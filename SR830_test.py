@@ -16,6 +16,7 @@ style.use('ggplot')
 import matplotlib.animation as animation
 import tkinter as tk
 from tkinter import ttk
+import threading
 
 #Check if everything connected properly
 rm = visa.ResourceManager()
@@ -27,7 +28,7 @@ class lock_in():
     
     def __init__(self, adress = 'GPIB0::3::INSTR'):
         
-        self.sr830 = rm.open_resource(adress, write_termination= '\n', read_termination='\n')
+        self.sr830 = 5#rm.open_resource(adress, write_termination= '\n', read_termination='\n')
         
         self.modes_ch1_options = ['X', 'R', 'X noise', 'AUX in 1', 'AUX in 2']
         
@@ -58,41 +59,88 @@ class lock_in():
         
         self.remote_status_options = ['lock', 'Unlock']
         
-        snap_data = get(self.sr830, 'SNAP?1,2,3,4')
-        self.x = snap_data[:10]
-        self.y = snap_data[12:22]
-        self.r = snap_data[24:34]
-        self.theta = snap_data[36:]
-        snap_aux = get(self.sr830, 'SNAP?5,6,7,8')
-        self.aux1 = snap_aux[:9]
-        self.aux2 = snap_aux[11:20]
-        self.aux3 = snap_aux[22:26]
-        self.aux4 = snap_aux[28:]
         
+    def frequency(self):
+        return get(self.sr830, 'FREQ?')
+    
+    def phase(self):
+        return get(self.sr830, 'PHAS?')
         
-    def __call__(self):
+    def amplitude(self):
+        return get(self.sr830, 'SLVL?')
+    
+    def sensitivity(self):
+        return get(self.sr830, 'SENS?')
+    
+    def time_constant(self):
+        return get(self.sr830, 'OFLT?')
+    
+    def low_pass_filter_slope(self):
+        return get(self.sr830, 'OFSL?')
+    
+    def synchronous_filter_status(self):
+        return get(self.sr830, 'SYNC?')
+    
+    def remote(self):
+        return get(self.sr830, 'OVRM?')
+    
+    def ch1(self):
+        return get(self.sr830, 'OUTR?1')
+    
+    def ch2(self):
+        return get(self.sr830, 'OUTR?2')
+    
+    def error(self):
+        return get(self.sr830, 'ERRS?')
         
-        self.frequency = get(self.sr830, 'FREQ?')
+    def parameter(self):
+        return pd.DataFrame({'Sensitivity': int([self.sensitivity()])}, 
+                                 {'Time constant': int([self.time_constant()])},
+                                 {'Low pass filter slope': int([self.low_pass_filter_slope()])}, 
+                                 {'Synchronous filter status': int([self.synchronous_filter_status()])},
+                                 {'Remote': int([self.remote()])},
+                                 {'Ch1': float([self.ch1()])},
+                                 {'Ch2': float([self.ch2()])},
+                                 {'Amplitude': float([self.amplitude()])}, 
+                                 {'Frequency': float([self.frequency()])},
+                                 {'Phase': float([self.phase()])},
+                                 {'Error': str([self.error()])})
+    
+    def snap_data(self):
+        return get(self.sr830, 'SNAP?1,2,3,4')
+    
+    def x(self):
+        return self.snap_data[:10]
+    
+    def y(self):
+        return self.snap_data[12:22]
+    
+    def r(self):
+        return self.snap_data[24:34]
+    
+    def theta(self):
+        return self.snap_data[36:]
+    
+    def snap_aux(self):
+        return get(self.sr830, 'SNAP?5,6,7,8')
+    
+    def aux1(self):
+        return self.snap_aux[:9]
+    
+    def aux2(self):
+        return self.snap_aux[11:20]
+    
+    def aux3(self):
+        return self.snap_aux[22:26]
+    
+    def aux4(self):
+        return self.snap_aux[28:]
         
-        self.phase = get(self.sr830, 'PHAS?')
-        
-        self.amplitude = get(self.sr830, 'SLVL?')
-        
-        self.sensitivity = get(self.sr830, 'SENS?')
-     
-        self.time_constant = get(self.sr830, 'OFLT?')
-        
-        self.low_pass_filter_slope = get(self.sr830, 'OFSL?')
-        
-        self.synchronous_filter_status = get(self.sr830, 'SYNC?')
-        
-        self.remote = get(self.sr830, 'OVRM?')
-        
-        self.ch1 = get(self.sr830, 'OUTR?1')
-        
-        self.ch2 = get(self.sr830, 'OUTR?2')
-        
-        self.error = get(self.sr830, 'ERRS?')
+    def data(self):
+    
+        return pd.DataFrame({'X': float(self.x()), 'Y': float(self.y()), 'R': float(self.r()), 
+                             'Theta': float(self.theta()), 'AUX1': float(self.aux1()),
+                             'AUX2': float(self.aux2()), 'AUX3': float(self.aux3()), 'AUX4': float(self.aux4())})
         
     def set_ch1_mode(self, mode = 0):
         line = 'DDEF?1,' + str(mode)
@@ -141,23 +189,13 @@ class lock_in():
         
 #Write command to a device and get it's output
 def get(device, command):
-    device.write(command)
-    return device.read()
+    #device.write(command)
+    return np.random.random(1)#device.read()
 
-config_filename = ''
-def write_config(filename = config_filename):
-    parameters = pd.DataFrame({'Sensitivity': int([lock_in().sensitivity])}, 
-                             {'Time constant': int([lock_in().time_constant])},
-                             {'Low pass filter slope': int([lock_in().low_pass_filter_slope])}, 
-                             {'Synchronous filter status': int([lock_in().synchronous_filter_status])},
-                             {'Remote': int([lock_in().remote])},
-                             {'Ch1': float([lock_in().ch1])},
-                             {'Ch2': float([lock_in().ch2])},
-                             {'Amplitude': float([lock_in().amplitude])}, 
-                             {'Frequency': float([lock_in().frequency])},
-                             {'Phase': float([lock_in().phase])},
-                             {'Error': str([lock_in().error])})
-    parameters.to_csv(filename, '    ')
+config_filename = r'C:\NUS\Transport lab\App\config\parameter.csv'
+
+def write_config(dataframe, filename = config_filename):
+    dataframe.to_csv(filename, sep = ' ')
     
 #starting time
 zero_time = time.process_time()
@@ -199,7 +237,7 @@ def animate(i):#, spectrometer_instance):
     appended_dataframe = pd.DataFrame({'time': [cur_time]
                                        })
     data = pd.concat([data, appended_dataframe])
-    data.to_csv(filename, sep = '    ')
+    data.to_csv(filename, sep = ' ')
      
     #Plotting data
     keit_elec_data = pd.read_csv(filename, sep = ' ')['keit_elec'].values.tolist()
@@ -275,9 +313,9 @@ class Settings(tk.Frame):
         label_time_constant.place(relx = 0.02, rely = 0.015)
         
         self.combo_time_constant = ttk.Combobox(self,
-                                        value = lock_in().__call__.time_constant_options)
+                                        value = lock_in().time_constant_options)
         self.combo_time_constant.current(8)
-        self.combo_time_constant.bind("<<ComboboxSelected>>", self.set_time_constant)
+        self.combo_time_constant.bind("<<ComboboxSelected>>", threading.Thread(target = self.set_time_constant).start())
         self.combo_time_constant.place(relx = 0.02, rely = 0.05)
         
         self.value_time_constant = tk.StringVar(value = '0.0')
@@ -290,7 +328,7 @@ class Settings(tk.Frame):
         self.combo_low_pass_filter_slope = ttk.Combobox(self, 
                                         value = lock_in().low_pass_filter_slope_options)
         self.combo_low_pass_filter_slope.current(1)
-        self.combo_low_pass_filter_slope.bind("<<ComboboxSelected>>", self.set_low_pass_filter_slope)
+        self.combo_low_pass_filter_slope.bind("<<ComboboxSelected>>", threading.Thread(target = self.set_low_pass_filter_slope).start())
         self.combo_low_pass_filter_slope.place(relx = 0.02, rely = 0.160)
         
         self.value_low_pass_filter_slope = tk.StringVar(value = '0.0')
@@ -303,7 +341,7 @@ class Settings(tk.Frame):
         self.combo_synchronous_filter_status = ttk.Combobox(self, 
                                         value = lock_in().synchronous_filter_status_options)
         self.combo_synchronous_filter_status.current(0)
-        self.combo_synchronous_filter_status.bind("<<ComboboxSelected>>", self.set_synchronous_filter_status)
+        self.combo_synchronous_filter_status.bind("<<ComboboxSelected>>", threading.Thread(target = self.set_synchronous_filter_status).start())
         self.combo_synchronous_filter_status.place(relx = 0.02, rely = 0.270)
         
         self.value_synchronous_filter_status = tk.StringVar(value = '0.0')
@@ -354,7 +392,7 @@ class Settings(tk.Frame):
         
         self.combo_sensitivity = ttk.Combobox(self, value = lock_in().sensitivity_options)
         self.combo_sensitivity.current(15)
-        self.combo_sensitivity.bind("<<ComboboxSelected>>", self.set_sensitivity)
+        self.combo_sensitivity.bind("<<ComboboxSelected>>", threading.Thread(target = self.set_sensitivity).start())
         self.combo_sensitivity.place(relx = 0.15, rely = 0.05)
         
         self.value_sensitivity = tk.StringVar(value = '0.0')
@@ -366,7 +404,7 @@ class Settings(tk.Frame):
 
         self.combo_remote = ttk.Combobox(self, value = lock_in().remote_status_options)
         self.combo_remote.current(1)
-        self.combo_remote.bind("<<ComboboxSelected>>", self.set_remote)
+        self.combo_remote.bind("<<ComboboxSelected>>", threading.Thread(target = self.set_remote).start())
         self.combo_remote.place(relx = 0.15, rely = 0.160)
         
         self.value_remote = tk.StringVar(value = '0.0')
@@ -379,7 +417,7 @@ class Settings(tk.Frame):
         
         self.combo_ch1 = ttk.Combobox(self, value = lock_in().modes_ch1_options)
         self.combo_ch1.current(0)
-        self.combo_ch1.bind("<<ComboboxSelected>>", self.set_ch1_mode)
+        self.combo_ch1.bind("<<ComboboxSelected>>", threading.Thread(target = self.set_ch1_mode).start())
         self.combo_ch1.place(relx = 0.15, rely = 0.4)
          
         self.value_ch2 = tk.StringVar(value = '0.0')
@@ -388,7 +426,7 @@ class Settings(tk.Frame):
         
         self.combo_ch2 = ttk.Combobox(self, value = lock_in().modes_ch2_options)
         self.combo_ch2.current(0)
-        self.combo_ch2.bind("<<ComboboxSelected>>", self.set_ch2_mode)
+        self.combo_ch2.bind("<<ComboboxSelected>>", threading.Thread(target = self.set_ch2_mode).start())
         self.combo_ch2.place(relx = 0.3, rely = 0.4)
         
         label_amplitude = tk.Label(self, text = 'Amplitude of SIN output, V. \n 0.004 < V < 5.000')
@@ -454,33 +492,42 @@ class Settings(tk.Frame):
         button_listbox = ttk.Button(self, text = "Collect data", command = select)
         button_listbox.place(relx = 0.615, rely = 0.665)
         '''
-        #self.update_values()
+        threading.Thread(target = self.update_sensitivity()).start()
+        threading.Thread(target = self.update_time_constant()).start()
+        threading.Thread(target = self.update_low_pass_filter_slope()).start()
+        threading.Thread(target = self.update_synchronous_filter_status()).start()
+        threading.Thread(target = self.update_remote()).start()
+        threading.Thread(target = self.update_amplitude()).start()
+        threading.Thread(target = self.update_phase()).start()
+        threading.Thread(target = self.update_frequency()).start()
+        threading.Thread(target = self.update_value_ch1()).start()
+        threading.Thread(target = self.update_value_ch2()).start()
         
         button_back_home  = ttk.Button(self, text = 'Back to Home', 
                             command = lambda: controller.show_frame(StartPage))
         button_back_home.place(relx = 0.85, rely = 0.85)
         
-    def set_sensitivity(self, event):
+    def set_sensitivity(self):
         lock_in().set_sensitivity(mode = int(self.combo_sensitivity.current()))
         
-    def set_time_constant(self, event):
+    def set_time_constant(self):
         lock_in().set_time_constant(mode = int(self.combo_time_constant.current()))
         
-    def set_low_pass_filter_slope(self, event):
+    def set_low_pass_filter_slope(self):
         lock_in().set_low_pass_filter_slope(
             mode = int(self.combo_low_pass_filter_slope.current()))
     
-    def set_synchronous_filter_status(self, event):
+    def set_synchronous_filter_status(self):
         lock_in().set_synchronous_filter_status(
             mode = int(self.combo_synchronous_filter_status.current()))
      
-    def set_ch1_mode(self, event):
+    def set_ch1_mode(self):
         lock_in().set_ch1_mode(mode = int(self.combo_ch1.current()))
     
-    def set_ch2_mode(self, event):
+    def set_ch2_mode(self):
         lock_in().set_ch2_mode(mode = int(self.combo_ch2.current()))
     
-    def set_remote(self, event):
+    def set_remote(self):
         lock_in().set_remote(mode = int(self.combo_remote.current()))
         
     def aux_button_clicked(self):
@@ -494,39 +541,57 @@ class Settings(tk.Frame):
         lock_in().set_phase(value = float(self.phase_initial.get()))
         lock_in().set_amplitude(value = float(self.amplitude_initial.get()))
         
-    def update_values(self):     
+    def update_time_constant(self, interval = 1000):     
         
-        interval = 50
+        self.label_value_time_constant['text'] = str(lock_in().time_constant_options[int(lock_in().time_constant())])
+        self.label_value_time_constant.after(interval, self.update_time_constant)
         
-        time1 = time.process_time()
         
-        self.label_value_time_constant['text'] = str(lock_in().time_constant_options[int(lock_in().time_constant)])
+    def update_sensitivity(self, interval = 1000):
+    
+        self.label_value_sensitivity['text'] = str(lock_in().sensitivity_options[int(lock_in().sensitivity())])
+        self.label_value_sensitivity.after(interval, self.update_sensitivity)
         
-        self.label_value_sensitivity['text'] = str(lock_in().sensitivity_options[int(lock_in().sensitivity)])
+    def update_low_pass_filter_slope(self, interval = 1000):
         
-        self.label_value_low_pass_filter_slope['text'] = str(lock_in().low_pass_filter_slope_options[int(lock_in().low_pass_filter_slope)])
+        self.label_value_low_pass_filter_slope['text'] = str(lock_in().low_pass_filter_slope_options[int(lock_in().low_pass_filter_slope())])
+        self.label_value_low_pass_filter_slope.after(interval, self.update_low_pass_filter_slope)
         
-        self.label_value_synchronous_filter_status['text'] = str(lock_in().synchronous_filter_status_options[int(lock_in().synchronous_filter_status)])
+    def update_synchronous_filter_status(self, interval = 1000):
+    
+        self.label_value_synchronous_filter_status['text'] = str(lock_in().synchronous_filter_status_options[int(lock_in().synchronous_filter_status())])
+        self.label_value_synchronous_filter_status.after(interval, self.update_synchronous_filter_status)
+        
+    def update_remote(self, interval = 1000): 
 
-        self.label_value_remote['text'] = str(lock_in().remote_status_options[int(lock_in().remote)])
- 
-        self.label_value_amplitude['text'] = str(lock_in().amplitude)
+        self.label_value_remote['text'] = str(lock_in().remote_status_options[int(lock_in().remote())])
+        self.label_value_remote.after(interval, self.update_remote)
         
-        self.label_value_phase['text'] = str(lock_in().phase)
+    def update_amplitude(self, interval = 500):
+     
+        self.label_value_amplitude['text'] = str(lock_in().amplitude())
+        self.label_value_amplitude.after(interval, self.update_amplitude)
+        
+    def update_phase(self, interval = 500):
+        
+        self.label_value_phase['text'] = str(lock_in().phase())
+        self.label_value_phase.after(interval, self.update_phase)
+     
+    def update_frequency(self, interval = 500):   
+     
+        self.label_value_frequency['text'] = str(lock_in().frequency())
+        self.label_value_frequency.after(interval, self.update_frequency)
       
-        self.label_value_frequency['text'] = str(lock_in().frequency)
+    def update_value_ch1(self, interval = 100):
       
-        self.label_value_ch1['text'] = '\n' + str(lock_in().ch1)
+        self.label_value_ch1['text'] = '\n' + str(lock_in().ch1())
+        self.label_value_ch1.after(interval, self.update_value_ch1)
        
-        self.label_value_ch2['text'] = '\n' + str(lock_in().ch2)
-        
-        time2 = time.process_time()
-        
-        delta_time = time2
-        
-        print(delta_time)
-        
-        self.update_values()
+    def update_value_ch2(self, interval = 100): 
+       
+        self.label_value_ch2['text'] = '\n' + str(lock_in().ch2())
+        self.label_value_ch2.after(interval, self.update_value_ch2)
+    
         
 class Graph(tk.Frame):
     
