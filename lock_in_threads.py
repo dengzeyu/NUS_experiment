@@ -5,6 +5,7 @@ from datetime import datetime
 import pandas as pd
 import matplotlib
 import numpy as np
+import random
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 plt.rcParams['animation.html'] = 'jshtml'
@@ -22,9 +23,39 @@ from csv import writer
 
 #Check if everything connected properly
 rm = visa.ResourceManager()
-rm.list_resources()
+list_of_devices = rm.list_resources()
+
+temp = rm.open_resource('ASRL3::INSTR', baud_rate = 115200, 
+                        data_bits = 8, parity = constants.VI_ASRL_PAR_NONE,
+                        stop_bits = constants.VI_ASRL_STOP_ONE, 
+                        flow_control = constants.VI_ASRL_FLOW_NONE,
+                        write_termination = '\r', read_termination = '\r')
+
+#Write command to a device and get it's output
+def get(device, command):
+    #return np.round(np.random.random(1), 1)
+    return device.query(command)
+
+print(get(temp, 'IDN?'))
 
 print(rm.list_resources(), '\n')
+
+def var2str(var, vars_data = locals()):
+    return [var_name for var_name in vars_data if id(var) == id(vars_data[var_name])][0]
+
+#assigning variables for sweeping
+
+device_to_sweep = 'Time'
+parameter_to_sweep = ''
+min_sweep = 0 
+max_sweep = 0 
+ratio_sweep = 1
+delay_factor = 0
+devices_to_read = []
+filename_sweep =  r'C:\NUS\Transport lab\Test\data_files\sweep' + datetime.today().strftime(
+                                '%H_%M_%d_%m_%Y') + '.csv'
+sweeper_flag = False
+columns = []
 
 class lock_in():
     
@@ -61,7 +92,19 @@ class lock_in():
         
         self.remote_status_options = ['lock', 'Unlock']
         
+        self.set_options = ['amplitude', 'frequency', 'phase', 'AUX1_output', 'AUX2_output', 'AUX3_output', 'AUX4_output']
+    
+        self.get_options = ['x', 'y', 'AUX1_input', 'AUX2_input', 'AUX3_input', 'AUX4_input']
         
+    def IDN(self):
+        return get(self.sr830, '*IDN?')
+    
+    def x(self):
+        return get(self.sr830, 'OUTP?1')
+    
+    def y(self):
+        return get(self.sr830, 'OUTP?2')
+    
     def frequency(self):
         return get(self.sr830, 'FREQ?')
     
@@ -96,77 +139,52 @@ class lock_in():
         return get(self.sr830, 'ERRS?')
         
     def parameter(self):
-        
         dataframe = pd.DataFrame({'Sensitivity': [float(self.sensitivity())], 
-                                 'Time_constant': [float(self.time_constant())],
-                                 'Low_pass_filter_slope': [float(self.low_pass_filter_slope())], 
-                                 'Synchronous_filter_status': [float(self.synchronous_filter_status())],
-                                 'Remote': [float(self.remote())],
-                                 'Amplitude': [float(self.amplitude())], 
-                                 'Frequency': [float(self.frequency())],
-                                 'Phase': [float(self.phase())],
-                                 'Error': [float(self.error())]})
-        
-        
+                             'Time_constant': [float(self.time_constant())],
+                             'Low_pass_filter_slope': [float(self.low_pass_filter_slope())], 
+                             'Synchronous_filter_status': [float(self.synchronous_filter_status())],
+                             'Remote': [float(self.remote())],
+                             'Amplitude': [float(self.amplitude())], 
+                             'Frequency': [float(self.frequency())],
+                             'Phase': [float(self.phase())]})
         return dataframe
     
     def channels(self):
         
-        dataframe = pd.DataFrame({'Ch1': [float(self.ch1())], 'Ch2': [float(self.ch2())]})
-    
-        return dataframe
+        try:
+            dataframe = pd.DataFrame({'Ch1': [float(self.ch1())], 'Ch2': [float(self.ch2())]})
+            return dataframe
+        except:
+            pass
     
     def snap_data(self):
         return get(self.sr830, 'SNAP?1,2,3,4')
-    
-    def x(self):
-        return self.snap_data[:10]
-    
-    def y(self):
-        return self.snap_data[12:22]
-    
-    def r(self):
-        return self.snap_data[24:34]
-    
-    def theta(self):
-        return self.snap_data[36:]
-    
-    def snap_aux(self):
-        return get(self.sr830, 'SNAP?5,6,7,8')
-    
-    def aux1(self):
-        return self.snap_aux[:9]
-    
-    def aux2(self):
-        return self.snap_aux[11:20]
-    
-    def aux3(self):
-        return self.snap_aux[22:26]
-    
-    def aux4(self):
-        return self.snap_aux[28:]
         
     def data(self):
     
         string = get(self.sr830, 'SNAP? 1,2')
         
-        return [float(time.process_time() - zero_time), float(string[:string.find(',')]), float(string[string.find(',') + 1:])]
+        return [time.process_time() - zero_time, string[:string.find(',')], string[string.find(',') + 1:]]
+        #return [time.process_time() - zero_time, float(np.random.randint(10)), float(np.random.randint(10))]
     
-    def aux_data(self):
-        
-        string = get(self.sr830, 'SNAP? 5,6,7,8')
-        
-        return [float(time.process_time() - zero_time),
-                float(string[:string.find(',')]), float(string[string.find(',') + 1:string.find(',', start = string.find(','))]),
-                float(string[string.find(',', start = string.find(',')) + 1:string.find(',', start = string.find(',', start = string.find(',')))]),
-                float(string[string.find(',', start = string.find(',', start = string.find(','))) + 1:])]
-        
+    def AUX1_input(self):
+        return get(self.sr830, 'OAUX?1')
+    
+    def AUX2_input(self):
+        return get(self.sr830, 'OAUX?2')
+    
+    def AUX3_input(self):
+        return get(self.sr830, 'OAUX?3')
+    
+    def AUX4_input(self):
+        return get(self.sr830, 'OAUX?4')
+    
     def set_ch1_mode(self, mode = 0):
-        line = 'DDEF?1,' + str(mode)
+        line = 'DDEF1,' + str(mode) + ',0'
         self.sr830.write(line)
         
     def set_ch2_mode(self, mode = 0):
-        line = 'DDEF?2,' + str(mode)
+        line = 'DDEF2,' + str(mode) + ',0'
         self.sr830.write(line)
         
     def set_frequency(self, value = 30.0):
@@ -201,15 +219,126 @@ class lock_in():
         line = 'OVRM' + str(mode)
         self.sr830.write(line)
         
-    def set_aux_voltage(self, ch = 1, V = 0):
-        line = 'AUXV' + str(ch) + ',' + str(V)
+    def set_AUX1_output(self, value = 0):
+        line = 'AUXV1,' + str(value)
         self.sr830.write(line)
         
+    def set_AUX2_output(self, value = 0):
+        line = 'AUXV2,' + str(value)
+        self.sr830.write(line)
+        
+    def set_AUX3_output(self, value = 0):
+        line = 'AUXV3,' + str(value)
+        self.sr830.write(line)
+        
+    def set_AUX4_output(self, value = 0):
+        line = 'AUXV4,' + str(value)
+        self.sr830.write(line)
+        
+        
+class TC300():
+    
+    def __init__(self, adress = 'ASRL3::INSTR'):
+        self.tc = rm.open_resource(adress, baud_rate = 115200, 
+                                data_bits = 8, parity = constants.VI_ASRL_PAR_NONE,
+                                stop_bits = constants.VI_ASRL_STOP_ONE, 
+                                flow_control = constants.VI_ASRL_FLOW_NONE,
+                                write_termination = '\r', read_termination = '\r')
+        
+        self.set_options = ['T1', 'T2']
+        
+        self.get_options = ['T1', 'T2']
+        
+    def IDN(self):
+        return(get(self.tc, 'IDN?')[2:])
          
-#Write command to a device and get it's output
-def get(device, command):
-    device.write(command)
-    return device.read()
+    def T1(self):
+        #Get the CH1 target temperature; returned value is the actual temperature in °C
+        return(get(self.tc, 'TACT1?'))
+    
+    def set_T1(self, value = 20):
+        #Set the CH1 target temperature to value/10 °C, the range is defined by 
+        #TMIN1 and TMAX1, the setting resolution of value is 1. 
+        self.tc.write('TSET1=' + str(int(value * 10)))
+        self.tc.write('EN1=1')
+    
+    def set_T1_min(self, t1_min = 0):
+        #Set the CH1 Target Temperature Min value, 
+        #(Range: -200 to TMAX1°C, with a resolution of 1°C). 
+        self.tc.write('TMIN1=' + str(t1_min))
+        
+    def set_T1_max(self, t1_max = 30):
+        #Set the CH1 Target Temperature Max value, n equals value 
+        #TMIN1 to 400°C, with a resolution of 1°C).
+        self.tc.write('T1MAX=' + str(t1_max))
+    
+    def T2(self):
+        #Get the CH2 target temperature; returned value is the actual temperature in °C
+        return(get(self.tc, 'TACT2?'))
+    
+    def set_T2(self, value = 20):
+        #Set the CH2 target temperature to value/10 °C, the range is defined by 
+        #TMIN1 and TMAX1, the setting resolution of value is 1. 
+        self.tc.write('TSET2=' + str(int(value * 10)))
+        self.tc.write('EN2=1')
+    
+    def set_T2_min(self, t2_min = 0):
+        #Set the CH2 Target Temperature Min value, 
+        #(Range: -200 to TMAX2°C, with a resolution of 1°C). 
+        self.tc.write('TMIN1=' + str(t2_min))
+        
+    def set_T2_max(self, t2_max = 20):
+        #Set the CH2 Target Temperature Max value, n equals value 
+        #TMIN1 to 400°C, with a resolution of 1°C).
+        self.tc.write('T1MAX=' + str(t2_max))
+
+device_classes = (lock_in, TC300)
+
+def devices_list():
+    #queries each device IDN?
+    list_of_devices = []
+    types_of_devices = []
+    for adress in rm.list_resources():
+        try:
+            try:
+                name = get(rm.open_resource(adress, read_termination = '\r'), 'IDN?')
+                if name.startswith('\n'):
+                    name = name[2:]
+                list_of_devices.append(name)
+                if name == '':
+                    raise UserWarning        
+            except UserWarning:
+                name = get(rm.open_resource(adress, read_termination = '\n'), 'IDN?')
+                if name.startswith('\n'):
+                    name = name[2:]
+                list_of_devices.append(name)
+        except visa.errors.VisaIOError: 
+            try:
+                name = get(rm.open_resource(adress, read_termination = '\n'), '*IDN?')
+                if name.startswith('\n'):
+                    name = name[2:]
+                list_of_devices.append(name)
+                if name == '':
+                    raise UserWarning  
+            except UserWarning:
+                name = get(rm.open_resource(adress, read_termination = '\r'), '*IDN?')
+                if name.startswith('\n'):
+                    name = name[2:]
+                list_of_devices.append(name)
+                
+        for class_of_device in device_classes:
+            if globals()[var2str(class_of_device)]().IDN() == name:
+                types_of_devices.append(var2str(class_of_device))
+        if len(types_of_devices) != len(list_of_devices):
+            types_of_devices.append('Not a class')
+            
+    return list_of_devices, types_of_devices
+
+names_of_devices, types_of_devices = devices_list()
+
+print(names_of_devices, types_of_devices)
+
+zero_time = time.process_time()
 
 config_parameters_filename = r'C:\NUS\Transport lab\App\config\parameters_' + datetime.today().strftime(
                                 '%H_%M_%d_%m_%Y') + '.csv' '.csv'
@@ -217,7 +346,7 @@ config_parameters_filename = r'C:\NUS\Transport lab\App\config\parameters_' + da
 config_parameters = pd.DataFrame(columns = ['Sensitivity', 'Time_constant', 
                                  'Low_pass_filter_slope', 'Synchronous_filter_status',
                                  'Remote', 'Amplitude', 'Frequency', 
-                                 'Phase', 'Error'])
+                                 'Phase'])
 
 config_parameters.to_csv(config_parameters_filename, index = False)
 
@@ -230,14 +359,16 @@ config_channels.to_csv(config_channels_filename, index = False)
 
 class write_config_parameters(threading.Thread):
 
-    def __init__(self):
+    def __init__(self, adress = 'GPIB0::3::INSTR'):
         threading.Thread.__init__(self)
+        self.adress = adress
+        self.filename = config_parameters_filename[:-4] + adress[:4] + adress[7] + '.csv'
         self.daemon = True
         self.start()
 
     def run(self):
         while True:
-            dataframe_parameters = lock_in().parameter()
+            dataframe_parameters = lock_in(adress = self.adress).parameter()
             with open(config_parameters_filename, 'a') as f_object:
                 try:
                     # Pass this file object to csv.writer()
@@ -256,24 +387,29 @@ class write_config_parameters(threading.Thread):
                     
 class write_config_channels(threading.Thread):
 
-    def __init__(self):
+    def __init__(self, adress = 'GPIB0::3::INSTR'):
         threading.Thread.__init__(self)
+        self.adress = adress
+        self.filename = config_channels_filename[:-4] + adress[:4] + adress[7] + '.csv' 
         self.daemon = True
         self.start()
 
     def run(self):
         while True:
-            dataframe_channels = lock_in().channels()
-            with open(config_channels_filename, 'a') as f_object:
-                try:
+            try:
+                dataframe_channels = lock_in(adress = self.adress).channels()
+            except:
+                pass
+            try:
+                with open(config_channels_filename, 'a') as f_object:
                     writer_object = writer(f_object)
                     writer_object.writerow(*dataframe_channels.values)
                     time.sleep(0.1)
                   
                     #Close the file object
                     f_object.close()
-                except KeyboardInterrupt():
-                    f_object.close()
+            except:
+                pass
                 
                 
 #Create Pandas dataframe and filename
@@ -288,14 +424,16 @@ data.to_csv(data_filename, index = False)
 
 class write_data(threading.Thread):
 
-    def __init__(self):
+    def __init__(self, adress = 'GPIB0::3::INSTR'):
         threading.Thread.__init__(self)
+        self.adress = adress
         self.daemon = True
+        self.filename = data_filename[:-4] + adress[:4] + adress[7] + '.csv'
         self.start()
 
     def run(self):
         while True:
-            dataframe_data = lock_in().data()
+            dataframe_data = lock_in(adress = self.adress).data()
             with open(data_filename, 'a') as f_object:
                 try:
                     writer_object = writer(f_object)
@@ -316,8 +454,10 @@ aux_data.to_csv(aux_filename, index = False)
 
 class write_AUX(threading.Thread):
 
-    def __init__(self):
+    def __init__(self, adress = 'GPIB0::3::INSTR'):
         threading.Thread.__init__(self)
+        self.adress = adress
+        self.filename = aux_filename[:-4] + adress[:4] + adress[7] + '.csv'
         self.daemon = True
         self.start()
 
@@ -335,42 +475,58 @@ class write_AUX(threading.Thread):
                 except KeyboardInterrupt():
                     f_object.close()
 
+
 #defining window initial parameters
 fig = Figure(figsize = (6, 2.5), dpi = 200)
 
 #defining subplots location
 
-'''
-ax1 = fig.add_subplot(221)
-ax1.set_title(r'V(t)')
-ax1.set_xlabel(r'Time, $s$')
-ax1.set_ylabel(r'DC voltage, $V$')
-ax2 = fig.add_subplot(222)
-ax2.set_title(r'T(t)')
-ax2.set_xlabel(r'Time, $s$')
-ax2.set_ylabel(r'Temperature, $\degree C$')
-ax3 = fig.add_subplot(223)
-ax3.set_title(r'V(t)')
-ax3.set_xlabel(r'Time, $s$')
-ax3.set_ylabel(r'Power voltage, $V$')
-'''
 
-def animate(i):#, spectrometer_instance):
-    #function to animate graph on each step
+ax1 = fig.add_subplot(221)
+ax1.set_title(r'X(t)')
+ax1.set_xlabel(r'Time, $s$')
+ax1.set_ylabel(r'X, $V$')
+ax2 = fig.add_subplot(222)
+ax2.set_title(r'Y(t)')
+ax2.set_xlabel(r'Time, $s$')
+ax2.set_ylabel(r'Y, $V$')
+ax3 = fig.add_subplot(223)
+ax3.set_title(r'X(Y)')
+ax3.set_xlabel(r'Y, $V$')
+ax3.set_ylabel(r'X, $V$')
+
+
+
+def animate(i):
+#function to animate graph on each step
+    data = pd.read_csv(data_filename)    
     
-    #spectrometer_instance.frames[Settings].update()
-    
+    time = data['Time'].values
+    x = data['X'].values
+    y = data['Y'].values
     
     '''
-    ax1.clear()
-    ax1.plot(time_data, keit_elec_data, lw = 1, color = 'blue')
-    
-    ax2.clear()
-    ax2.plot(time_data, temp_data, lw = 1, color = 'crimson')
-    
-    ax3.clear()
-    ax3.plot(time_data, power_supply_data, lw = 1, color = 'green')
-    '''
+    if time.shape[0] > 100:
+        mask = np.concatenate((np.ones(time.shape[0] - 10), np.zeros(10)))
+        indeces = random.sample((np.arange(0, time.shape[0] - 10, dtype = int)).tolist(), 90)
+        for i in indeces:
+            mask[i] = 0
+        time = np.ma.masked_array(time, mask)
+        x = np.ma.masked_array(x, mask)
+        y = np.ma.masked_array(y, mask)
+    '''    
+    try:    
+        ax1.clear()
+        ax1.plot(time, x, '-', lw = 1, color = 'blue')
+        
+        ax2.clear()
+        ax2.plot(time, y, '-', lw = 1, color = 'crimson')
+        
+        ax3.clear()
+        ax3.plot(y, x, '-', lw = 1, color = 'green')
+    except:
+        pass
+        
 
 class spectrometer(tk.Tk):
     
@@ -387,7 +543,7 @@ class spectrometer(tk.Tk):
         
         self.frames = {}
         
-        for F in (StartPage, Settings, Graph):
+        for F in (StartPage, Lock_in_settings, Sweeper, Graph):
             frame = F(container, self)
             self.frames[F] = frame
             frame.grid(row = 0, column = 0, sticky = 'nsew')
@@ -405,20 +561,22 @@ class StartPage(tk.Frame):
         label = tk.Label(self, text = 'Start Page', font = LARGE_FONT)
         label.pack(pady = 10, padx = 10)
         
-        button = ttk.Button(self, text = "Settings", command = lambda: controller.show_frame(Settings))
-        button.pack()
+        lock_in_settings_button = ttk.Button(self, text = "Lock in settings", command = lambda: controller.show_frame(Lock_in_settings))
+        lock_in_settings_button.pack()
         
-        button2 = ttk.Button(self, text = 'Graph', command = lambda: controller.show_frame(Graph))
-        button2.pack()
+        sweeper_button = ttk.Button(self, text = 'Sweeper', command = lambda: controller.show_frame(Sweeper))
+        sweeper_button.pack()
         
+        graph_button = ttk.Button(self, text = 'Graph', command = lambda: controller.show_frame(Graph))
+        graph_button.pack()
         
-class Settings(tk.Frame):
+class Lock_in_settings(tk.Frame):
     
     def __init__(self, parent, controller):
         
         tk.Frame.__init__(self, parent)
         
-        label = tk.Label(self, text = 'Settings', font = LARGE_FONT)
+        label = tk.Label(self, text = 'Lock in settings', font = LARGE_FONT)
         label.place(relx = 0.485, rely = 0.02)
         
         label_time_constant = tk.Label(self, text = 'Time constant')
@@ -611,7 +769,6 @@ class Settings(tk.Frame):
         thread_update_ch1 = threading.Thread(target = self.update_value_ch1())
         thread_update_ch2 = threading.Thread(target = self.update_value_ch2())
         
-        
         thread_update_sensitivity.start()
         thread_update_time_constant.start() 
         thread_update_low_pass_filter_slope.start()
@@ -662,17 +819,17 @@ class Settings(tk.Frame):
         lock_in().set_remote(mode = int(self.combo_remote.current()))
         
     def aux_button_clicked(self):
-        lock_in().set_aux_voltage(ch = 1, V = float(self.aux1_initial.get()))
-        lock_in().set_aux_voltage(ch = 2, V = float(self.aux2_initial.get()))
-        lock_in().set_aux_voltage(ch = 3, V = float(self.aux3_initial.get()))
-        lock_in().set_aux_voltage(ch = 4, V = float(self.aux4_initial.get()))
+        lock_in().set_AUX1_output(value = float(self.aux1_initial.get()))
+        lock_in().set_AUX2_output(value = float(self.aux2_initial.get()))
+        lock_in().set_AUX3_output(value = float(self.aux3_initial.get()))
+        lock_in().set_AUX4_output(value = float(self.aux4_initial.get()))
         
     def reference_button_clicked(self):
         lock_in().set_frequency(value = float(self.frequency_initial.get()))
         lock_in().set_phase(value = float(self.phase_initial.get()))
         lock_in().set_amplitude(value = float(self.amplitude_initial.get()))
         
-    def update_time_constant(self, interval = 5000):     
+    def update_time_constant(self, interval = 3000):     
         
         try:
             value = pd.read_csv(config_parameters_filename)['Time_constant'].values[-1]
@@ -681,7 +838,7 @@ class Settings(tk.Frame):
         self.label_value_time_constant['text'] = str(lock_in().time_constant_options[int(value)])
         self.label_value_time_constant.after(interval, self.update_time_constant)
        
-    def update_sensitivity(self, interval = 5000):
+    def update_sensitivity(self, interval = 3000):
     
         try:
             value = pd.read_csv(config_parameters_filename)['Sensitivity'].values[-1]
@@ -690,7 +847,7 @@ class Settings(tk.Frame):
         self.label_value_sensitivity['text'] = str(lock_in().sensitivity_options[int(value)])
         self.label_value_sensitivity.after(interval, self.update_sensitivity)
         
-    def update_low_pass_filter_slope(self, interval = 5000):
+    def update_low_pass_filter_slope(self, interval = 3000):
         
         try:
             value = pd.read_csv(config_parameters_filename)['Low_pass_filter_slope'].values[-1]
@@ -699,7 +856,7 @@ class Settings(tk.Frame):
         self.label_value_low_pass_filter_slope['text'] = str(lock_in().low_pass_filter_slope_options[int(value)])
         self.label_value_low_pass_filter_slope.after(interval, self.update_low_pass_filter_slope)
         
-    def update_synchronous_filter_status(self, interval = 5000):
+    def update_synchronous_filter_status(self, interval = 3000):
         
         try:
             value = pd.read_csv(config_parameters_filename)['Synchronous_filter_status'].values[-1]
@@ -708,7 +865,7 @@ class Settings(tk.Frame):
         self.label_value_synchronous_filter_status['text'] = str(lock_in().synchronous_filter_status_options[int(value)])
         self.label_value_synchronous_filter_status.after(interval, self.update_synchronous_filter_status)
         
-    def update_remote(self, interval = 5000): 
+    def update_remote(self, interval = 3000): 
 
         try:
             value = pd.read_csv(config_parameters_filename)['Remote'].values[-1]
@@ -717,7 +874,7 @@ class Settings(tk.Frame):
         self.label_value_remote['text'] = str(lock_in().remote_status_options[int(value)])
         self.label_value_remote.after(interval, self.update_remote)
         
-    def update_amplitude(self, interval = 5000):
+    def update_amplitude(self, interval = 3000):
      
         try:
             value = pd.read_csv(config_parameters_filename)['Amplitude'].values[-1]
@@ -726,7 +883,7 @@ class Settings(tk.Frame):
         self.label_value_amplitude['text'] = str(value)
         self.label_value_amplitude.after(interval, self.update_amplitude)
         
-    def update_phase(self, interval = 5000):
+    def update_phase(self, interval = 3000):
         
         try:
             value = pd.read_csv(config_parameters_filename)['Phase'].values[-1]
@@ -735,7 +892,7 @@ class Settings(tk.Frame):
         self.label_value_phase['text'] = str(value)
         self.label_value_phase.after(interval, self.update_phase)
      
-    def update_frequency(self, interval = 5000):   
+    def update_frequency(self, interval = 3000):   
      
         try:
             value = pd.read_csv(config_parameters_filename)['Frequency'].values[-1]
@@ -744,7 +901,7 @@ class Settings(tk.Frame):
         self.label_value_frequency['text'] = str(value)
         self.label_value_frequency.after(interval, self.update_frequency)
       
-    def update_value_ch1(self, interval = 100):
+    def update_value_ch1(self, interval = 300):
       
         try:
             value = pd.read_csv(config_channels_filename)['Ch1'].values[-1]
@@ -753,7 +910,7 @@ class Settings(tk.Frame):
         self.label_value_ch1['text'] = '\n' + str(value)
         self.label_value_ch1.after(interval, self.update_value_ch1)
        
-    def update_value_ch2(self, interval = 100): 
+    def update_value_ch2(self, interval = 300): 
        
         try:
             value = pd.read_csv(config_channels_filename)['Ch2'].values[-1] 
@@ -761,13 +918,192 @@ class Settings(tk.Frame):
             value = 0.0
         self.label_value_ch2['text'] = '\n' + str(value)
         self.label_value_ch2.after(interval, self.update_value_ch2)
+        
+class Sweeper(tk.Frame):
     
+    def __init__(self, parent, controller):
+        
+        tk.Frame.__init__(self, parent)
+        label = tk.Label(self, text = 'Sweeper', font = LARGE_FONT)
+        label.pack(pady = 10, padx = 10)
+        
+        button_home = ttk.Button(self, text = 'Back to Home', 
+                            command = lambda: controller.show_frame(StartPage))
+        button_home.pack()
+        
+        label_to_sweep = tk.Label(self, text = 'To sweep:', font = LARGE_FONT)
+        label_to_sweep.place(relx = 0.15, rely = 0.12)
+        
+        label_to_read = tk.Label(self, text = 'To read:', font = LARGE_FONT)
+        label_to_read.place(relx = 0.3, rely = 0.12)
+        
+        self.combo_to_sweep = ttk.Combobox(self, value = ['Time', *list_of_devices])
+        self.combo_to_sweep.current(0)
+        self.combo_to_sweep.bind("<<ComboboxSelected>>", self.update_sweep_parameters)
+        self.combo_to_sweep.place(relx = 0.15, rely = 0.16)
+        
+        devices = tk.StringVar()
+        devices.set(value = list_of_devices)
+        label_listbox = tk.Label(self, textvariable = 'Units to collect \n in datafile')
+        label_listbox.place(relx = 0.5, rely = 0.5)
+        self.lstbox_to_read = tk.Listbox(self, listvariable = devices, 
+                            selectmode = 'multiple', width=20, height=10)
+        self.lstbox_to_read.place(relx = 0.3, rely = 0.16)
+        
+        self.sweep_options = ttk.Combobox(self)
+        self.sweep_options.place(relx = 0.15, rely = 0.2)
+        
+        label_min = tk.Label(self, text = 'MIN', font = LARGE_FONT)
+        label_min.place(relx = 0.12, rely = 0.24)
+        
+        label_max = tk.Label(self, text = 'MAX', font = LARGE_FONT)
+        label_max.place(relx = 0.12, rely = 0.28)
+        
+        label_step = tk.Label(self, text = 'Ratio, \n Δ/s', font = LARGE_FONT)
+        label_step.place(relx = 0.12, rely = 0.32)
+        
+        self.entry_min = tk.Entry(self)
+        self.entry_min.place(relx = 0.17, rely = 0.24)
+        
+        self.entry_max = tk.Entry(self)
+        self.entry_max.place(relx = 0.17, rely = 0.28)
+        
+        self.entry_ratio = tk.Entry(self)
+        self.entry_ratio.place(relx = 0.17, rely = 0.32)
+        
+        label_delay_factor = tk.Label(self, text = 'Delay factor, s', justify=tk.LEFT, font = LARGE_FONT)
+        label_delay_factor.place(relx = 0.12, rely = 0.4)
+        
+        self.entry_delay_factor = tk.Entry(self)
+        self.entry_delay_factor.place(relx = 0.12, rely = 0.46)
+        
+        button_start_sweeping = ttk.Button(self, text = "Start sweeping", command = lambda: self.start_sweeping())
+        button_start_sweeping.place(relx = 0.7, rely = 0.7)
+        
+    def update_sweep_parameters(self, event, interval = 1000):
+        if self.combo_to_sweep.current() == 0:
+            self.sweep_options['value'] = []
+            self.sweep_options.after(interval)
+            pass
+        else:
+            class_of_sweeper_device = types_of_devices[self.combo_to_sweep.current() - 1]
+            if class_of_sweeper_device != 'Not a class':
+                self.sweep_options['value'] = getattr(globals()[class_of_sweeper_device](), 'set_options')
+                self.sweep_options.after(interval)
+                    
+    def start_sweeping(self):
+        
+        global device_to_sweep
+        global parameter_to_sweep
+        global min_sweep 
+        global max_sweep 
+        global ratio_sweep
+        global delay_factor
+        global devices_to_read 
+        global filename_sweep 
+        global sweeper_flag 
+        global columns
+        
+        #asking multichoise to get devices to read
+        self.list_to_read = list()
+        selection = self.lstbox_to_read.curselection()
+        for i in selection:
+            entrada = self.lstbox_to_read.get(i)
+            self.list_to_read.append(entrada)
+        devices_to_read = self.list_to_read
+        
+        #creating columns
+        if self.combo_to_sweep.current() == 0:
+            columns = ['Time']
+        else:
+            device_to_sweep = self.combo_to_sweep['value'][self.combo_to_sweep.current()]
+            parameter_to_sweep = self.sweep_options['value'][self.sweep_options.current()]
+            columns = ['Time', device_to_sweep + parameter_to_sweep]   
+        for device in self.list_to_read:
+            for read_parameter in getattr(globals()[types_of_devices[list_of_devices.index(device)]](), 'get_options'):
+                columns.append(device + read_parameter)
+        
+        #fixing sweeper parmeters
+        min_sweep = self.entry_min.get()
+        max_sweep = self.entry_max.get()
+        ratio_sweep = self.entry_ratio.get()
+        delay_factor = self.entry_delay_factor.get()
+        sweeper_flag = True
+        
+        Sweeper_write(device_to_sweep = device_to_sweep, 
+                      parameter_to_sweep = parameter_to_sweep,
+                      min_sweep = min_sweep, max_sweep = max_sweep,
+                      ratio_sweep = ratio_sweep, delay_factor = delay_factor,
+                      devices_to_read = devices_to_read,
+                      filename_sweep = filename_sweep, 
+                      columns = columns, sweeper_flag = sweeper_flag)
+
+class Sweeper_write(threading.Thread):
+     
+    def __init__(self, device_to_sweep, parameter_to_sweep, min_sweep, 
+                 max_sweep, ratio_sweep, delay_factor, devices_to_read, filename_sweep,
+                 columns, sweeper_flag):
+        
+        threading.Thread.__init__(self)
+        self.device_to_sweep = device_to_sweep 
+        self.parameter_to_sweep = parameter_to_sweep
+        self.min_sweep = float(min_sweep) 
+        self.max_sweep = float(max_sweep)
+        self.ratio_sweep = float(ratio_sweep)
+        self.delay_factor = float(delay_factor)
+        self.devices_to_read = devices_to_read
+        self.filename_sweep = filename_sweep
+        self.value = float(min_sweep)
+        self.columns = columns
+        self.sweeper_flag = sweeper_flag
+        try:
+            self.step = (float(max_sweep) - float(min_sweep)) / 100
+        except ValueError:
+            self.step = 0
+        try:
+            threading.Thread.__init__(self)
+            self.daemon = True
+            self.start()
+        except NameError:
+            pass
+        
+    def run(self):
+        if self.sweeper_flag == True:
+            dataframe = pd.DataFrame(columns = self.columns)
+            dataframe.to_csv(self.filename_sweep, index = False)
+            print(self.device_to_sweep)
+            print(self.parameter_to_sweep)
+            while True and self.value < self.max_sweep:
+                if self.device_to_sweep == 'Time':
+                    dataframe = [time.process_time() - zero_time]
+                else:
+                    dataframe = [time.process_time() - zero_time]
+                    #sweep process here
+                    ###################
+                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep)]](adress = self.device_to_sweep), 'set_' + str(self.parameter_to_sweep))(value = self.value)
+                    self.value += self.step
+                    time.sleep((self.max_sweep - self.min_sweep) / self.ratio_sweep / 100)
+                    ###################
+                    dataframe.append(self.value)
+                for device in self.devices_to_read:
+                    for option in getattr(globals()[types_of_devices[list_of_devices.index(device)]](adress = device), 'get_options'):
+                        dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(device)]](adress = device), option)()) 
+                print(self.devices_to_read)
+                    
+                with open(self.filename_sweep, 'a') as f_object:
+                    try:
+                        writer_object = writer(f_object)
+                        writer_object.writerow(dataframe)
+                        f_object.close()
+                    except KeyboardInterrupt():
+                        f_object.close()
+                        
         
 class Graph(tk.Frame):
     
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-        label = tk.Label(self, text = 'graph', font = LARGE_FONT)
+        label = tk.Label(self, text = 'Graph', font = LARGE_FONT)
         label.pack(pady = 10, padx = 10)
         
         button = ttk.Button(self, text = 'Back to Home', 
@@ -791,7 +1127,7 @@ def main():
     write_data()
     #write_AUX()
     app = spectrometer()
-    ani = animation.FuncAnimation(fig, animate, interval = interval)#, fargs = (app,))
+    ani = animation.FuncAnimation(fig, animate, interval = interval)
     app.mainloop()
     while True:
         pass
