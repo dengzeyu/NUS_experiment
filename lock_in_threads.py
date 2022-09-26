@@ -59,12 +59,15 @@ columns = []
 
 #variables for plotting
 
-x1_data = ''
-y1_data = ''
-x2_data = ''
-y2_data = ''
-x3_data = ''
-y3_data = ''
+x1_data = []
+y1_data = []
+x2_data = []
+y2_data = []
+x3_data = []
+y3_data = []
+x4_data = []
+y4_data = []
+z4_data = [[]]
 
 class lock_in():
     
@@ -520,37 +523,60 @@ class write_config_channels(threading.Thread):
 
 zero_time = time.process_time()
 
-#defining window initial parameters
-fig = Figure(figsize = (6, 2.5), dpi = 300)
+#defining plots initial parameters
+fig221 = Figure(figsize = (0.35, 0.4), dpi = 300).add_subplot(111)
+fig222 = Figure(figsize = (0.35, 0.4), dpi = 300).add_subplot(111)
+fig223 = Figure(figsize = (0.35, 0.4), dpi = 300).add_subplot(111)
+fig224 = Figure(figsize = (0.35, 0.4), dpi = 300).add_subplot(111)
 
 #defining subplots location
 
-
-ax1 = fig.add_subplot(221)
-ax1.set_xlabel('')
-ax1.set_ylabel('')
-ax2 = fig.add_subplot(222)
-ax2.set_xlabel('')
-ax2.set_ylabel('')
-ax3 = fig.add_subplot(223)
-ax3.set_xlabel(r'')
-ax3.set_ylabel(r'')
-ax4 = fig.add_subplot(224)
-ax4.set_xlabel(r'')
-ax4.set_ylabel(r'')
-
-def animate(i):
+def animate221(i):
 #function to animate graph on each step    
-    columns = pd.read_csv(filename_sweep).columns
+    global x1
+    global y1
     try:    
-        ax1.clear()
-        ax1.plot(x1, y1, '-', lw = 1, color = 'blue')
-        
-        ax2.clear()
-        ax2.plot(x2, y2, '-', lw = 1, color = 'crimson')
-        
-        ax3.clear()
-        ax3.plot(x3, y3, '-', lw = 1, color = 'green')
+        fig221.clear()
+        fig221.plot(x1, y1, '-', lw = 1, color = 'darkblue')
+    except:
+        pass
+    
+def animate222(i):
+#function to animate graph on each step    
+    global x2
+    global y2
+    try:    
+        fig222.clear()
+        fig222.plot(x2, y2, '-', lw = 1, color = 'crimson')
+    except:
+        pass
+    
+def animate223(i):
+#function to animate graph on each step    
+    global x3
+    global y3
+    try:    
+        fig223.clear()
+        fig223.plot(x3, y3, '-', lw = 1, color = 'darkgreen')
+    except:
+        pass
+
+def animate224(i):
+#function to animate graph on each step    
+    global x4
+    global y4
+    global z4
+    try:   
+        fig224.clear()
+        colorbar = fig224.imshow(z4, interpolation ='nearest')
+        fig224.colorbar(colorbar)
+        try:
+            fig224.yticks(np.arange(x4.shape[0], step = x4.shape[0] // 10), 
+                          round(x4[::x4.shape[0] // 10], 2))
+            fig224.xticks(np.arange(y4.shape[0], step = y4.shape[0] // 10), 
+                          round(y4[::y4.shape[0] // 10], 2))
+        except ZeroDivisionError or ValueError:
+            pass
     except:
         pass
         
@@ -1381,14 +1407,68 @@ class Graph(tk.Frame):
                             command = lambda: controller.show_frame(StartPage))
         button.pack()
         
-        canvas = FigureCanvasTkAgg(fig, self)
-        canvas.draw()
-        canvas.get_tk_widget().pack(side = tk.TOP, fill = tk.BOTH, expand = True)
+        plot221 = FigureCanvasTkAgg(fig221, self)
+        plot221.draw()
+        plot221.get_tk_widget().place(padx = 0.05, pady = 0.05)
         
-        toolbar = NavigationToolbar2Tk(canvas, self)
-        toolbar.update()
-        toolbar.pack(side=tk.BOTTOM, fill=tk.BOTH)
-        canvas._tkcanvas.pack(side = tk.TOP, fill = tk.BOTH, expand = True)
+        toolbar221 = NavigationToolbar2Tk(plot221, self)
+        toolbar221.update()
+        toolbar221.place(padx = 0.05, pady = 0.35)
+        #plot221._tkcanvas.place(padx = 0.05, pady = 0.05)
+        
+        combo_x1 = ttk.Combobox(self, values = columns)
+        try:
+            combo_x1.current(0)
+        except IndexError:
+            pass
+        combo_x1.bind("<<ComboboxSelected>>", self.x1_update)
+        combo_x1.place(padx = 0.1, pady = 0.4)
+        
+        combo_y1 = ttk.Combobox(self, values = columns)
+        try:
+            combo_y1.current(0)
+        except IndexError:
+            pass
+        combo_y1.bind("<<ComboboxSelected>>", self.y1_update)
+        combo_y1.place(padx = 0.1, pady = 0.45)
+        
+        plot222 = FigureCanvasTkAgg(fig222, self)
+        plot222.draw()
+        plot222.get_tk_widget().place(padx = 0.55, pady = 0.05)
+        
+        toolbar222 = NavigationToolbar2Tk(plot222, self)
+        toolbar222.update()
+        toolbar222.place(padx = 0.55, pady = 0.35)
+        #plot222._tkcanvas.place(padx = 0.55, pady = 0.05)
+        
+        plot223 = FigureCanvasTkAgg(fig223, self)
+        plot223.draw()
+        plot223.get_tk_widget().place(padx = 0.05, pady = 0.55)
+        
+        toolbar223 = NavigationToolbar2Tk(plot223, self)
+        toolbar223.update()
+        toolbar223.place(padx = 0.05, pady = 0.85)
+        #plot221._tkcanvas.place(padx = 0.05, pady = 0.55)
+        
+        plot224 = FigureCanvasTkAgg(fig224, self)
+        plot224.draw()
+        plot224.get_tk_widget().place(padx = 0.55, pady = 0.55)
+        
+        toolbar224 = NavigationToolbar2Tk(plot224, self)
+        toolbar224.update()
+        toolbar224.place(padx = 0.55, pady = 0.85)
+        #plot224._tkcanvas.place(padx = 0.55, pady = 0.55)
+    
+    def x1_update(self):
+        global x1
+        global filename_sweep
+        x1 = pd.read_csv(filename_sweep)[columns[self.combo_x1.current()]].values
+        
+    def y1_update(self):
+        global y1
+        global filename_sweep
+        y1 = pd.read_csv(filename_sweep)[columns[self.combo_y1.current()]].values
+        
         
 interval = 100
 
@@ -1396,7 +1476,10 @@ def main():
     write_config_parameters()
     write_config_channels()
     app = spectrometer()
-    ani = animation.FuncAnimation(fig, animate, interval = interval)
+    ani221 = animation.FuncAnimation(fig221, animate221, interval = interval)
+    ani222 = animation.FuncAnimation(fig222, animate222, interval = interval)
+    ani223 = animation.FuncAnimation(fig223, animate223, interval = interval)
+    ani224 = animation.FuncAnimation(fig224, animate224, interval = 3 * interval)
     app.mainloop()
     while True:
         pass
