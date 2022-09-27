@@ -524,10 +524,24 @@ class write_config_channels(threading.Thread):
 zero_time = time.process_time()
 
 #defining plots initial parameters
-fig221 = Figure(figsize = (0.35, 0.4), dpi = 300).add_subplot(111)
-fig222 = Figure(figsize = (0.35, 0.4), dpi = 300).add_subplot(111)
-fig223 = Figure(figsize = (0.35, 0.4), dpi = 300).add_subplot(111)
-fig224 = Figure(figsize = (0.35, 0.4), dpi = 300).add_subplot(111)
+labelsize = 4
+pad = 1
+
+fig221 = Figure(figsize = (1.8, 1), dpi = 300)
+ax1 = fig221.add_subplot(111)
+ax1.tick_params(axis='both', which='major', pad=pad, labelsize = labelsize)
+
+fig222 = Figure(figsize = (1.8, 1), dpi = 300)
+ax2 = fig222.add_subplot(111)
+ax2.tick_params(axis='both', which='major', pad=pad, labelsize = labelsize)
+
+fig223 = Figure(figsize = (1.8, 1), dpi = 300)
+ax3 = fig223.add_subplot(111)
+ax3.tick_params(axis='both', which='major', pad=pad, labelsize = labelsize)
+
+fig224 = Figure(figsize = (1.8, 1), dpi = 300)
+ax4 = fig224.add_subplot(111)
+ax4.tick_params(axis='both', which='major', pad=pad, labelsize = labelsize)
 
 #defining subplots location
 
@@ -536,8 +550,8 @@ def animate221(i):
     global x1
     global y1
     try:    
-        fig221.clear()
-        fig221.plot(x1, y1, '-', lw = 1, color = 'darkblue')
+        ax1.clear()
+        ax1.plot(x1, y1, '-', lw = 1, color = 'darkblue')
     except:
         pass
     
@@ -546,8 +560,8 @@ def animate222(i):
     global x2
     global y2
     try:    
-        fig222.clear()
-        fig222.plot(x2, y2, '-', lw = 1, color = 'crimson')
+        ax2.clear()
+        ax2.plot(x2, y2, '-', lw = 1, color = 'crimson')
     except:
         pass
     
@@ -556,8 +570,8 @@ def animate223(i):
     global x3
     global y3
     try:    
-        fig223.clear()
-        fig223.plot(x3, y3, '-', lw = 1, color = 'darkgreen')
+        ax3.clear()
+        ax3.plot(x3, y3, '-', lw = 1, color = 'darkgreen')
     except:
         pass
 
@@ -567,13 +581,13 @@ def animate224(i):
     global y4
     global z4
     try:   
-        fig224.clear()
-        colorbar = fig224.imshow(z4, interpolation ='nearest')
-        fig224.colorbar(colorbar)
+        ax4.clear()
+        colorbar = ax4.imshow(z4, interpolation ='nearest')
+        ax4.colorbar(colorbar)
         try:
-            fig224.yticks(np.arange(x4.shape[0], step = x4.shape[0] // 10), 
+            ax4.yticks(np.arange(x4.shape[0], step = x4.shape[0] // 10), 
                           round(x4[::x4.shape[0] // 10], 2))
-            fig224.xticks(np.arange(y4.shape[0], step = y4.shape[0] // 10), 
+            ax4.xticks(np.arange(y4.shape[0], step = y4.shape[0] // 10), 
                           round(y4[::y4.shape[0] // 10], 2))
         except ZeroDivisionError or ValueError:
             pass
@@ -1394,81 +1408,203 @@ class Sweeper_write(threading.Thread):
                         f_object.close()
                     except KeyboardInterrupt():
                         f_object.close()
-                
+ 
+class VerticalNavigationToolbar2Tk(NavigationToolbar2Tk):
+   def __init__(self, canvas, window):
+      super().__init__(canvas, window, pack_toolbar=False)
+
+   # override _Button() to re-pack the toolbar button in vertical direction
+   def _Button(self, text, image_file, toggle, command):
+      b = super()._Button(text, image_file, toggle, command)
+      b.pack(side=tk.TOP) # re-pack button in vertical direction
+      return b
+
+   # override _Spacer() to create vertical separator
+   def _Spacer(self):
+      s = tk.Frame(self, width=26, relief=tk.RIDGE, bg="DarkGray", padx=2)
+      s.pack(side=tk.TOP, pady=5) # pack in vertical direction
+      return s
+
+   # disable showing mouse position in toolbar
+   def set_message(self, s):
+      pass
         
 class Graph(tk.Frame):
     
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-        label = tk.Label(self, text = 'Graph', font = LARGE_FONT)
-        label.pack(pady = 10, padx = 10)
         
         button = ttk.Button(self, text = 'Back to Home', 
                             command = lambda: controller.show_frame(StartPage))
-        button.pack()
+        button.place(relx = 0.9, rely = 0.46)
         
         plot221 = FigureCanvasTkAgg(fig221, self)
         plot221.draw()
-        plot221.get_tk_widget().place(padx = 0.05, pady = 0.05)
+        plot221.get_tk_widget().place(relx = 0.02, rely = 0)
         
-        toolbar221 = NavigationToolbar2Tk(plot221, self)
+        toolbar221 = VerticalNavigationToolbar2Tk(plot221, self)
         toolbar221.update()
-        toolbar221.place(padx = 0.05, pady = 0.35)
-        #plot221._tkcanvas.place(padx = 0.05, pady = 0.05)
+        toolbar221.place(relx = 0.45, rely = 0)
+        plot221._tkcanvas.place(relx = 0.02, rely = 0)
+        
+        label_x1 = tk.Label(self, text = 'x', font = LARGE_FONT)
+        label_x1.place(relx = 0.02, rely = 0.455)
+        
+        label_y1 = tk.Label(self, text = 'y', font = LARGE_FONT)
+        label_y1.place(relx = 0.15, rely = 0.455)
         
         combo_x1 = ttk.Combobox(self, values = columns)
         try:
             combo_x1.current(0)
-        except IndexError:
+        except tk.TclError:
             pass
-        combo_x1.bind("<<ComboboxSelected>>", self.x1_update)
-        combo_x1.place(padx = 0.1, pady = 0.4)
+        combo_x1.bind("<<ComboboxSelected>>", lambda: self.x1_update)
+        combo_x1.place(relx = 0.035, rely = 0.46)
         
         combo_y1 = ttk.Combobox(self, values = columns)
         try:
             combo_y1.current(0)
-        except IndexError:
+        except tk.TclError:
             pass
-        combo_y1.bind("<<ComboboxSelected>>", self.y1_update)
-        combo_y1.place(padx = 0.1, pady = 0.45)
+        combo_y1.bind("<<ComboboxSelected>>", lambda: self.y1_update)
+        combo_y1.place(relx = 0.165, rely = 0.46)
         
         plot222 = FigureCanvasTkAgg(fig222, self)
         plot222.draw()
-        plot222.get_tk_widget().place(padx = 0.55, pady = 0.05)
+        plot222.get_tk_widget().place(relx = 0.52, rely = 0)
         
-        toolbar222 = NavigationToolbar2Tk(plot222, self)
+        toolbar222 = VerticalNavigationToolbar2Tk(plot222, self)
         toolbar222.update()
-        toolbar222.place(padx = 0.55, pady = 0.35)
-        #plot222._tkcanvas.place(padx = 0.55, pady = 0.05)
+        toolbar222.place(relx = 0.95, rely = 0)
+        plot222._tkcanvas.place(relx = 0.52, rely = 0)
+        
+        label_x2 = tk.Label(self, text = 'x', font = LARGE_FONT)
+        label_x2.place(relx = 0.52, rely = 0.455)
+        
+        label_y2 = tk.Label(self, text = 'y', font = LARGE_FONT)
+        label_y2.place(relx = 0.65, rely = 0.455)
+        
+        combo_x2 = ttk.Combobox(self, values = columns)
+        try:
+            combo_x2.current(0)
+        except tk.TclError:
+            pass
+        combo_x2.bind("<<ComboboxSelected>>", lambda: self.x2_update)
+        combo_x2.place(relx = 0.535, rely = 0.46)
+        
+        combo_y2 = ttk.Combobox(self, values = columns)
+        try:
+            combo_y2.current(0)
+        except tk.TclError:
+            pass
+        combo_y2.bind("<<ComboboxSelected>>", lambda: self.y2_update)
+        combo_y2.place(relx = 0.665, rely = 0.46)
         
         plot223 = FigureCanvasTkAgg(fig223, self)
         plot223.draw()
-        plot223.get_tk_widget().place(padx = 0.05, pady = 0.55)
+        plot223.get_tk_widget().place(relx = 0.02, rely = 0.50)
         
-        toolbar223 = NavigationToolbar2Tk(plot223, self)
+        toolbar223 = VerticalNavigationToolbar2Tk(plot223, self)
         toolbar223.update()
-        toolbar223.place(padx = 0.05, pady = 0.85)
-        #plot221._tkcanvas.place(padx = 0.05, pady = 0.55)
+        toolbar223.place(relx = 0.45, rely = 0.5)
+        plot223._tkcanvas.place(relx = 0.02, rely = 0.5)
+        
+        label_x3 = tk.Label(self, text = 'x', font = LARGE_FONT)
+        label_x3.place(relx = 0.02, rely = 0.955)
+        
+        label_y3 = tk.Label(self, text = 'y', font = LARGE_FONT)
+        label_y3.place(relx = 0.15, rely = 0.955)
+        
+        combo_x3 = ttk.Combobox(self, values = columns)
+        try:
+            combo_x3.current(0)
+        except tk.TclError:
+            pass
+        combo_x3.bind("<<ComboboxSelected>>", lambda: self.x3_update)
+        combo_x3.place(relx = 0.035, rely = 0.96)
+        
+        combo_y3 = ttk.Combobox(self, values = columns)
+        try:
+            combo_y3.current(0)
+        except tk.TclError:
+            pass
+        combo_y3.bind("<<ComboboxSelected>>", lambda: self.y3_update)
+        combo_y3.place(relx = 0.165, rely = 0.96)
         
         plot224 = FigureCanvasTkAgg(fig224, self)
         plot224.draw()
-        plot224.get_tk_widget().place(padx = 0.55, pady = 0.55)
+        plot224.get_tk_widget().place(relx = 0.52, rely = 0.5)
         
-        toolbar224 = NavigationToolbar2Tk(plot224, self)
+        toolbar224 = VerticalNavigationToolbar2Tk(plot224, self)
         toolbar224.update()
-        toolbar224.place(padx = 0.55, pady = 0.85)
-        #plot224._tkcanvas.place(padx = 0.55, pady = 0.55)
+        toolbar224.place(relx = 0.95, rely = 0.5)
+        plot224._tkcanvas.place(relx = 0.52, rely = 0.5)
+        
+        label_x4 = tk.Label(self, text = 'x', font = LARGE_FONT)
+        label_x4.place(relx = 0.52, rely = 0.955)
+        
+        label_y4 = tk.Label(self, text = 'y', font = LARGE_FONT)
+        label_y4.place(relx = 0.65, rely = 0.955)
+        
+        label_z4 = tk.Label(self, text = 'z', font = LARGE_FONT)
+        label_z4.place(relx = 0.78, rely = 0.955)
+        
+        combo_x4 = ttk.Combobox(self, values = columns)
+        try:
+            combo_x2.current(0)
+        except tk.TclError:
+            pass
+        combo_x4.bind("<<ComboboxSelected>>")
+        combo_x4.place(relx = 0.535, rely = 0.96)
+        
+        combo_y4 = ttk.Combobox(self, values = columns)
+        try:
+            combo_y4.current(0)
+        except tk.TclError:
+            pass
+        combo_y4.bind("<<ComboboxSelected>>")
+        combo_y4.place(relx = 0.665, rely = 0.96)
     
-    def x1_update(self):
+        combo_z4 = ttk.Combobox(self, values = columns)
+        try:
+            combo_z4.current(0)
+        except tk.TclError:
+            pass
+        combo_z4.bind("<<ComboboxSelected>>")
+        combo_z4.place(relx = 0.795, rely = 0.96)    
+    
+    def x1_update(self, event):
         global x1
         global filename_sweep
         x1 = pd.read_csv(filename_sweep)[columns[self.combo_x1.current()]].values
         
-    def y1_update(self):
+    def y1_update(self, event):
         global y1
         global filename_sweep
         y1 = pd.read_csv(filename_sweep)[columns[self.combo_y1.current()]].values
         
+    def x2_update(self, event):
+        global x2
+        global filename_sweep
+        x2 = pd.read_csv(filename_sweep)[columns[self.combo_x2.current()]].values
+        
+    def y2_update(self, event):
+        global y2
+        global filename_sweep
+        y2 = pd.read_csv(filename_sweep)[columns[self.combo_y2.current()]].values
+        
+    def x3_update(self, event):
+        global x3
+        global filename_sweep
+        x3 = pd.read_csv(filename_sweep)[columns[self.combo_x3.current()]].values
+        
+    def y3_update(self, event):
+        global y3
+        global filename_sweep
+        y3 = pd.read_csv(filename_sweep)[columns[self.combo_y3.current()]].values
+        
+    
+    
         
 interval = 100
 
