@@ -32,6 +32,7 @@ temp = rm.open_resource('ASRL3::INSTR', baud_rate = 115200,
                         flow_control = constants.VI_ASRL_FLOW_NONE,
                         write_termination = '\r', read_termination = '\r')
 
+
 #Write command to a device and get it's output
 def get(device, command):
     #return np.round(np.random.random(1), 1)
@@ -46,15 +47,29 @@ def var2str(var, vars_data = locals()):
 
 #assigning variables for sweeping
 
-device_to_sweep = 'Time'
-parameter_to_sweep = ''
-min_sweep = 0 
-max_sweep = 0 
-ratio_sweep = 1
-delay_factor = 0
+device_to_sweep1 = 'Time'
+device_to_sweep2 = 'Time'
+device_to_sweep3 = 'Time'
+parameter_to_sweep1 = ''
+parameter_to_sweep2 = ''
+parameter_to_sweep3 = ''
+min_sweep1 = 0 
+max_sweep1 = 0 
+ratio_sweep1 = 1
+delay_factor1 = 0
+min_sweep2 = 0 
+max_sweep2 = 0 
+ratio_sweep2 = 1
+delay_factor2 = 0
+min_sweep3 = 0 
+max_sweep3 = 0 
+ratio_sweep3 = 1
+delay_factor3 = 0
 filename_sweep =  r'C:\NUS\Transport lab\Test\data_files\sweep' + datetime.today().strftime(
                                 '%H_%M_%d_%m_%Y') + '.csv'
-sweeper_flag = False
+sweeper_flag1 = False
+sweeper_flag2 = False
+sweeper_flag3 = False
 columns = []
 
 #variables for plotting
@@ -595,7 +610,7 @@ def animate224(i):
         pass
         
 
-class spectrometer(tk.Tk):
+class Universal_frontend(tk.Tk):
     
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
@@ -635,10 +650,10 @@ class StartPage(tk.Frame):
         sweeper1d_button.place(relx = 0.1, rely = 0.4)
         
         sweeper2d_button = ttk.Button(self, text = '2D - sweeper', command = lambda: controller.show_frame(Sweeper2d))
-        sweeper2d_button.place(relx = 0.15, rely = 0.4)
+        sweeper2d_button.place(relx = 0.2, rely = 0.4)
         
         sweeper3d_button = ttk.Button(self, text = '3D - sweeper', command = lambda: controller.show_frame(Sweeper3d))
-        sweeper3d_button.place(relx = 0.15, rely = 0.4)
+        sweeper3d_button.place(relx = 0.3, rely = 0.4)
         
         graph_button = ttk.Button(self, text = 'Graph', command = lambda: controller.show_frame(Graph))
         graph_button.place(relx = 0.1, rely = 0.7)
@@ -1066,15 +1081,17 @@ class Sweeper1d(tk.Frame):
                     
     def start_sweeping(self):
         
-        global device_to_sweep
-        global parameter_to_sweep
-        global min_sweep 
-        global max_sweep 
-        global ratio_sweep
-        global delay_factor
+        global device_to_sweep1
+        global parameter_to_sweep1
+        global min_sweep1 
+        global max_sweep1 
+        global ratio_sweep1
+        global delay_factor1
         global parameters_to_read 
         global filename_sweep 
-        global sweeper_flag 
+        global sweeper_flag1
+        global sweeper_flag2
+        global sweeper_flag3
         global columns
         
         #asking multichoise to get parameters to read
@@ -1089,26 +1106,22 @@ class Sweeper1d(tk.Frame):
         if self.combo_to_sweep.current() == 0:
             columns = ['Time']
         else:
-            device_to_sweep = self.combo_to_sweep['value'][self.combo_to_sweep.current()]
-            parameter_to_sweep = self.sweep_options['value'][self.sweep_options.current()]
-            columns = ['Time', device_to_sweep + '.' + parameter_to_sweep]   
+            device_to_sweep1 = self.combo_to_sweep['value'][self.combo_to_sweep.current()]
+            parameter_to_sweep1 = self.sweep_options['value'][self.sweep_options.current()]
+            columns = ['Time', device_to_sweep1 + '.' + parameter_to_sweep1]   
         for option in parameters_to_read:
             columns.append(option)
         
         #fixing sweeper parmeters
-        min_sweep = self.entry_min.get()
-        max_sweep = self.entry_max.get()
-        ratio_sweep = self.entry_ratio.get()
-        delay_factor = self.entry_delay_factor.get()
-        sweeper_flag = True
+        min_sweep1 = self.entry_min.get()
+        max_sweep1 = self.entry_max.get()
+        ratio_sweep1 = self.entry_ratio.get()
+        delay_factor1 = self.entry_delay_factor.get()
+        sweeper_flag1 = True
+        sweeper_flag2 = False
+        sweeper_flag3 = False
         
-        Sweeper_write(device_to_sweep = device_to_sweep, 
-                      parameter_to_sweep = parameter_to_sweep,
-                      min_sweep = min_sweep, max_sweep = max_sweep,
-                      ratio_sweep = ratio_sweep, delay_factor = delay_factor,
-                      parameters_to_read = parameters_to_read,
-                      filename_sweep = filename_sweep, 
-                      columns = columns, sweeper_flag = sweeper_flag)
+        Sweeper_write()
         
 class Sweeper2d(tk.Frame):
     
@@ -1122,77 +1135,128 @@ class Sweeper2d(tk.Frame):
                             command = lambda: controller.show_frame(StartPage))
         button_home.pack()
         
-        label_to_sweep = tk.Label(self, text = 'To sweep:', font = LARGE_FONT)
-        label_to_sweep.place(relx = 0.15, rely = 0.12)
+        label_to_sweep1 = tk.Label(self, text = 'To sweep:', font = LARGE_FONT)
+        label_to_sweep1.place(relx = 0.15, rely = 0.12)
+        
+        label_to_sweep2 = tk.Label(self, text = 'To sweep:', font = LARGE_FONT)
+        label_to_sweep2.place(relx = 0.3, rely = 0.12)
         
         label_to_read = tk.Label(self, text = 'To read:', font = LARGE_FONT)
-        label_to_read.place(relx = 0.3, rely = 0.12)
+        label_to_read.place(relx = 0.45, rely = 0.12)
         
-        self.combo_to_sweep = ttk.Combobox(self, value = ['Time', *list_of_devices])
-        self.combo_to_sweep.current(0)
-        self.combo_to_sweep.bind("<<ComboboxSelected>>", self.update_sweep_parameters)
-        self.combo_to_sweep.place(relx = 0.15, rely = 0.16)
+        self.combo_to_sweep1 = ttk.Combobox(self, value = list_of_devices)
+        self.combo_to_sweep1.current(0)
+        self.combo_to_sweep1.bind("<<ComboboxSelected>>", self.update_sweep_parameters1)
+        self.combo_to_sweep1.place(relx = 0.15, rely = 0.16)
+        
+        self.combo_to_sweep2 = ttk.Combobox(self, value = list_of_devices)
+        self.combo_to_sweep2.current(0)
+        self.combo_to_sweep2.bind("<<ComboboxSelected>>", self.update_sweep_parameters2)
+        self.combo_to_sweep2.place(relx = 0.3, rely = 0.16)
         
         devices = tk.StringVar()
         devices.set(value = parameters_to_read)
         self.lstbox_to_read = tk.Listbox(self, listvariable = devices, 
                             selectmode = 'multiple', width=20, 
                             height = len(parameters_to_read) * 2)
-        self.lstbox_to_read.place(relx = 0.3, rely = 0.16)
+        self.lstbox_to_read.place(relx = 0.45, rely = 0.16)
         
-        self.sweep_options = ttk.Combobox(self)
-        self.sweep_options.place(relx = 0.15, rely = 0.2)
+        self.sweep_options1 = ttk.Combobox(self)
+        self.sweep_options1.place(relx = 0.15, rely = 0.2)
         
-        label_min = tk.Label(self, text = 'MIN', font = LARGE_FONT)
-        label_min.place(relx = 0.12, rely = 0.24)
+        self.sweep_options2 = ttk.Combobox(self)
+        self.sweep_options2.place(relx = 0.3, rely = 0.2)
         
-        label_max = tk.Label(self, text = 'MAX', font = LARGE_FONT)
-        label_max.place(relx = 0.12, rely = 0.28)
+        label_min1 = tk.Label(self, text = 'MIN', font = LARGE_FONT)
+        label_min1.place(relx = 0.12, rely = 0.24)
         
-        label_step = tk.Label(self, text = 'Ratio, \n Δ/s', font = LARGE_FONT)
-        label_step.place(relx = 0.12, rely = 0.32)
+        label_max1 = tk.Label(self, text = 'MAX', font = LARGE_FONT)
+        label_max1.place(relx = 0.12, rely = 0.28)
         
-        self.entry_min = tk.Entry(self)
-        self.entry_min.place(relx = 0.17, rely = 0.24)
+        label_step1 = tk.Label(self, text = 'Ratio, \n Δ/s', font = LARGE_FONT)
+        label_step1.place(relx = 0.12, rely = 0.32)
         
-        self.entry_max = tk.Entry(self)
-        self.entry_max.place(relx = 0.17, rely = 0.28)
+        self.entry_min1 = tk.Entry(self)
+        self.entry_min1.place(relx = 0.17, rely = 0.24)
         
-        self.entry_ratio = tk.Entry(self)
-        self.entry_ratio.place(relx = 0.17, rely = 0.32)
+        self.entry_max1 = tk.Entry(self)
+        self.entry_max1.place(relx = 0.17, rely = 0.28)
         
-        label_delay_factor = tk.Label(self, text = 'Delay factor, s', justify=tk.LEFT, font = LARGE_FONT)
-        label_delay_factor.place(relx = 0.12, rely = 0.4)
+        self.entry_ratio1 = tk.Entry(self)
+        self.entry_ratio1.place(relx = 0.17, rely = 0.32)
         
-        self.entry_delay_factor = tk.Entry(self)
-        self.entry_delay_factor.place(relx = 0.12, rely = 0.46)
+        label_delay_factor1 = tk.Label(self, text = 'Delay factor, s', justify=tk.LEFT, font = LARGE_FONT)
+        label_delay_factor1.place(relx = 0.12, rely = 0.4)
+        
+        self.entry_delay_factor1 = tk.Entry(self)
+        self.entry_delay_factor1.place(relx = 0.12, rely = 0.46)
+        
+        label_min2 = tk.Label(self, text = 'MIN', font = LARGE_FONT)
+        label_min2.place(relx = 0.27, rely = 0.24)
+        
+        label_max2 = tk.Label(self, text = 'MAX', font = LARGE_FONT)
+        label_max2.place(relx = 0.27, rely = 0.28)
+        
+        label_step2 = tk.Label(self, text = 'Ratio, \n Δ/s', font = LARGE_FONT)
+        label_step2.place(relx = 0.27, rely = 0.32)
+        
+        self.entry_min2 = tk.Entry(self)
+        self.entry_min2.place(relx = 0.32, rely = 0.24)
+        
+        self.entry_max2 = tk.Entry(self)
+        self.entry_max2.place(relx = 0.32, rely = 0.28)
+        
+        self.entry_ratio2 = tk.Entry(self)
+        self.entry_ratio2.place(relx = 0.32, rely = 0.32)
+        
+        label_delay_factor2 = tk.Label(self, text = 'Delay factor, s', justify=tk.LEFT, font = LARGE_FONT)
+        label_delay_factor2.place(relx = 0.27, rely = 0.4)
+        
+        self.entry_delay_factor2 = tk.Entry(self)
+        self.entry_delay_factor2.place(relx = 0.27, rely = 0.46)
         
         button_start_sweeping = ttk.Button(self, text = "Start sweeping", command = lambda: self.start_sweeping())
         button_start_sweeping.place(relx = 0.7, rely = 0.7)
         
-    def update_sweep_parameters(self, event, interval = 1000):
-        if self.combo_to_sweep.current() == 0:
-            self.sweep_options['value'] = ['']
-            self.sweep_options.current(0)
-            self.sweep_options.after(interval)
-            pass
+    def update_sweep_parameters1(self, event, interval = 1000):
+        class_of_sweeper_device1 = types_of_devices[self.combo_to_sweep1.current()]
+        if class_of_sweeper_device1 != 'Not a class':
+            self.sweep_options1['value'] = getattr(globals()[class_of_sweeper_device1](), 'set_options')
+            self.sweep_options1.after(interval)
         else:
-            class_of_sweeper_device = types_of_devices[self.combo_to_sweep.current() - 1]
-            if class_of_sweeper_device != 'Not a class':
-                self.sweep_options['value'] = getattr(globals()[class_of_sweeper_device](), 'set_options')
-                self.sweep_options.after(interval)
+            self.sweep_options1['value'] = ['']
+            self.sweep_options1.current(0)
+            self.sweep_options1.after(interval)
+
+    def update_sweep_parameters2(self, event, interval = 1000):
+        class_of_sweeper_device2 = types_of_devices[self.combo_to_sweep2.current()]
+        if class_of_sweeper_device2 != 'Not a class':
+            self.sweep_options2['value'] = getattr(globals()[class_of_sweeper_device2](), 'set_options')
+            self.sweep_options2.after(interval)
+        else:
+            self.sweep_options2['value'] = ['']
+            self.sweep_options2.current(0)
+            self.sweep_options2.after(interval)
                     
     def start_sweeping(self):
         
-        global device_to_sweep
-        global parameter_to_sweep
-        global min_sweep 
-        global max_sweep 
-        global ratio_sweep
-        global delay_factor
+        global device_to_sweep1
+        global device_to_sweep2
+        global parameter_to_sweep1
+        global parameter_to_sweep2
+        global min_sweep1 
+        global max_sweep1 
+        global ratio_sweep1
+        global delay_factor1
+        global min_sweep2 
+        global max_sweep2 
+        global ratio_sweep2
+        global delay_factor2
         global parameters_to_read 
         global filename_sweep 
-        global sweeper_flag 
+        global sweeper_flag1
+        global sweeper_flag2
+        global sweeper_flag3
         global columns
         
         #asking multichoise to get parameters to read
@@ -1204,29 +1268,28 @@ class Sweeper2d(tk.Frame):
         parameters_to_read = self.list_to_read
         
         #creating columns
-        if self.combo_to_sweep.current() == 0:
-            columns = ['Time']
-        else:
-            device_to_sweep = self.combo_to_sweep['value'][self.combo_to_sweep.current()]
-            parameter_to_sweep = self.sweep_options['value'][self.sweep_options.current()]
-            columns = ['Time', device_to_sweep + '.' + parameter_to_sweep]   
+        device_to_sweep1 = self.combo_to_sweep1['value'][self.combo_to_sweep1.current()]
+        parameter_to_sweep1 = self.sweep_options1['value'][self.sweep_options1.current()]
+        device_to_sweep2 = self.combo_to_sweep2['value'][self.combo_to_sweep2.current()]
+        parameter_to_sweep2 = self.sweep_options2['value'][self.sweep_options2.current()]
+        columns = ['Time', device_to_sweep1 + '.' + parameter_to_sweep1, device_to_sweep2 + '.' + parameter_to_sweep2]   
         for option in parameters_to_read:
             columns.append(option)
         
         #fixing sweeper parmeters
-        min_sweep = self.entry_min.get()
-        max_sweep = self.entry_max.get()
-        ratio_sweep = self.entry_ratio.get()
-        delay_factor = self.entry_delay_factor.get()
-        sweeper_flag = True
+        min_sweep1 = self.entry_min1.get()
+        max_sweep1 = self.entry_max1.get()
+        ratio_sweep1 = self.entry_ratio1.get()
+        delay_factor1 = self.entry_delay_factor1.get()
+        min_sweep2 = self.entry_min2.get()
+        max_sweep2 = self.entry_max2.get()
+        ratio_sweep2 = self.entry_ratio2.get()
+        delay_factor2 = self.entry_delay_factor2.get()
+        sweeper_flag1 = False
+        sweeper_flag2 = True
+        sweeper_flag3 = False
         
-        Sweeper_write(device_to_sweep = device_to_sweep, 
-                      parameter_to_sweep = parameter_to_sweep,
-                      min_sweep = min_sweep, max_sweep = max_sweep,
-                      ratio_sweep = ratio_sweep, delay_factor = delay_factor,
-                      parameters_to_read = parameters_to_read,
-                      filename_sweep = filename_sweep, 
-                      columns = columns, sweeper_flag = sweeper_flag)
+        Sweeper_write()
         
 class Sweeper3d(tk.Frame):
     
@@ -1240,77 +1303,178 @@ class Sweeper3d(tk.Frame):
                             command = lambda: controller.show_frame(StartPage))
         button_home.pack()
         
-        label_to_sweep = tk.Label(self, text = 'To sweep:', font = LARGE_FONT)
-        label_to_sweep.place(relx = 0.15, rely = 0.12)
+        label_to_sweep1 = tk.Label(self, text = 'To sweep:', font = LARGE_FONT)
+        label_to_sweep1.place(relx = 0.15, rely = 0.12)
+        
+        label_to_sweep2 = tk.Label(self, text = 'To sweep:', font = LARGE_FONT)
+        label_to_sweep2.place(relx = 0.3, rely = 0.12)
+        
+        label_to_sweep3 = tk.Label(self, text = 'To sweep:', font = LARGE_FONT)
+        label_to_sweep3.place(relx = 0.3, rely = 0.12)
         
         label_to_read = tk.Label(self, text = 'To read:', font = LARGE_FONT)
-        label_to_read.place(relx = 0.3, rely = 0.12)
+        label_to_read.place(relx = 0.6, rely = 0.12)
         
-        self.combo_to_sweep = ttk.Combobox(self, value = ['Time', *list_of_devices])
-        self.combo_to_sweep.current(0)
-        self.combo_to_sweep.bind("<<ComboboxSelected>>", self.update_sweep_parameters)
-        self.combo_to_sweep.place(relx = 0.15, rely = 0.16)
+        self.combo_to_sweep1 = ttk.Combobox(self, value = list_of_devices)
+        self.combo_to_sweep1.current(0)
+        self.combo_to_sweep1.bind("<<ComboboxSelected>>", self.update_sweep_parameters1)
+        self.combo_to_sweep1.place(relx = 0.15, rely = 0.16)
+        
+        self.combo_to_sweep2 = ttk.Combobox(self, value = list_of_devices)
+        self.combo_to_sweep2.current(0)
+        self.combo_to_sweep2.bind("<<ComboboxSelected>>", self.update_sweep_parameters2)
+        self.combo_to_sweep2.place(relx = 0.3, rely = 0.16)
+        
+        self.combo_to_sweep3 = ttk.Combobox(self, value = list_of_devices)
+        self.combo_to_sweep3.current(0)
+        self.combo_to_sweep3.bind("<<ComboboxSelected>>", self.update_sweep_parameters3)
+        self.combo_to_sweep3.place(relx = 0.45, rely = 0.16)
         
         devices = tk.StringVar()
         devices.set(value = parameters_to_read)
         self.lstbox_to_read = tk.Listbox(self, listvariable = devices, 
                             selectmode = 'multiple', width=20, 
                             height = len(parameters_to_read) * 2)
-        self.lstbox_to_read.place(relx = 0.3, rely = 0.16)
+        self.lstbox_to_read.place(relx = 0.6, rely = 0.16)
         
-        self.sweep_options = ttk.Combobox(self)
-        self.sweep_options.place(relx = 0.15, rely = 0.2)
+        self.sweep_options1 = ttk.Combobox(self)
+        self.sweep_options1.place(relx = 0.15, rely = 0.2)
         
-        label_min = tk.Label(self, text = 'MIN', font = LARGE_FONT)
-        label_min.place(relx = 0.12, rely = 0.24)
+        self.sweep_options2 = ttk.Combobox(self)
+        self.sweep_options2.place(relx = 0.3, rely = 0.2)
         
-        label_max = tk.Label(self, text = 'MAX', font = LARGE_FONT)
-        label_max.place(relx = 0.12, rely = 0.28)
+        self.sweep_options2 = ttk.Combobox(self)
+        self.sweep_options2.place(relx = 0.45, rely = 0.2)
         
-        label_step = tk.Label(self, text = 'Ratio, \n Δ/s', font = LARGE_FONT)
-        label_step.place(relx = 0.12, rely = 0.32)
+        label_min1 = tk.Label(self, text = 'MIN', font = LARGE_FONT)
+        label_min1.place(relx = 0.12, rely = 0.24)
         
-        self.entry_min = tk.Entry(self)
-        self.entry_min.place(relx = 0.17, rely = 0.24)
+        label_max1 = tk.Label(self, text = 'MAX', font = LARGE_FONT)
+        label_max1.place(relx = 0.12, rely = 0.28)
         
-        self.entry_max = tk.Entry(self)
-        self.entry_max.place(relx = 0.17, rely = 0.28)
+        label_step1 = tk.Label(self, text = 'Ratio, \n Δ/s', font = LARGE_FONT)
+        label_step1.place(relx = 0.12, rely = 0.32)
         
-        self.entry_ratio = tk.Entry(self)
-        self.entry_ratio.place(relx = 0.17, rely = 0.32)
+        self.entry_min1 = tk.Entry(self)
+        self.entry_min1.place(relx = 0.17, rely = 0.24)
         
-        label_delay_factor = tk.Label(self, text = 'Delay factor, s', justify=tk.LEFT, font = LARGE_FONT)
-        label_delay_factor.place(relx = 0.12, rely = 0.4)
+        self.entry_max1 = tk.Entry(self)
+        self.entry_max1.place(relx = 0.17, rely = 0.28)
         
-        self.entry_delay_factor = tk.Entry(self)
-        self.entry_delay_factor.place(relx = 0.12, rely = 0.46)
+        self.entry_ratio1 = tk.Entry(self)
+        self.entry_ratio1.place(relx = 0.17, rely = 0.32)
+        
+        label_delay_factor1 = tk.Label(self, text = 'Delay factor, s', justify=tk.LEFT, font = LARGE_FONT)
+        label_delay_factor1.place(relx = 0.12, rely = 0.4)
+        
+        self.entry_delay_factor1 = tk.Entry(self)
+        self.entry_delay_factor1.place(relx = 0.12, rely = 0.46)
+        
+        label_min2 = tk.Label(self, text = 'MIN', font = LARGE_FONT)
+        label_min2.place(relx = 0.27, rely = 0.24)
+        
+        label_max2 = tk.Label(self, text = 'MAX', font = LARGE_FONT)
+        label_max2.place(relx = 0.27, rely = 0.28)
+        
+        label_step2 = tk.Label(self, text = 'Ratio, \n Δ/s', font = LARGE_FONT)
+        label_step2.place(relx = 0.27, rely = 0.32)
+        
+        self.entry_min2 = tk.Entry(self)
+        self.entry_min2.place(relx = 0.32, rely = 0.24)
+        
+        self.entry_max2 = tk.Entry(self)
+        self.entry_max2.place(relx = 0.32, rely = 0.28)
+        
+        self.entry_ratio2 = tk.Entry(self)
+        self.entry_ratio2.place(relx = 0.32, rely = 0.32)
+        
+        label_delay_factor2 = tk.Label(self, text = 'Delay factor, s', justify=tk.LEFT, font = LARGE_FONT)
+        label_delay_factor2.place(relx = 0.27, rely = 0.4)
+        
+        self.entry_delay_factor2 = tk.Entry(self)
+        self.entry_delay_factor2.place(relx = 0.27, rely = 0.46)
+        
+        label_min3 = tk.Label(self, text = 'MIN', font = LARGE_FONT)
+        label_min3.place(relx = 0.42, rely = 0.24)
+        
+        label_max3 = tk.Label(self, text = 'MAX', font = LARGE_FONT)
+        label_max3.place(relx = 0.42, rely = 0.28)
+        
+        label_step3 = tk.Label(self, text = 'Ratio, \n Δ/s', font = LARGE_FONT)
+        label_step3.place(relx = 0.42, rely = 0.32)
+        
+        self.entry_min3 = tk.Entry(self)
+        self.entry_min3.place(relx = 0.47, rely = 0.24)
+        
+        self.entry_max3 = tk.Entry(self)
+        self.entry_max3.place(relx = 0.47, rely = 0.28)
+        
+        self.entry_ratio3 = tk.Entry(self)
+        self.entry_ratio3.place(relx = 0.47, rely = 0.32)
+        
+        label_delay_factor3 = tk.Label(self, text = 'Delay factor, s', justify=tk.LEFT, font = LARGE_FONT)
+        label_delay_factor3.place(relx = 0.42, rely = 0.4)
+        
+        self.entry_delay_factor3 = tk.Entry(self)
+        self.entry_delay_factor3.place(relx = 0.42, rely = 0.46)
         
         button_start_sweeping = ttk.Button(self, text = "Start sweeping", command = lambda: self.start_sweeping())
-        button_start_sweeping.place(relx = 0.7, rely = 0.7)
+        button_start_sweeping.place(relx = 0.75, rely = 0.7)
         
-    def update_sweep_parameters(self, event, interval = 1000):
-        if self.combo_to_sweep.current() == 0:
-            self.sweep_options['value'] = ['']
-            self.sweep_options.current(0)
-            self.sweep_options.after(interval)
-            pass
+    def update_sweep_parameters1(self, event, interval = 1000):
+        class_of_sweeper_device1 = types_of_devices[self.combo_to_sweep1.current()]
+        if class_of_sweeper_device1 != 'Not a class':
+            self.sweep_options1['value'] = getattr(globals()[class_of_sweeper_device1](), 'set_options')
+            self.sweep_options1.after(interval)
         else:
-            class_of_sweeper_device = types_of_devices[self.combo_to_sweep.current() - 1]
-            if class_of_sweeper_device != 'Not a class':
-                self.sweep_options['value'] = getattr(globals()[class_of_sweeper_device](), 'set_options')
-                self.sweep_options.after(interval)
+            self.sweep_options1['value'] = ['']
+            self.sweep_options1.current(0)
+            self.sweep_options1.after(interval)
+
+    def update_sweep_parameters2(self, event, interval = 1000):
+        class_of_sweeper_device2 = types_of_devices[self.combo_to_sweep2.current()]
+        if class_of_sweeper_device2 != 'Not a class':
+            self.sweep_options2['value'] = getattr(globals()[class_of_sweeper_device2](), 'set_options')
+            self.sweep_options2.after(interval)
+        else:
+            self.sweep_options2['value'] = ['']
+            self.sweep_options2.current(0)
+            self.sweep_options2.after(interval)
+    def update_sweep_parameters3(self, event, interval = 1000):       
+        class_of_sweeper_device3 = types_of_devices[self.combo_to_sweep3.current()]
+        if class_of_sweeper_device3 != 'Not a class':
+            self.sweep_options3['value'] = getattr(globals()[class_of_sweeper_device3](), 'set_options')
+            self.sweep_options3.after(interval)
+        else:
+            self.sweep_options3['value'] = ['']
+            self.sweep_options3.current(0)
+            self.sweep_options3.after(interval)
                     
     def start_sweeping(self):
         
-        global device_to_sweep
-        global parameter_to_sweep
-        global min_sweep 
-        global max_sweep 
-        global ratio_sweep
-        global delay_factor
+        global device_to_sweep1
+        global device_to_sweep2
+        global device_to_sweep3
+        global parameter_to_sweep1
+        global parameter_to_sweep2
+        global parameter_to_sweep3
+        global min_sweep1 
+        global max_sweep1 
+        global ratio_sweep1
+        global delay_factor1
+        global min_sweep2 
+        global max_sweep2 
+        global ratio_sweep2
+        global delay_factor2
+        global min_sweep3
+        global max_sweep3
+        global ratio_sweep3
+        global delay_factor3
         global parameters_to_read 
         global filename_sweep 
-        global sweeper_flag 
+        global sweeper_flag1
+        global sweeper_flag2
+        global sweeper_flag3
         global columns
         
         #asking multichoise to get parameters to read
@@ -1322,53 +1486,89 @@ class Sweeper3d(tk.Frame):
         parameters_to_read = self.list_to_read
         
         #creating columns
-        if self.combo_to_sweep.current() == 0:
-            columns = ['Time']
-        else:
-            device_to_sweep = self.combo_to_sweep['value'][self.combo_to_sweep.current()]
-            parameter_to_sweep = self.sweep_options['value'][self.sweep_options.current()]
-            columns = ['Time', device_to_sweep + '.' + parameter_to_sweep]   
+        device_to_sweep1 = self.combo_to_sweep1['value'][self.combo_to_sweep1.current()]
+        parameter_to_sweep1 = self.sweep_options1['value'][self.sweep_options1.current()]
+        device_to_sweep2 = self.combo_to_sweep2['value'][self.combo_to_sweep2.current()]
+        parameter_to_sweep2 = self.sweep_options2['value'][self.sweep_options2.current()]
+        device_to_sweep3 = self.combo_to_sweep3['value'][self.combo_to_sweep3.current()]
+        parameter_to_sweep3 = self.sweep_options3['value'][self.sweep_options3.current()]
+        columns = ['Time', device_to_sweep1 + '.' + parameter_to_sweep1, 
+                   device_to_sweep2 + '.' + parameter_to_sweep2, 
+                   device_to_sweep3 + '.' + parameter_to_sweep3]   
         for option in parameters_to_read:
             columns.append(option)
         
         #fixing sweeper parmeters
-        min_sweep = self.entry_min.get()
-        max_sweep = self.entry_max.get()
-        ratio_sweep = self.entry_ratio.get()
-        delay_factor = self.entry_delay_factor.get()
-        sweeper_flag = True
+        min_sweep1 = self.entry_min1.get()
+        max_sweep1 = self.entry_max1.get()
+        ratio_sweep1 = self.entry_ratio1.get()
+        delay_factor1 = self.entry_delay_factor1.get()
+        min_sweep2 = self.entry_min2.get()
+        max_sweep2 = self.entry_max2.get()
+        ratio_sweep2 = self.entry_ratio2.get()
+        delay_factor2 = self.entry_delay_factor2.get()
+        min_sweep3 = self.entry_min3.get()
+        max_sweep3 = self.entry_max3.get()
+        ratio_sweep3 = self.entry_ratio3.get()
+        delay_factor3 = self.entry_delay_factor3.get()
+        sweeper_flag1 = False
+        sweeper_flag2 = False
+        sweeper_flag3 = True
         
-        Sweeper_write(device_to_sweep = device_to_sweep, 
-                      parameter_to_sweep = parameter_to_sweep,
-                      min_sweep = min_sweep, max_sweep = max_sweep,
-                      ratio_sweep = ratio_sweep, delay_factor = delay_factor,
-                      parameters_to_read = parameters_to_read,
-                      filename_sweep = filename_sweep, 
-                      columns = columns, sweeper_flag = sweeper_flag)
-
+        Sweeper_write()
+        
 class Sweeper_write(threading.Thread):
      
-    def __init__(self, device_to_sweep, parameter_to_sweep, min_sweep, 
-                 max_sweep, ratio_sweep, delay_factor, parameters_to_read, filename_sweep,
-                 columns, sweeper_flag):
-        
+    def __init__(self):
+    
         threading.Thread.__init__(self)
-        self.device_to_sweep = device_to_sweep 
-        self.parameter_to_sweep = parameter_to_sweep
-        self.min_sweep = float(min_sweep) 
-        self.max_sweep = float(max_sweep)
-        self.ratio_sweep = float(ratio_sweep)
-        self.delay_factor = float(delay_factor)
+        self.device_to_sweep1 = device_to_sweep1
+        self.device_to_sweep2 = device_to_sweep2
+        self.device_to_sweep3 = device_to_sweep3
+        self.parameter_to_sweep1 = parameter_to_sweep1
+        self.parameter_to_sweep2 = parameter_to_sweep2
+        self.parameter_to_sweep3 = parameter_to_sweep3
+        self.min_sweep1 = float(min_sweep1) 
+        self.max_sweep1 = float(max_sweep1)
+        self.ratio_sweep1 = float(ratio_sweep1)
+        self.delay_factor1 = float(delay_factor1)
+        self.min_sweep2 = float(min_sweep2) 
+        self.max_sweep2 = float(max_sweep2)
+        self.ratio_sweep2 = float(ratio_sweep2)
+        self.delay_factor2 = float(delay_factor2)
+        self.min_sweep3 = float(min_sweep3) 
+        self.max_sweep3 = float(max_sweep3)
+        self.ratio_sweep3 = float(ratio_sweep3)
+        self.delay_factor3 = float(delay_factor3)
         self.parameters_to_read = parameters_to_read
         self.filename_sweep = filename_sweep
-        self.value = float(min_sweep)
+        self.value1 = float(min_sweep1)
+        self.value2 = float(min_sweep2)
+        self.value3 = float(min_sweep3)
         self.columns = columns
-        self.sweeper_flag = sweeper_flag
+        self.sweeper_flag1 = sweeper_flag1
+        self.sweeper_flag2 = sweeper_flag2
+        self.sweeper_flag3 = sweeper_flag3
+        self.step1 = float(delay_factor1) * float(ratio_sweep1)
+        self.step2 = float(delay_factor2) * float(ratio_sweep2)
+        self.step3 = float(delay_factor3) * float(ratio_sweep3)
+        self.time1 = (float(min_sweep1) - float(max_sweep1)) / float(ratio_sweep1)
+        self.time2 = (float(min_sweep2) - float(max_sweep2)) / float(ratio_sweep2)
+        self.time3 = (float(min_sweep3) - float(max_sweep3)) / float(ratio_sweep3)
+        '''
         try:
-            self.nstep = (float(max_sweep) - float(min_sweep)) / self.ratio_sweep / self.delay_factor
+            self.nstep1 = (float(max_sweep1) - float(min_sweep1)) / self.ratio_sweep1 / self.delay_factor1
         except ValueError:
-            self.nstep = 1
-        self.step = self.delay_factor * self.ratio_sweep
+            self.nstep1 = 1
+        try:
+            self.nstep2 = (float(max_sweep2) - float(min_sweep2)) / self.ratio_sweep2 / self.delay_factor2
+        except ValueError:
+            self.nstep2 = 1
+        try:
+            self.nstep3 = (float(max_sweep3) - float(min_sweep3)) / self.ratio_sweep3 / self.delay_factor3
+        except ValueError:
+            self.nstep3 = 1
+        '''
         try:
             threading.Thread.__init__(self)
             self.daemon = True
@@ -1377,24 +1577,22 @@ class Sweeper_write(threading.Thread):
             pass
         
     def run(self):
-        if self.sweeper_flag == True:
+        if self.sweeper_flag1 == True:
             dataframe = pd.DataFrame(columns = self.columns)
             dataframe.to_csv(self.filename_sweep, index = False)
-            print(self.device_to_sweep)
-            print(self.parameter_to_sweep)
-            while True and self.value < self.max_sweep:
-                if self.device_to_sweep == 'Time':
+            while self.value1 <= self.max_sweep1:
+                if self.device_to_sweep1 == 'Time':
                     dataframe = [time.process_time() - zero_time]
                 else:
                     dataframe = [time.process_time() - zero_time]
                     #sweep process here
                     ###################
                     #set 'parameter_to_sweep' to 'value'
-                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep)]](adress = self.device_to_sweep), 'set_' + str(self.parameter_to_sweep))(value = self.value)
-                    self.value += self.step
-                    time.sleep(self.delay_factor)
+                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress = self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value = self.value1)
+                    self.value1 += self.step1
+                    time.sleep(self.delay_factor1)
                     ###################
-                    dataframe.append(self.value)
+                    dataframe.append(self.value1)
                 for parameter in self.parameters_to_read:
                     index_dot = parameter.find('.')
                     adress = parameter[:index_dot]
@@ -1408,7 +1606,184 @@ class Sweeper_write(threading.Thread):
                         f_object.close()
                     except KeyboardInterrupt():
                         f_object.close()
- 
+                    finally:
+                        f_object.close()
+            self.sweeper_flag1 = False
+                        
+        if self.sweeper_flag2 == True:
+            dataframe = pd.DataFrame(columns = self.columns)
+            dataframe.to_csv(self.filename_sweep, index = False)
+            
+            if self.time1 < self.time2:
+                self.device_to_sweep1 = device_to_sweep2
+                self.device_to_sweep2 = device_to_sweep1
+                self.parameter_to_sweep1 = parameter_to_sweep2
+                self.parameter_to_sweep2 = parameter_to_sweep1
+                self.min_sweep1 = float(min_sweep2) 
+                self.max_sweep1 = float(max_sweep2)
+                self.ratio_sweep1 = float(ratio_sweep2)
+                self.delay_factor1 = float(delay_factor2)
+                self.min_sweep2 = float(min_sweep1) 
+                self.max_sweep2 = float(max_sweep1)
+                self.ratio_sweep2 = float(ratio_sweep1)
+                self.delay_factor2 = float(delay_factor1)
+                self.step1 = float(delay_factor2) * float(ratio_sweep2)
+                self.step2 = float(delay_factor1) * float(ratio_sweep1)
+                self.value1 = float(min_sweep2)
+                self.value2 = float(min_sweep1)
+            
+            while self.value1 <= self.max_sweep1:
+                dataframe = [time.process_time() - zero_time]
+                #sweep process 1 here
+                ###################
+                #set 'parameter_to_sweep1' to 'value1'
+                getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress = self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value = self.value1)
+                self.value1 += self.step1
+                time.sleep(self.delay_factor1)
+                ###################
+                dataframe.append(self.value1)
+                dataframe_after = [*dataframe]
+                while self.value2 <= self.max_sweep2:
+                    #sweep process 2 here
+                    ###################
+                    #set 'parameter_to_sweep2' to 'value2'
+                    dataframe = [*dataframe_after]
+                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](adress = self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value = self.value2)
+                    self.value2 += self.step2
+                    time.sleep(self.delay_factor2)
+                    ###################
+                    dataframe.append(self.value2)
+                    for parameter in self.parameters_to_read:
+                        index_dot = parameter.find('.')
+                        adress = parameter[:index_dot]
+                        option = parameter[index_dot + 1:]
+                        dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
+        
+                    with open(self.filename_sweep, 'a') as f_object:
+                        try:
+                            writer_object = writer(f_object)
+                            writer_object.writerow(dataframe)
+                            f_object.close()
+                        except KeyboardInterrupt():
+                            f_object.close()
+                        finally:
+                            f_object.close()
+            self.sweeper_flag2 == False
+            
+        if self.sweeper_flag3 == True:
+            print(3)
+            dataframe = pd.DataFrame(columns = self.columns)
+            dataframe.to_csv(self.filename_sweep, index = False)
+            
+            if self.time1 > self.time2:             
+                self.device_to_sweep1 = device_to_sweep2
+                self.device_to_sweep2 = device_to_sweep1
+                self.parameter_to_sweep1 = parameter_to_sweep2
+                self.parameter_to_sweep2 = parameter_to_sweep1
+                self.min_sweep1 = float(min_sweep2) 
+                self.max_sweep1 = float(max_sweep2)
+                self.ratio_sweep1 = float(ratio_sweep2)
+                self.delay_factor1 = float(delay_factor2)
+                self.min_sweep2 = float(min_sweep1) 
+                self.max_sweep2 = float(max_sweep1)
+                self.ratio_sweep2 = float(ratio_sweep1)
+                self.delay_factor2 = float(delay_factor1)
+                self.step1 = float(delay_factor2) * float(ratio_sweep2)
+                self.step2 = float(delay_factor1) * float(ratio_sweep1)
+                self.value1 = float(min_sweep2)
+                self.value2 = float(min_sweep1)
+                self.time1 = (float(min_sweep2) - float(max_sweep2)) / float(ratio_sweep2)
+                self.time2 = (float(min_sweep1) - float(max_sweep1)) / float(ratio_sweep1)
+            if self.time1 > self.time3:
+                self.device_to_sweep1 = device_to_sweep3
+                self.device_to_sweep3 = device_to_sweep1
+                self.parameter_to_sweep1 = parameter_to_sweep3
+                self.parameter_to_sweep3 = parameter_to_sweep1
+                self.min_sweep1 = float(min_sweep3) 
+                self.max_sweep1 = float(max_sweep3)
+                self.ratio_sweep1 = float(ratio_sweep3)
+                self.delay_factor1 = float(delay_factor3)
+                self.min_sweep3 = float(min_sweep1) 
+                self.max_sweep3 = float(max_sweep1)
+                self.ratio_sweep3 = float(ratio_sweep1)
+                self.delay_factor3 = float(delay_factor1)
+                self.step1 = float(delay_factor3) * float(ratio_sweep3)
+                self.step3 = float(delay_factor1) * float(ratio_sweep1)
+                self.value1 = float(min_sweep3)
+                self.value3 = float(min_sweep1)
+                self.time1 = (float(min_sweep3) - float(max_sweep3)) / float(ratio_sweep3)
+                self.time3 = (float(min_sweep1) - float(max_sweep1)) / float(ratio_sweep1)
+            if self.time2 > self.time3:
+                self.device_to_sweep2 = device_to_sweep3
+                self.device_to_sweep3 = device_to_sweep2
+                self.parameter_to_sweep2 = parameter_to_sweep3
+                self.parameter_to_sweep3 = parameter_to_sweep2
+                self.min_sweep2 = float(min_sweep3) 
+                self.max_sweep2 = float(max_sweep3)
+                self.ratio_sweep2 = float(ratio_sweep3)
+                self.delay_factor2 = float(delay_factor3)
+                self.min_sweep3 = float(min_sweep2) 
+                self.max_sweep3 = float(max_sweep2)
+                self.ratio_sweep3 = float(ratio_sweep2)
+                self.delay_factor3 = float(delay_factor2)
+                self.step2 = float(delay_factor3) * float(ratio_sweep3)
+                self.step3 = float(delay_factor2) * float(ratio_sweep2)
+                self.value2 = float(min_sweep3)
+                self.value3 = float(min_sweep2)
+                self.time2 = (float(min_sweep3) - float(max_sweep3)) / float(ratio_sweep3)
+                self.time3 = (float(min_sweep2) - float(max_sweep2)) / float(ratio_sweep2)
+                
+            
+            while self.value1 <= self.max_sweep1:
+                dataframe = [time.process_time() - zero_time]
+                #sweep process 1 here
+                ###################
+                #set 'parameter_to_sweep1' to 'value1'
+                getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress = self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value = self.value1)
+                self.value1 += self.step1
+                time.sleep(self.delay_factor1)
+                ###################
+                dataframe.append(self.value1)
+                dataframe_after = [*dataframe]
+                while self.value2 <= self.max_sweep2:
+                    #sweep process 2 here
+                    ###################
+                    #set 'parameter_to_sweep2' to 'value2'
+                    dataframe = [*dataframe_after]
+                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](adress = self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value = self.value2)
+                    self.value2 += self.step2
+                    time.sleep(self.delay_factor2)
+                    ###################
+                    dataframe.append(self.value2)
+                    dataframe_after_after = [*dataframe]
+                    while self.value3 <= self.max_sweep3:
+                        #sweep process 3 here
+                        ###################
+                        #set 'parameter_to_sweep3' to 'value3'
+                        dataframe = [*dataframe_after_after]
+                        getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep3)]](adress = self.device_to_sweep3), 'set_' + str(self.parameter_to_sweep3))(value = self.value3)
+                        self.value3 += self.step3
+                        time.sleep(self.delay_factor3)
+                        ###################
+                        dataframe.append(self.value3)
+                        for parameter in self.parameters_to_read:
+                            index_dot = parameter.find('.')
+                            adress = parameter[:index_dot]
+                            option = parameter[index_dot + 1:]
+                            dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
+            
+                        with open(self.filename_sweep, 'a') as f_object:
+                            try:
+                                writer_object = writer(f_object)
+                                writer_object.writerow(dataframe)
+                                f_object.close()
+                            except KeyboardInterrupt():
+                                f_object.close()
+                            finally:
+                                f_object.close()
+            self.sweeper_flag3 == False
+
+
 class VerticalNavigationToolbar2Tk(NavigationToolbar2Tk):
    def __init__(self, canvas, window):
       super().__init__(canvas, window, pack_toolbar=False)
@@ -1453,21 +1828,21 @@ class Graph(tk.Frame):
         label_y1 = tk.Label(self, text = 'y', font = LARGE_FONT)
         label_y1.place(relx = 0.15, rely = 0.455)
         
-        combo_x1 = ttk.Combobox(self, values = columns)
+        self.combo_x1 = ttk.Combobox(self, values = columns)
         try:
-            combo_x1.current(0)
+            self.combo_x1.current(0)
         except tk.TclError:
             pass
-        combo_x1.bind("<<ComboboxSelected>>", lambda: self.x1_update)
-        combo_x1.place(relx = 0.035, rely = 0.46)
+        self.combo_x1.bind("<<ComboboxSelected>>", self.x1_update)
+        self.combo_x1.place(relx = 0.035, rely = 0.46)
         
-        combo_y1 = ttk.Combobox(self, values = columns)
+        self.combo_y1 = ttk.Combobox(self, values = columns)
         try:
-            combo_y1.current(0)
+            self.combo_y1.current(0)
         except tk.TclError:
             pass
-        combo_y1.bind("<<ComboboxSelected>>", lambda: self.y1_update)
-        combo_y1.place(relx = 0.165, rely = 0.46)
+        self.combo_y1.bind("<<ComboboxSelected>>", self.y1_update)
+        self.combo_y1.place(relx = 0.165, rely = 0.46)
         
         plot222 = FigureCanvasTkAgg(fig222, self)
         plot222.draw()
@@ -1484,21 +1859,21 @@ class Graph(tk.Frame):
         label_y2 = tk.Label(self, text = 'y', font = LARGE_FONT)
         label_y2.place(relx = 0.65, rely = 0.455)
         
-        combo_x2 = ttk.Combobox(self, values = columns)
+        self.combo_x2 = ttk.Combobox(self, values = columns)
         try:
-            combo_x2.current(0)
+            self.combo_x2.current(0)
         except tk.TclError:
             pass
-        combo_x2.bind("<<ComboboxSelected>>", lambda: self.x2_update)
-        combo_x2.place(relx = 0.535, rely = 0.46)
+        self.combo_x2.bind("<<ComboboxSelected>>", self.x2_update)
+        self.combo_x2.place(relx = 0.535, rely = 0.46)
         
-        combo_y2 = ttk.Combobox(self, values = columns)
+        self.combo_y2 = ttk.Combobox(self, values = columns)
         try:
-            combo_y2.current(0)
+            self.combo_y2.current(0)
         except tk.TclError:
             pass
-        combo_y2.bind("<<ComboboxSelected>>", lambda: self.y2_update)
-        combo_y2.place(relx = 0.665, rely = 0.46)
+        self.combo_y2.bind("<<ComboboxSelected>>", self.y2_update)
+        self.combo_y2.place(relx = 0.665, rely = 0.46)
         
         plot223 = FigureCanvasTkAgg(fig223, self)
         plot223.draw()
@@ -1515,21 +1890,21 @@ class Graph(tk.Frame):
         label_y3 = tk.Label(self, text = 'y', font = LARGE_FONT)
         label_y3.place(relx = 0.15, rely = 0.955)
         
-        combo_x3 = ttk.Combobox(self, values = columns)
+        self.combo_x3 = ttk.Combobox(self, values = columns)
         try:
-            combo_x3.current(0)
+            self.combo_x3.current(0)
         except tk.TclError:
             pass
-        combo_x3.bind("<<ComboboxSelected>>", lambda: self.x3_update)
-        combo_x3.place(relx = 0.035, rely = 0.96)
+        self.combo_x3.bind("<<ComboboxSelected>>", self.x3_update)
+        self.combo_x3.place(relx = 0.035, rely = 0.96)
         
-        combo_y3 = ttk.Combobox(self, values = columns)
+        self.combo_y3 = ttk.Combobox(self, values = columns)
         try:
-            combo_y3.current(0)
+            self.combo_y3.current(0)
         except tk.TclError:
             pass
-        combo_y3.bind("<<ComboboxSelected>>", lambda: self.y3_update)
-        combo_y3.place(relx = 0.165, rely = 0.96)
+        self.combo_y3.bind("<<ComboboxSelected>>", self.y3_update)
+        self.combo_y3.place(relx = 0.165, rely = 0.96)
         
         plot224 = FigureCanvasTkAgg(fig224, self)
         plot224.draw()
@@ -1549,29 +1924,50 @@ class Graph(tk.Frame):
         label_z4 = tk.Label(self, text = 'z', font = LARGE_FONT)
         label_z4.place(relx = 0.78, rely = 0.955)
         
-        combo_x4 = ttk.Combobox(self, values = columns)
+        self.combo_x4 = ttk.Combobox(self, values = columns)
         try:
-            combo_x2.current(0)
+            self.combo_x4.current(0)
         except tk.TclError:
             pass
-        combo_x4.bind("<<ComboboxSelected>>")
-        combo_x4.place(relx = 0.535, rely = 0.96)
+        self.combo_x4.bind("<<ComboboxSelected>>")
+        self.combo_x4.place(relx = 0.535, rely = 0.96)
         
-        combo_y4 = ttk.Combobox(self, values = columns)
+        self.combo_y4 = ttk.Combobox(self, values = columns)
         try:
-            combo_y4.current(0)
+            self.combo_y4.current(0)
         except tk.TclError:
             pass
-        combo_y4.bind("<<ComboboxSelected>>")
-        combo_y4.place(relx = 0.665, rely = 0.96)
+        self.combo_y4.bind("<<ComboboxSelected>>")
+        self.combo_y4.place(relx = 0.665, rely = 0.96)
     
-        combo_z4 = ttk.Combobox(self, values = columns)
+        self.combo_z4 = ttk.Combobox(self, values = columns)
         try:
-            combo_z4.current(0)
+            self.combo_z4.current(0)
         except tk.TclError:
             pass
-        combo_z4.bind("<<ComboboxSelected>>")
-        combo_z4.place(relx = 0.795, rely = 0.96)    
+        self.combo_z4.bind("<<ComboboxSelected>>")
+        self.combo_z4.place(relx = 0.795, rely = 0.96)   
+        
+        self.interval = 100
+        
+        updating = threading.Thread(target = self.combos_update)
+        updating.start()
+        updating.join()
+        
+    def combos_update(self):
+        self.combo_x1['values'] = columns
+        self.combo_x1.after(interval, self.combos_update)
+        self.combo_y1['values'] = columns
+        self.combo_y1.after(interval, self.combos_update)
+        self.combo_x2['values'] = columns
+        self.combo_x2.after(interval, self.combos_update)
+        self.combo_y2['values'] = columns
+        self.combo_y2.after(interval, self.combos_update)
+        self.combo_x3['values'] = columns
+        self.combo_x3.after(interval, self.combos_update)
+        self.combo_y3['values'] = columns
+        self.combo_y3.after(interval, self.combos_update)
+        
     
     def x1_update(self, event):
         global x1
@@ -1611,7 +2007,7 @@ interval = 100
 def main():
     write_config_parameters()
     write_config_channels()
-    app = spectrometer()
+    app = Universal_frontend()
     ani221 = animation.FuncAnimation(fig221, animate221, interval = interval)
     ani222 = animation.FuncAnimation(fig222, animate222, interval = interval)
     ani223 = animation.FuncAnimation(fig223, animate223, interval = interval)
