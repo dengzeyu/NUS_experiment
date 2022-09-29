@@ -74,15 +74,24 @@ columns = []
 
 #variables for plotting
 
-x1_data = []
-y1_data = []
-x2_data = []
-y2_data = []
-x3_data = []
-y3_data = []
-x4_data = []
-y4_data = []
-z4_data = [[]]
+x1 = []
+x1_status = 0
+y1 = []
+y1_status = 0
+x2 = []
+x2_status = 0
+y2 = []
+y2_status = 0
+x3 = []
+x3_status = 0
+y3 = []
+y3_status = 0
+x4 = []
+x4_status = 0
+y4 = []
+y4_status = 0
+z4 = [[]]
+z4_status = 0
 
 class lock_in():
     
@@ -564,31 +573,60 @@ def animate221(i):
 #function to animate graph on each step    
     global x1
     global y1
-    try:    
+    global x1_status
+    global y1_status
+    global columns
+    global filename_sweep
+    
+    try:
+        data = pd.read_csv(filename_sweep)
+        x1 = data[columns[x1_status]].values
+        y1 = data[columns[y1_status]].values
         ax1.clear()
         ax1.plot(x1, y1, '-', lw = 1, color = 'darkblue')
-    except:
-        pass
+        print(x1, y1)
+    except FileNotFoundError:
+        ax1.clear()
+        ax1.plot(x1, y1, '-', lw = 1, color = 'darkblue')
+        
     
 def animate222(i):
 #function to animate graph on each step    
     global x2
     global y2
-    try:    
+    global x2_status
+    global y2_status
+    global columns
+    global filename_sweep
+    
+    try:
+        data = pd.read_csv(filename_sweep)
+        x2 = data[columns[x2_status + 1]].values
+        y2 = data[columns[y2_status + 1]].values 
         ax2.clear()
         ax2.plot(x2, y2, '-', lw = 1, color = 'crimson')
-    except:
-        pass
+    except FileNotFoundError:
+        ax1.clear()
+        ax1.plot(x1, y1, '-', lw = 1, color = 'darkblue')
     
 def animate223(i):
 #function to animate graph on each step    
     global x3
     global y3
-    try:    
+    global x3_status
+    global y3_status
+    global columns
+    global filename_sweep
+    
+    try:
+        data = pd.read_csv(filename_sweep)
+        x3 = data[columns[x3_status + 1]].values
+        y3 = data[columns[y3_status + 1]].values 
         ax3.clear()
         ax3.plot(x3, y3, '-', lw = 1, color = 'darkgreen')
-    except:
-        pass
+    except FileNotFoundError:
+        ax1.clear()
+        ax1.plot(x1, y1, '-', lw = 1, color = 'darkblue')
 
 def animate224(i):
 #function to animate graph on each step    
@@ -612,7 +650,7 @@ def animate224(i):
 
 class Universal_frontend(tk.Tk):
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, classes, start, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
         
         tk.Tk.iconbitmap(self)
@@ -625,12 +663,12 @@ class Universal_frontend(tk.Tk):
         
         self.frames = {}
         
-        for F in (StartPage, Lock_in_settings, Sweeper1d, Sweeper2d, Sweeper3d, Graph):
+        for F in classes:
             frame = F(container, self)
             self.frames[F] = frame
             frame.grid(row = 0, column = 0, sticky = 'nsew')
         
-        self.show_frame(StartPage)
+        self.show_frame(start)
         
     def show_frame(self, cont):
         frame = self.frames[cont]
@@ -654,9 +692,6 @@ class StartPage(tk.Frame):
         
         sweeper3d_button = ttk.Button(self, text = '3D - sweeper', command = lambda: controller.show_frame(Sweeper3d))
         sweeper3d_button.place(relx = 0.3, rely = 0.4)
-        
-        graph_button = ttk.Button(self, text = 'Graph', command = lambda: controller.show_frame(Graph))
-        graph_button.place(relx = 0.1, rely = 0.7)
         
 class Lock_in_settings(tk.Frame):
     
@@ -1012,6 +1047,7 @@ class Sweeper1d(tk.Frame):
     def __init__(self, parent, controller):
         
         tk.Frame.__init__(self, parent)
+    
         label = tk.Label(self, text = '1dSweeper', font = LARGE_FONT)
         label.pack(pady = 10, padx = 10)
         
@@ -1066,6 +1102,9 @@ class Sweeper1d(tk.Frame):
         
         button_start_sweeping = ttk.Button(self, text = "Start sweeping", command = lambda: self.start_sweeping())
         button_start_sweeping.place(relx = 0.7, rely = 0.7)
+        
+        graph_button = ttk.Button(self, text = 'Graph', command = Universal_frontend(classes = (Graph,), start = Graph))
+        graph_button.place(relx = 0.7, rely = 0.8)
         
     def update_sweep_parameters(self, event, interval = 1000):
         if self.combo_to_sweep.current() == 0:
@@ -1217,6 +1256,9 @@ class Sweeper2d(tk.Frame):
         
         button_start_sweeping = ttk.Button(self, text = "Start sweeping", command = lambda: self.start_sweeping())
         button_start_sweeping.place(relx = 0.7, rely = 0.7)
+        
+        graph_button = ttk.Button(self, text = 'Graph', command = Universal_frontend(classes = (Graph,), start = Graph))
+        graph_button.place(relx = 0.7, rely = 0.8)
         
     def update_sweep_parameters1(self, event, interval = 1000):
         class_of_sweeper_device1 = types_of_devices[self.combo_to_sweep1.current()]
@@ -1421,6 +1463,9 @@ class Sweeper3d(tk.Frame):
         button_start_sweeping = ttk.Button(self, text = "Start sweeping", command = lambda: self.start_sweeping())
         button_start_sweeping.place(relx = 0.75, rely = 0.7)
         
+        graph_button = ttk.Button(self, text = 'Graph', command = Universal_frontend(classes = (Graph,), start = Graph))
+        graph_button.place(relx = 0.7, rely = 0.8)
+        
     def update_sweep_parameters1(self, event, interval = 1000):
         class_of_sweeper_device1 = types_of_devices[self.combo_to_sweep1.current()]
         if class_of_sweeper_device1 != 'Not a class':
@@ -1614,7 +1659,7 @@ class Sweeper_write(threading.Thread):
             dataframe = pd.DataFrame(columns = self.columns)
             dataframe.to_csv(self.filename_sweep, index = False)
             
-            if self.time1 < self.time2:
+            if self.time1 > self.time2:
                 self.device_to_sweep1 = device_to_sweep2
                 self.device_to_sweep2 = device_to_sweep1
                 self.parameter_to_sweep1 = parameter_to_sweep2
@@ -1648,6 +1693,7 @@ class Sweeper_write(threading.Thread):
                     ###################
                     #set 'parameter_to_sweep2' to 'value2'
                     dataframe = [*dataframe_after]
+                    dataframe[0] = time.process_time() - zero_time
                     getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](adress = self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value = self.value2)
                     self.value2 += self.step2
                     time.sleep(self.delay_factor2)
@@ -1668,10 +1714,10 @@ class Sweeper_write(threading.Thread):
                             f_object.close()
                         finally:
                             f_object.close()
+                self.value2 = self.min_sweep2
             self.sweeper_flag2 == False
             
         if self.sweeper_flag3 == True:
-            print(3)
             dataframe = pd.DataFrame(columns = self.columns)
             dataframe.to_csv(self.filename_sweep, index = False)
             
@@ -1733,7 +1779,6 @@ class Sweeper_write(threading.Thread):
                 self.time2 = (float(min_sweep3) - float(max_sweep3)) / float(ratio_sweep3)
                 self.time3 = (float(min_sweep2) - float(max_sweep2)) / float(ratio_sweep2)
                 
-            
             while self.value1 <= self.max_sweep1:
                 dataframe = [time.process_time() - zero_time]
                 #sweep process 1 here
@@ -1750,6 +1795,7 @@ class Sweeper_write(threading.Thread):
                     ###################
                     #set 'parameter_to_sweep2' to 'value2'
                     dataframe = [*dataframe_after]
+                    dataframe[0] = time.process_time() - zero_time
                     getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](adress = self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value = self.value2)
                     self.value2 += self.step2
                     time.sleep(self.delay_factor2)
@@ -1761,6 +1807,7 @@ class Sweeper_write(threading.Thread):
                         ###################
                         #set 'parameter_to_sweep3' to 'value3'
                         dataframe = [*dataframe_after_after]
+                        dataframe[0] = time.process_time() - zero_time
                         getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep3)]](adress = self.device_to_sweep3), 'set_' + str(self.parameter_to_sweep3))(value = self.value3)
                         self.value3 += self.step3
                         time.sleep(self.delay_factor3)
@@ -1781,6 +1828,8 @@ class Sweeper_write(threading.Thread):
                                 f_object.close()
                             finally:
                                 f_object.close()
+                    self.value3 = self.min_sweep3
+                self.value2 = self.min_sweep3
             self.sweeper_flag3 == False
 
 
@@ -1808,11 +1857,7 @@ class Graph(tk.Frame):
     
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-        
-        button = ttk.Button(self, text = 'Back to Home', 
-                            command = lambda: controller.show_frame(StartPage))
-        button.place(relx = 0.9, rely = 0.46)
-        
+
         plot221 = FigureCanvasTkAgg(fig221, self)
         plot221.draw()
         plot221.get_tk_widget().place(relx = 0.02, rely = 0)
@@ -1829,21 +1874,13 @@ class Graph(tk.Frame):
         label_y1.place(relx = 0.15, rely = 0.455)
         
         self.combo_x1 = ttk.Combobox(self, values = columns)
-        try:
-            self.combo_x1.current(0)
-        except tk.TclError:
-            pass
         self.combo_x1.bind("<<ComboboxSelected>>", self.x1_update)
         self.combo_x1.place(relx = 0.035, rely = 0.46)
         
         self.combo_y1 = ttk.Combobox(self, values = columns)
-        try:
-            self.combo_y1.current(0)
-        except tk.TclError:
-            pass
         self.combo_y1.bind("<<ComboboxSelected>>", self.y1_update)
         self.combo_y1.place(relx = 0.165, rely = 0.46)
-        
+    
         plot222 = FigureCanvasTkAgg(fig222, self)
         plot222.draw()
         plot222.get_tk_widget().place(relx = 0.52, rely = 0)
@@ -1860,18 +1897,10 @@ class Graph(tk.Frame):
         label_y2.place(relx = 0.65, rely = 0.455)
         
         self.combo_x2 = ttk.Combobox(self, values = columns)
-        try:
-            self.combo_x2.current(0)
-        except tk.TclError:
-            pass
         self.combo_x2.bind("<<ComboboxSelected>>", self.x2_update)
         self.combo_x2.place(relx = 0.535, rely = 0.46)
         
         self.combo_y2 = ttk.Combobox(self, values = columns)
-        try:
-            self.combo_y2.current(0)
-        except tk.TclError:
-            pass
         self.combo_y2.bind("<<ComboboxSelected>>", self.y2_update)
         self.combo_y2.place(relx = 0.665, rely = 0.46)
         
@@ -1891,21 +1920,14 @@ class Graph(tk.Frame):
         label_y3.place(relx = 0.15, rely = 0.955)
         
         self.combo_x3 = ttk.Combobox(self, values = columns)
-        try:
-            self.combo_x3.current(0)
-        except tk.TclError:
-            pass
         self.combo_x3.bind("<<ComboboxSelected>>", self.x3_update)
         self.combo_x3.place(relx = 0.035, rely = 0.96)
         
         self.combo_y3 = ttk.Combobox(self, values = columns)
-        try:
-            self.combo_y3.current(0)
-        except tk.TclError:
-            pass
         self.combo_y3.bind("<<ComboboxSelected>>", self.y3_update)
         self.combo_y3.place(relx = 0.165, rely = 0.96)
         
+        '''
         plot224 = FigureCanvasTkAgg(fig224, self)
         plot224.draw()
         plot224.get_tk_widget().place(relx = 0.52, rely = 0.5)
@@ -1947,13 +1969,52 @@ class Graph(tk.Frame):
             pass
         self.combo_z4.bind("<<ComboboxSelected>>")
         self.combo_z4.place(relx = 0.795, rely = 0.96)   
+        '''
+        try:
+            if sweeper_flag1 == True:
+                self.combo_x1.current(0)
+                x1_status = 0
+                self.combo_y1.current(2)
+                y1_status = 2
+                self.combo_x2.current(0)
+                x2_status = 0
+                self.combo_y2.current(2)
+                y2_status = 2
+                self.combo_x3.current(0)
+                x3_status = 0
+                self.combo_y3.current(2)
+                y3_status = 2
+            if sweeper_flag2 == True:
+                self.combo_x1.current(0)
+                x1_status = 0
+                self.combo_y1.current(3)
+                y1_status = 3
+                self.combo_x2.current(0)
+                x2_status = 0
+                self.combo_y2.current(3)
+                y2_status = 3
+                self.combo_x3.current(0)
+                x3_status = 0
+                self.combo_y3.current(3)
+                y3_status = 3
+            if sweeper_flag3 == True:
+                self.combo_x1.current(0)
+                x1_status = 0
+                self.combo_y1.current(4)
+                y1_status = 4
+                self.combo_x2.current(0)
+                x2_status = 0
+                self.combo_y2.current(4)
+                y2_status = 4
+                self.combo_x3.current(0)
+                x3_status = 0
+                self.combo_y3.current(4)
+                y3_status = 4
+        except tk.TclError:
+            pass
         
         self.interval = 100
-        
-        updating = threading.Thread(target = self.combos_update)
-        updating.start()
-        updating.join()
-        
+    '''    
     def combos_update(self):
         self.combo_x1['values'] = columns
         self.combo_x1.after(interval, self.combos_update)
@@ -1967,51 +2028,43 @@ class Graph(tk.Frame):
         self.combo_x3.after(interval, self.combos_update)
         self.combo_y3['values'] = columns
         self.combo_y3.after(interval, self.combos_update)
-        
+    '''
     
     def x1_update(self, event):
-        global x1
-        global filename_sweep
-        x1 = pd.read_csv(filename_sweep)[columns[self.combo_x1.current()]].values
+        global x1_status
+        x1_status = self.combo_x1.current()
         
     def y1_update(self, event):
-        global y1
-        global filename_sweep
-        y1 = pd.read_csv(filename_sweep)[columns[self.combo_y1.current()]].values
+        global y1_status
+        y1_status = self.combo_y1.current()
         
     def x2_update(self, event):
-        global x2
-        global filename_sweep
-        x2 = pd.read_csv(filename_sweep)[columns[self.combo_x2.current()]].values
+        global x2_status
+        x2_status = self.combo_x2.current()
         
     def y2_update(self, event):
-        global y2
-        global filename_sweep
-        y2 = pd.read_csv(filename_sweep)[columns[self.combo_y2.current()]].values
+        global y2_status
+        y2_status = self.combo_y2.current()
         
     def x3_update(self, event):
-        global x3
-        global filename_sweep
-        x3 = pd.read_csv(filename_sweep)[columns[self.combo_x3.current()]].values
+        global x3_status
+        x3_status = self.combo_x3.current()
         
     def y3_update(self, event):
-        global y3
-        global filename_sweep
-        y3 = pd.read_csv(filename_sweep)[columns[self.combo_y3.current()]].values
-        
-    
-    
+        global y3_status
+        y3_status = self.combo_y3.current()
         
 interval = 100
 
 def main():
     write_config_parameters()
     write_config_channels()
-    app = Universal_frontend()
+    app = Universal_frontend(classes = (StartPage, Lock_in_settings, Sweeper1d, Sweeper2d, Sweeper3d),
+                             start = StartPage)
     ani221 = animation.FuncAnimation(fig221, animate221, interval = interval)
     ani222 = animation.FuncAnimation(fig222, animate222, interval = interval)
     ani223 = animation.FuncAnimation(fig223, animate223, interval = interval)
-    ani224 = animation.FuncAnimation(fig224, animate224, interval = 3 * interval)
+    #ani224 = animation.FuncAnimation(fig224, animate224, frames = self, interval = 3 * interval)
     app.mainloop()
     while True:
         pass
