@@ -21,6 +21,7 @@ import threading
 import multiprocessing as mp
 from csv import writer
 import re
+import os
 
 #Check if everything connected properly
 rm = visa.ResourceManager()
@@ -70,6 +71,9 @@ filename_sweep =  r'C:\NUS\Transport lab\Test\data_files\sweep' + datetime.today
 sweeper_flag1 = False
 sweeper_flag2 = False
 sweeper_flag3 = False
+
+manual_sweep_flags = [0]
+manual_filenames = ['']
 columns = []
 
 #variables for plotting
@@ -547,107 +551,6 @@ class write_config_channels(threading.Thread):
 
 zero_time = time.process_time()
 
-#defining plots initial parameters
-labelsize = 4
-pad = 1
-
-fig221 = Figure(figsize = (1.8, 1), dpi = 300)
-ax1 = fig221.add_subplot(111)
-ax1.tick_params(axis='both', which='major', pad=pad, labelsize = labelsize)
-
-fig222 = Figure(figsize = (1.8, 1), dpi = 300)
-ax2 = fig222.add_subplot(111)
-ax2.tick_params(axis='both', which='major', pad=pad, labelsize = labelsize)
-
-fig223 = Figure(figsize = (1.8, 1), dpi = 300)
-ax3 = fig223.add_subplot(111)
-ax3.tick_params(axis='both', which='major', pad=pad, labelsize = labelsize)
-
-fig224 = Figure(figsize = (1.8, 1), dpi = 300)
-ax4 = fig224.add_subplot(111)
-ax4.tick_params(axis='both', which='major', pad=pad, labelsize = labelsize)
-
-#defining subplots location
-
-def animate221(i):
-#function to animate graph on each step    
-    global x1
-    global y1
-    global x1_status
-    global y1_status
-    global columns
-    global filename_sweep
-    
-    try:
-        data = pd.read_csv(filename_sweep)
-        x1 = data[columns[x1_status]].values
-        y1 = data[columns[y1_status]].values
-        ax1.clear()
-        ax1.plot(x1, y1, '-', lw = 1, color = 'darkblue')
-        print(x1, y1)
-    except FileNotFoundError:
-        ax1.clear()
-        ax1.plot(x1, y1, '-', lw = 1, color = 'darkblue')
-        
-    
-def animate222(i):
-#function to animate graph on each step    
-    global x2
-    global y2
-    global x2_status
-    global y2_status
-    global columns
-    global filename_sweep
-    
-    try:
-        data = pd.read_csv(filename_sweep)
-        x2 = data[columns[x2_status + 1]].values
-        y2 = data[columns[y2_status + 1]].values 
-        ax2.clear()
-        ax2.plot(x2, y2, '-', lw = 1, color = 'crimson')
-    except FileNotFoundError:
-        ax1.clear()
-        ax1.plot(x1, y1, '-', lw = 1, color = 'darkblue')
-    
-def animate223(i):
-#function to animate graph on each step    
-    global x3
-    global y3
-    global x3_status
-    global y3_status
-    global columns
-    global filename_sweep
-    
-    try:
-        data = pd.read_csv(filename_sweep)
-        x3 = data[columns[x3_status + 1]].values
-        y3 = data[columns[y3_status + 1]].values 
-        ax3.clear()
-        ax3.plot(x3, y3, '-', lw = 1, color = 'darkgreen')
-    except FileNotFoundError:
-        ax1.clear()
-        ax1.plot(x1, y1, '-', lw = 1, color = 'darkblue')
-
-def animate224(i):
-#function to animate graph on each step    
-    global x4
-    global y4
-    global z4
-    try:   
-        ax4.clear()
-        colorbar = ax4.imshow(z4, interpolation ='nearest')
-        ax4.colorbar(colorbar)
-        try:
-            ax4.yticks(np.arange(x4.shape[0], step = x4.shape[0] // 10), 
-                          round(x4[::x4.shape[0] // 10], 2))
-            ax4.xticks(np.arange(y4.shape[0], step = y4.shape[0] // 10), 
-                          round(y4[::y4.shape[0] // 10], 2))
-        except ZeroDivisionError or ValueError:
-            pass
-    except:
-        pass
-        
-
 class Universal_frontend(tk.Tk):
     
     def __init__(self, classes, start, *args, **kwargs):
@@ -669,6 +572,9 @@ class Universal_frontend(tk.Tk):
             frame.grid(row = 0, column = 0, sticky = 'nsew')
         
         self.show_frame(start)
+        
+        tk.Tk.quit(self)
+        tk.Tk.mainloop(self)
         
     def show_frame(self, cont):
         frame = self.frames[cont]
@@ -1100,10 +1006,40 @@ class Sweeper1d(tk.Frame):
         self.entry_delay_factor = tk.Entry(self)
         self.entry_delay_factor.place(relx = 0.12, rely = 0.46)
         
+        #section of manual sweep points selection
+        self.status_manual = tk.IntVar()
+        index_sweep = filename_sweep.find('sweep')
+        if index_sweep != -1:
+            filename = filename_sweep[:index_sweep] + 'manual' + filename_sweep[index_sweep + 5:]
+        else:
+            filename[:-4] + '_manual' + '.csv'
+        
+        #icons
+        save = tk.PhotoImage(file = r'C:\NUS\Transport lab\App\save.png')
+        explore = tk.PhotoImage(file = r'C:\NUS\Transport lab\App\explore.png')
+        create = tk.PhotoImage(file = r'C:\NUS\Transport lab\App\create.png')
+        #initials
+        manual_sweep_flags = [0]
+        manual_filenames = ['']
+            
+        checkbox_manual = ttk.Checkbutton(self, text = 'Maunal sweep select', 
+                                          variable = self.status_manual, onvalue = 1,
+                                          offvalue = 0, command = lambda: self.save_manual_status())
+        checkbox_manual.place(relx = 0.12, rely = 0.52)
+        
+        button_new_manual = ttk.Button(self, text = 'New', command = lambda: self.open_blank(filename = filename))
+        button_new_manual.place(relx = 0.17, rely = 0.52)
+        
+        button_explore_manual = ttk.Button(self, text = 'Explore', command = lambda: self.explore_files())
+        button_explore_manual.place(relx = 0.25, rely = 0.52)
+        
+        button_filename = ttk.Button(self, text = 'Filename', command = lambda: self.set_filename_sweep())
+        button_filename.place(relx = 0.7, rely = 0.6)
+        
         button_start_sweeping = ttk.Button(self, text = "Start sweeping", command = lambda: self.start_sweeping())
         button_start_sweeping.place(relx = 0.7, rely = 0.7)
         
-        graph_button = ttk.Button(self, text = 'Graph', command = Universal_frontend(classes = (Graph,), start = Graph))
+        graph_button = ttk.Button(self, text = 'Graph', command = lambda: Universal_frontend(classes = (Graph,), start = Graph))
         graph_button.place(relx = 0.7, rely = 0.8)
         
     def update_sweep_parameters(self, event, interval = 1000):
@@ -1118,6 +1054,41 @@ class Sweeper1d(tk.Frame):
                 self.sweep_options['value'] = getattr(globals()[class_of_sweeper_device](), 'set_options')
                 self.sweep_options.after(interval)
                     
+    def save_manual_status(self):
+        global manual_sweep_flags
+        if manual_sweep_flags[0] != self.status_manual.get():
+            manual_sweep_flags[0] = self.status_manual.get()
+                
+    def open_blank(self, filename):
+        global manual_filenames
+        global manual_sweep_flags
+        if manual_sweep_flags[0] == 1:
+            with open(filename, 'w') as _:
+                pass
+            manual_filenames[0] = filename
+            os.startfile(filename)
+        else:
+            pass
+        
+    def explore_files(self):
+        global manual_sweep_flags
+        if manual_sweep_flags[0] == 1:
+            filename = tk.filedialog.askopenfilename(initialdir = r'C:\NUS\Transport lab\Test',
+                                          title = 'Select a manual sweeper',
+                                          filetypes = (('CSV files', '*.csv*'),
+                                                       ('all files', '*.*')))
+            manual_filenames[0] = filename
+        else:
+            pass
+        
+    def set_filename_sweep(self):
+        global filename_sweep
+        
+        filename_sweep = tk.filedialog.asksaveasfilename(title = 'Save the file', 
+                                                     initialfile = r'C:\NUS\Transport lab\Test\data_files\sweep' + datetime.today().strftime(
+                                                                                     '%H_%M_%d_%m_%Y'),
+                                                     defaultextension = '.csv')
+                
     def start_sweeping(self):
         
         global device_to_sweep1
@@ -1254,10 +1225,52 @@ class Sweeper2d(tk.Frame):
         self.entry_delay_factor2 = tk.Entry(self)
         self.entry_delay_factor2.place(relx = 0.27, rely = 0.46)
         
+        #section of manual sweep points selection
+        self.status_manual1 = tk.IntVar()
+        self.status_manual2 = tk.IntVar()
+        index_sweep = filename_sweep.find('sweep')
+        if index_sweep != -1:
+            filename = filename_sweep[:index_sweep] + 'manual' + filename_sweep[index_sweep + 5:]
+        else:
+            filename[:-4] + '_manual' + '.csv'
+        
+        #icons
+        save = tk.PhotoImage(file = r'C:\NUS\Transport lab\App\save.png')
+        explore = tk.PhotoImage(file = r'C:\NUS\Transport lab\App\explore.png')
+        create = tk.PhotoImage(file = r'C:\NUS\Transport lab\App\create.png')
+        #initials
+        manual_sweep_flags = [0, 0]
+        manual_filenames = ['', '']
+            
+        checkbox_manual1 = ttk.Checkbutton(self, text = 'Maunal sweep select', 
+                                          variable = self.status_manual1, onvalue = 1,
+                                          offvalue = 0, command = lambda: self.save_manual_status(i = 0))
+        checkbox_manual1.place(relx = 0.12, rely = 0.52)
+        
+        button_new_manual1 = ttk.Button(self, text = 'New', command = lambda: self.open_blank(filename = filename, i = 0))
+        button_new_manual1.place(relx = 0.17, rely = 0.52)
+        
+        button_explore_manual1 = ttk.Button(self, text = 'Explore', command = lambda: self.explore_files(i = 0))
+        button_explore_manual1.place(relx = 0.25, rely = 0.52)
+        
+        checkbox_manual2 = ttk.Checkbutton(self, text = 'Maunal sweep select', 
+                                          variable = self.status_manual2, onvalue = 1,
+                                          offvalue = 0, command = lambda: self.save_manual_status(i = 1))
+        checkbox_manual2.place(relx = 0.32, rely = 0.52)
+        
+        button_new_manual2 = ttk.Button(self, text = 'New', command = lambda: self.open_blank(filename = filename, i = 1))
+        button_new_manual2.place(relx = 0.37, rely = 0.52)
+        
+        button_explore_manual2 = ttk.Button(self, text = 'Explore', command = lambda: self.explore_files(i = 1))
+        button_explore_manual2.place(relx = 0.45, rely = 0.52)
+        
+        button_filename = ttk.Button(self, text = 'Filename', command = lambda: self.set_filename_sweep())
+        button_filename.place(relx = 0.7, rely = 0.6)
+        
         button_start_sweeping = ttk.Button(self, text = "Start sweeping", command = lambda: self.start_sweeping())
         button_start_sweeping.place(relx = 0.7, rely = 0.7)
         
-        graph_button = ttk.Button(self, text = 'Graph', command = Universal_frontend(classes = (Graph,), start = Graph))
+        graph_button = ttk.Button(self, text = 'Graph', command = lambda: Universal_frontend(classes = (Graph,), start = Graph))
         graph_button.place(relx = 0.7, rely = 0.8)
         
     def update_sweep_parameters1(self, event, interval = 1000):
@@ -1279,6 +1292,41 @@ class Sweeper2d(tk.Frame):
             self.sweep_options2['value'] = ['']
             self.sweep_options2.current(0)
             self.sweep_options2.after(interval)
+            
+    def save_manual_status(self, i):
+        global manual_sweep_flags
+        if manual_sweep_flags[i] != self.status_manual.get():
+            manual_sweep_flags[i] = self.status_manual.get()
+                
+    def open_blank(self, filename, i):
+        global manual_filenames
+        global manual_sweep_flags
+        if manual_sweep_flags[i] == 1:
+            with open(filename, 'w') as _:
+                pass
+            manual_filenames[i] = filename
+            os.startfile(filename)
+        else:
+            pass
+        
+    def explore_files(self, i):
+        global manual_sweep_flags
+        if manual_sweep_flags[i] == 1:
+            filename = tk.filedialog.askopenfilename(initialdir = r'C:\NUS\Transport lab\Test',
+                                          title = 'Select a manual sweeper',
+                                          filetypes = (('CSV files', '*.csv*'),
+                                                       ('all files', '*.*')))
+            manual_filenames[i] = filename
+        else:
+            pass
+        
+    def set_filename_sweep(self):
+        global filename_sweep
+        
+        filename_sweep = tk.filedialog.asksaveasfilename(title = 'Save the file', 
+                                                     initialfile = r'C:\NUS\Transport lab\Test\data_files\sweep' + datetime.today().strftime(
+                                                                                     '%H_%M_%d_%m_%Y'),
+                                                     defaultextension = '.csv')
                     
     def start_sweeping(self):
         
@@ -1460,10 +1508,64 @@ class Sweeper3d(tk.Frame):
         self.entry_delay_factor3 = tk.Entry(self)
         self.entry_delay_factor3.place(relx = 0.42, rely = 0.46)
         
+        #section of manual sweep points selection
+        self.status_manual1 = tk.IntVar()
+        self.status_manual2 = tk.IntVar()
+        self.status_manual3 = tk.IntVar()
+        index_sweep = filename_sweep.find('sweep')
+        if index_sweep != -1:
+            filename = filename_sweep[:index_sweep] + 'manual' + filename_sweep[index_sweep + 5:]
+        else:
+            filename[:-4] + '_manual' + '.csv'
+        
+        #icons
+        save = tk.PhotoImage(file = r'C:\NUS\Transport lab\App\save.png')
+        explore = tk.PhotoImage(file = r'C:\NUS\Transport lab\App\explore.png')
+        create = tk.PhotoImage(file = r'C:\NUS\Transport lab\App\create.png')
+        #initials
+        manual_sweep_flags = [0, 0, 0]
+        manual_filenames = ['', '', '']
+            
+        checkbox_manual1 = ttk.Checkbutton(self, text = 'Maunal sweep select', 
+                                          variable = self.status_manual1, onvalue = 1,
+                                          offvalue = 0, command = lambda: self.save_manual_status(i = 0))
+        checkbox_manual1.place(relx = 0.12, rely = 0.52)
+        
+        button_new_manual1 = ttk.Button(self, text = 'New', command = lambda: self.open_blank(filename = filename, i = 0))
+        button_new_manual1.place(relx = 0.17, rely = 0.52)
+        
+        button_explore_manual1 = ttk.Button(self, text = 'Explore', command = lambda: self.explore_files(i = 0))
+        button_explore_manual1.place(relx = 0.25, rely = 0.52)
+        
+        checkbox_manual2 = ttk.Checkbutton(self, text = 'Maunal sweep select', 
+                                          variable = self.status_manual2, onvalue = 1,
+                                          offvalue = 0, command = lambda: self.save_manual_status(i = 1))
+        checkbox_manual2.place(relx = 0.32, rely = 0.52)
+        
+        button_new_manual2 = ttk.Button(self, text = 'New', command = lambda: self.open_blank(filename = filename, i = 1))
+        button_new_manual2.place(relx = 0.37, rely = 0.52)
+        
+        button_explore_manual2 = ttk.Button(self, text = 'Explore', command = lambda: self.explore_files(i = 1))
+        button_explore_manual2.place(relx = 0.45, rely = 0.52)
+        
+        checkbox_manual3 = ttk.Checkbutton(self, text = 'Maunal sweep select', 
+                                          variable = self.status_manual3, onvalue = 1,
+                                          offvalue = 0, command = lambda: self.save_manual_status(i = 2))
+        checkbox_manual3.place(relx = 0.52, rely = 0.52)
+        
+        button_new_manual3 = ttk.Button(self, text = 'New', command = lambda: self.open_blank(filename = filename, i = 2))
+        button_new_manual3.place(relx = 0.57, rely = 0.52)
+        
+        button_explore_manual3 = ttk.Button(self, text = 'Explore', command = lambda: self.explore_files(i = 2))
+        button_explore_manual3.place(relx = 0.65, rely = 0.52)
+        
+        button_filename = ttk.Button(self, text = 'Filename', command = lambda: self.set_filename_sweep())
+        button_filename.place(relx = 0.7, rely = 0.6)
+        
         button_start_sweeping = ttk.Button(self, text = "Start sweeping", command = lambda: self.start_sweeping())
         button_start_sweeping.place(relx = 0.75, rely = 0.7)
         
-        graph_button = ttk.Button(self, text = 'Graph', command = Universal_frontend(classes = (Graph,), start = Graph))
+        graph_button = ttk.Button(self, text = 'Graph', command = lambda: Universal_frontend(classes = (Graph,), start = Graph))
         graph_button.place(relx = 0.7, rely = 0.8)
         
     def update_sweep_parameters1(self, event, interval = 1000):
@@ -1485,6 +1587,7 @@ class Sweeper3d(tk.Frame):
             self.sweep_options2['value'] = ['']
             self.sweep_options2.current(0)
             self.sweep_options2.after(interval)
+            
     def update_sweep_parameters3(self, event, interval = 1000):       
         class_of_sweeper_device3 = types_of_devices[self.combo_to_sweep3.current()]
         if class_of_sweeper_device3 != 'Not a class':
@@ -1495,6 +1598,41 @@ class Sweeper3d(tk.Frame):
             self.sweep_options3.current(0)
             self.sweep_options3.after(interval)
                     
+    def save_manual_status(self, i):
+        global manual_sweep_flags
+        if manual_sweep_flags[i] != self.status_manual.get():
+            manual_sweep_flags[i] = self.status_manual.get()
+                
+    def open_blank(self, filename, i):
+        global manual_filenames
+        global manual_sweep_flags
+        if manual_sweep_flags[i] == 1:
+            with open(filename, 'w') as _:
+                pass
+            manual_filenames[i] = filename
+            os.startfile(filename)
+        else:
+            pass
+        
+    def explore_files(self, i):
+        global manual_sweep_flags
+        if manual_sweep_flags[i] == 1:
+            filename = tk.filedialog.askopenfilename(initialdir = r'C:\NUS\Transport lab\Test',
+                                          title = 'Select a manual sweeper',
+                                          filetypes = (('CSV files', '*.csv*'),
+                                                       ('all files', '*.*')))
+            manual_filenames[i] = filename
+        else:
+            pass
+        
+    def set_filename_sweep(self):
+        global filename_sweep
+        
+        filename_sweep = tk.filedialog.asksaveasfilename(title = 'Save the file', 
+                                                     initialfile = r'C:\NUS\Transport lab\Test\data_files\sweep' + datetime.today().strftime(
+                                                                                     '%H_%M_%d_%m_%Y'),
+                                                     defaultextension = '.csv')
+            
     def start_sweeping(self):
         
         global device_to_sweep1
@@ -1591,16 +1729,16 @@ class Sweeper_write(threading.Thread):
         self.value2 = float(min_sweep2)
         self.value3 = float(min_sweep3)
         self.columns = columns
-        self.sweeper_flag1 = sweeper_flag1
-        self.sweeper_flag2 = sweeper_flag2
-        self.sweeper_flag3 = sweeper_flag3
+        self.sweeper_flag1 = bool(sweeper_flag1)
+        self.sweeper_flag2 = bool(sweeper_flag2)
+        self.sweeper_flag3 = bool(sweeper_flag3)
         self.step1 = float(delay_factor1) * float(ratio_sweep1)
         self.step2 = float(delay_factor2) * float(ratio_sweep2)
         self.step3 = float(delay_factor3) * float(ratio_sweep3)
         self.time1 = (float(min_sweep1) - float(max_sweep1)) / float(ratio_sweep1)
         self.time2 = (float(min_sweep2) - float(max_sweep2)) / float(ratio_sweep2)
         self.time3 = (float(min_sweep3) - float(max_sweep3)) / float(ratio_sweep3)
-        '''
+        
         try:
             self.nstep1 = (float(max_sweep1) - float(min_sweep1)) / self.ratio_sweep1 / self.delay_factor1
         except ValueError:
@@ -1613,7 +1751,7 @@ class Sweeper_write(threading.Thread):
             self.nstep3 = (float(max_sweep3) - float(min_sweep3)) / self.ratio_sweep3 / self.delay_factor3
         except ValueError:
             self.nstep3 = 1
-        '''
+            
         try:
             threading.Thread.__init__(self)
             self.daemon = True
@@ -1622,44 +1760,102 @@ class Sweeper_write(threading.Thread):
             pass
         
     def run(self):
+        global manual_filenames
+        global manual_sweep_flags
         if self.sweeper_flag1 == True:
             dataframe = pd.DataFrame(columns = self.columns)
             dataframe.to_csv(self.filename_sweep, index = False)
-            while self.value1 <= self.max_sweep1:
-                if self.device_to_sweep1 == 'Time':
+            if manual_sweep_flags[0] == 0:
+                while self.value1 <= self.max_sweep1:
+                    if manual_sweep_flags[0] == 0:
+                        if self.device_to_sweep1 == 'Time':
+                            dataframe = [time.process_time() - zero_time]
+                        else:
+                            dataframe = [time.process_time() - zero_time]
+                            #sweep process here
+                            ###################
+                            #set 'parameter_to_sweep' to 'value'
+                            getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress = self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value = self.value1)
+                            self.value1 += self.step1
+                            time.sleep(self.delay_factor1)
+                            ###################
+                            dataframe.append(self.value1)
+                        for parameter in self.parameters_to_read:
+                            index_dot = parameter.find('.')
+                            adress = parameter[:index_dot]
+                            option = parameter[index_dot + 1:]
+                            dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
+                    
+                        with open(self.filename_sweep, 'a') as f_object:
+                            try:
+                                writer_object = writer(f_object)
+                                writer_object.writerow(dataframe)
+                                f_object.close()
+                            except KeyboardInterrupt():
+                                f_object.close()
+                            finally:
+                                f_object.close()
+                    else:
+                        for value in pd.read_csv(manual_filenames[0]):
+                            dataframe = [time.process_time() - zero_time]
+                            #manual sweep process here
+                            ###################
+                            #set 'parameter_to_sweep' to 'value'
+                            getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress = self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value = value)
+                            time.sleep(self.delay_factor1)
+                            ###################
+                            dataframe.append(value)
+                            for parameter in self.parameters_to_read:
+                                index_dot = parameter.find('.')
+                                adress = parameter[:index_dot]
+                                option = parameter[index_dot + 1:]
+                                dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
+                        
+                            with open(self.filename_sweep, 'a') as f_object:
+                                try:
+                                    writer_object = writer(f_object)
+                                    writer_object.writerow(dataframe)
+                                    f_object.close()
+                                except KeyboardInterrupt():
+                                    f_object.close()
+                                finally:
+                                    f_object.close()
+                        break
+                self.sweeper_flag1 = False
+            else:
+                for value in pd.read_csv(manual_filenames[0]):
                     dataframe = [time.process_time() - zero_time]
-                else:
-                    dataframe = [time.process_time() - zero_time]
-                    #sweep process here
+                    #manual sweep process here
                     ###################
                     #set 'parameter_to_sweep' to 'value'
-                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress = self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value = self.value1)
-                    self.value1 += self.step1
+                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress = self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value = value)
                     time.sleep(self.delay_factor1)
                     ###################
-                    dataframe.append(self.value1)
-                for parameter in self.parameters_to_read:
-                    index_dot = parameter.find('.')
-                    adress = parameter[:index_dot]
-                    option = parameter[index_dot + 1:]
-                    dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
-            
-                with open(self.filename_sweep, 'a') as f_object:
-                    try:
-                        writer_object = writer(f_object)
-                        writer_object.writerow(dataframe)
-                        f_object.close()
-                    except KeyboardInterrupt():
-                        f_object.close()
-                    finally:
-                        f_object.close()
+                    dataframe.append(value)
+                    for parameter in self.parameters_to_read:
+                        index_dot = parameter.find('.')
+                        adress = parameter[:index_dot]
+                        option = parameter[index_dot + 1:]
+                        dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
+                
+                    with open(self.filename_sweep, 'a') as f_object:
+                        try:
+                            writer_object = writer(f_object)
+                            writer_object.writerow(dataframe)
+                            f_object.close()
+                        except KeyboardInterrupt():
+                            f_object.close()
+                        finally:
+                            f_object.close()
             self.sweeper_flag1 = False
+                
                         
         if self.sweeper_flag2 == True:
             dataframe = pd.DataFrame(columns = self.columns)
             dataframe.to_csv(self.filename_sweep, index = False)
             
-            if self.time1 > self.time2:
+            
+            if self.time1 > self.time2 or manual_sweep_flags == [1, 0]:
                 self.device_to_sweep1 = device_to_sweep2
                 self.device_to_sweep2 = device_to_sweep1
                 self.parameter_to_sweep1 = parameter_to_sweep2
@@ -1676,45 +1872,196 @@ class Sweeper_write(threading.Thread):
                 self.step2 = float(delay_factor1) * float(ratio_sweep1)
                 self.value1 = float(min_sweep2)
                 self.value2 = float(min_sweep1)
-            
-            while self.value1 <= self.max_sweep1:
-                dataframe = [time.process_time() - zero_time]
-                #sweep process 1 here
+                manual_sweeper_flags = [0, 1]
+            if manual_sweeper_flags[0] == 0:
+                while self.value1 <= self.max_sweep1:
+                    if manual_sweeper_flags[0] == 0:
+                        dataframe = [time.process_time() - zero_time]
+                        #sweep process 1 here
+                        ###################
+                        #set 'parameter_to_sweep1' to 'value1'
+                        getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress = self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value = self.value1)
+                        self.value1 += self.step1
+                        time.sleep(self.delay_factor1)
+                        ###################
+                        dataframe.append(self.value1)
+                        dataframe_after = [*dataframe]
+                        if manual_sweeper_flags[1] == 0:
+                            while self.value2 <= self.max_sweep2:
+                                if manual_sweeper_flags[1] == 0:
+                                    #sweep process 2 here
+                                    ###################
+                                    #set 'parameter_to_sweep2' to 'value2'
+                                    dataframe = [*dataframe_after]
+                                    dataframe[0] = time.process_time() - zero_time
+                                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](adress = self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value = self.value2)
+                                    self.value2 += self.step2
+                                    time.sleep(self.delay_factor2)
+                                    ###################
+                                    dataframe.append(self.value2)
+                                    for parameter in self.parameters_to_read:
+                                        index_dot = parameter.find('.')
+                                        adress = parameter[:index_dot]
+                                        option = parameter[index_dot + 1:]
+                                        dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
+                        
+                                    with open(self.filename_sweep, 'a') as f_object:
+                                        try:
+                                            writer_object = writer(f_object)
+                                            writer_object.writerow(dataframe)
+                                            f_object.close()
+                                        except KeyboardInterrupt():
+                                            f_object.close()
+                                        finally:
+                                            f_object.close()
+                                else:
+                                    #manual sweep process 2 here
+                                    ###################
+                                    #set 'parameter_to_sweep2' to 'value2'
+                                    for value2 in pd.read_csv(manual_filenames[1]):
+                                        dataframe = [*dataframe_after]
+                                        dataframe[0] = time.process_time() - zero_time
+                                        getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](adress = self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value = value2)
+                                        time.sleep(self.delay_factor2)
+                                        ###################
+                                        dataframe.append(value2)
+                                        for parameter in self.parameters_to_read:
+                                            index_dot = parameter.find('.')
+                                            adress = parameter[:index_dot]
+                                            option = parameter[index_dot + 1:]
+                                            dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
+                            
+                                        with open(self.filename_sweep, 'a') as f_object:
+                                            try:
+                                                writer_object = writer(f_object)
+                                                writer_object.writerow(dataframe)
+                                                f_object.close()
+                                            except KeyboardInterrupt():
+                                                f_object.close()
+                                            finally:
+                                                f_object.close()
+                                    break
+                            self.value2 = self.min_sweep2
+                        else:
+                            #manual sweep process 2 here
+                            ###################
+                            #set 'parameter_to_sweep2' to 'value2'
+                            for value2 in pd.read_csv(manual_filenames[1]):
+                                dataframe = [*dataframe_after]
+                                dataframe[0] = time.process_time() - zero_time
+                                getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](adress = self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value = value2)
+                                time.sleep(self.delay_factor2)
+                                ###################
+                                dataframe.append(value2)
+                                for parameter in self.parameters_to_read:
+                                    index_dot = parameter.find('.')
+                                    adress = parameter[:index_dot]
+                                    option = parameter[index_dot + 1:]
+                                    dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
+                    
+                                with open(self.filename_sweep, 'a') as f_object:
+                                    try:
+                                        writer_object = writer(f_object)
+                                        writer_object.writerow(dataframe)
+                                        f_object.close()
+                                    except KeyboardInterrupt():
+                                        f_object.close()
+                                    finally:
+                                       f_object.close()
+                    if manual_sweep_flags == [1, 0]:
+                        self.device_to_sweep1 = device_to_sweep2
+                        self.device_to_sweep2 = device_to_sweep1
+                        self.parameter_to_sweep1 = parameter_to_sweep2
+                        self.parameter_to_sweep2 = parameter_to_sweep1
+                        self.min_sweep1 = float(min_sweep2) 
+                        self.max_sweep1 = float(max_sweep2)
+                        self.ratio_sweep1 = float(ratio_sweep2)
+                        self.delay_factor1 = float(delay_factor2)
+                        self.min_sweep2 = float(min_sweep1) 
+                        self.max_sweep2 = float(max_sweep1)
+                        self.ratio_sweep2 = float(ratio_sweep1)
+                        self.delay_factor2 = float(delay_factor1)
+                        self.step1 = float(delay_factor2) * float(ratio_sweep2)
+                        self.step2 = float(delay_factor1) * float(ratio_sweep1)
+                        self.value1 = float(min_sweep2)
+                        self.value2 = float(min_sweep1)
+                        manual_sweeper_flags = [0, 1]
+                    else:
+                        #manual sweep process 1 here
+                        ###################
+                        #set 'parameter_to_sweep1' to 'value1'
+                        for value1 in pd.read_csv(manual_filenames[1]):
+                            for value2 in pd.read_csv(manual_filenames[1]):
+                                dataframe = [*dataframe_after]
+                                dataframe[0] = time.process_time() - zero_time
+                                getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress = self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value = value1)
+                                time.sleep(self.delay_factor1)
+                                dataframe.append(value1)
+                                getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](adress = self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value = value2)
+                                time.sleep(self.delay_factor2)
+                                dataframe.append(value2)
+                                for parameter in self.parameters_to_read:
+                                    index_dot = parameter.find('.')
+                                    adress = parameter[:index_dot]
+                                    option = parameter[index_dot + 1:]
+                                    dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
+                    
+                                with open(self.filename_sweep, 'a') as f_object:
+                                    try:
+                                        writer_object = writer(f_object)
+                                        writer_object.writerow(dataframe)
+                                        f_object.close()
+                                    except KeyboardInterrupt():
+                                        f_object.close()
+                                    finally:
+                                       f_object.close()
+            if manual_sweep_flags == [1, 0]:
+                self.device_to_sweep1 = device_to_sweep2
+                self.device_to_sweep2 = device_to_sweep1
+                self.parameter_to_sweep1 = parameter_to_sweep2
+                self.parameter_to_sweep2 = parameter_to_sweep1
+                self.min_sweep1 = float(min_sweep2) 
+                self.max_sweep1 = float(max_sweep2)
+                self.ratio_sweep1 = float(ratio_sweep2)
+                self.delay_factor1 = float(delay_factor2)
+                self.min_sweep2 = float(min_sweep1) 
+                self.max_sweep2 = float(max_sweep1)
+                self.ratio_sweep2 = float(ratio_sweep1)
+                self.delay_factor2 = float(delay_factor1)
+                self.step1 = float(delay_factor2) * float(ratio_sweep2)
+                self.step2 = float(delay_factor1) * float(ratio_sweep1)
+                self.value1 = float(min_sweep2)
+                self.value2 = float(min_sweep1)
+                manual_sweeper_flags = [0, 1]
+            else:
+                #manual sweep process 1 here
                 ###################
                 #set 'parameter_to_sweep1' to 'value1'
-                getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress = self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value = self.value1)
-                self.value1 += self.step1
-                time.sleep(self.delay_factor1)
-                ###################
-                dataframe.append(self.value1)
-                dataframe_after = [*dataframe]
-                while self.value2 <= self.max_sweep2:
-                    #sweep process 2 here
-                    ###################
-                    #set 'parameter_to_sweep2' to 'value2'
-                    dataframe = [*dataframe_after]
-                    dataframe[0] = time.process_time() - zero_time
-                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](adress = self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value = self.value2)
-                    self.value2 += self.step2
-                    time.sleep(self.delay_factor2)
-                    ###################
-                    dataframe.append(self.value2)
-                    for parameter in self.parameters_to_read:
-                        index_dot = parameter.find('.')
-                        adress = parameter[:index_dot]
-                        option = parameter[index_dot + 1:]
-                        dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
-        
-                    with open(self.filename_sweep, 'a') as f_object:
-                        try:
-                            writer_object = writer(f_object)
-                            writer_object.writerow(dataframe)
-                            f_object.close()
-                        except KeyboardInterrupt():
-                            f_object.close()
-                        finally:
-                            f_object.close()
-                self.value2 = self.min_sweep2
+                for value1 in pd.read_csv(manual_filenames[1]):
+                    for value2 in pd.read_csv(manual_filenames[1]):
+                        dataframe = [*dataframe_after]
+                        dataframe[0] = time.process_time() - zero_time
+                        getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress = self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value = value1)
+                        time.sleep(self.delay_factor1)
+                        dataframe.append(value1)
+                        getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](adress = self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value = value2)
+                        time.sleep(self.delay_factor2)
+                        dataframe.append(value2)
+                        for parameter in self.parameters_to_read:
+                            index_dot = parameter.find('.')
+                            adress = parameter[:index_dot]
+                            option = parameter[index_dot + 1:]
+                            dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
+            
+                        with open(self.filename_sweep, 'a') as f_object:
+                            try:
+                                writer_object = writer(f_object)
+                                writer_object.writerow(dataframe)
+                                f_object.close()
+                            except KeyboardInterrupt():
+                                f_object.close()
+                            finally:
+                               f_object.close()
             self.sweeper_flag2 == False
             
         if self.sweeper_flag3 == True:
@@ -1857,15 +2204,6 @@ class Graph(tk.Frame):
     
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-
-        plot221 = FigureCanvasTkAgg(fig221, self)
-        plot221.draw()
-        plot221.get_tk_widget().place(relx = 0.02, rely = 0)
-        
-        toolbar221 = VerticalNavigationToolbar2Tk(plot221, self)
-        toolbar221.update()
-        toolbar221.place(relx = 0.45, rely = 0)
-        plot221._tkcanvas.place(relx = 0.02, rely = 0)
         
         label_x1 = tk.Label(self, text = 'x', font = LARGE_FONT)
         label_x1.place(relx = 0.02, rely = 0.455)
@@ -1880,15 +2218,6 @@ class Graph(tk.Frame):
         self.combo_y1 = ttk.Combobox(self, values = columns)
         self.combo_y1.bind("<<ComboboxSelected>>", self.y1_update)
         self.combo_y1.place(relx = 0.165, rely = 0.46)
-    
-        plot222 = FigureCanvasTkAgg(fig222, self)
-        plot222.draw()
-        plot222.get_tk_widget().place(relx = 0.52, rely = 0)
-        
-        toolbar222 = VerticalNavigationToolbar2Tk(plot222, self)
-        toolbar222.update()
-        toolbar222.place(relx = 0.95, rely = 0)
-        plot222._tkcanvas.place(relx = 0.52, rely = 0)
         
         label_x2 = tk.Label(self, text = 'x', font = LARGE_FONT)
         label_x2.place(relx = 0.52, rely = 0.455)
@@ -1903,15 +2232,6 @@ class Graph(tk.Frame):
         self.combo_y2 = ttk.Combobox(self, values = columns)
         self.combo_y2.bind("<<ComboboxSelected>>", self.y2_update)
         self.combo_y2.place(relx = 0.665, rely = 0.46)
-        
-        plot223 = FigureCanvasTkAgg(fig223, self)
-        plot223.draw()
-        plot223.get_tk_widget().place(relx = 0.02, rely = 0.50)
-        
-        toolbar223 = VerticalNavigationToolbar2Tk(plot223, self)
-        toolbar223.update()
-        toolbar223.place(relx = 0.45, rely = 0.5)
-        plot223._tkcanvas.place(relx = 0.02, rely = 0.5)
         
         label_x3 = tk.Label(self, text = 'x', font = LARGE_FONT)
         label_x3.place(relx = 0.02, rely = 0.955)
@@ -1928,15 +2248,6 @@ class Graph(tk.Frame):
         self.combo_y3.place(relx = 0.165, rely = 0.96)
         
         '''
-        plot224 = FigureCanvasTkAgg(fig224, self)
-        plot224.draw()
-        plot224.get_tk_widget().place(relx = 0.52, rely = 0.5)
-        
-        toolbar224 = VerticalNavigationToolbar2Tk(plot224, self)
-        toolbar224.update()
-        toolbar224.place(relx = 0.95, rely = 0.5)
-        plot224._tkcanvas.place(relx = 0.52, rely = 0.5)
-        
         label_x4 = tk.Label(self, text = 'x', font = LARGE_FONT)
         label_x4.place(relx = 0.52, rely = 0.955)
         
@@ -1970,66 +2281,191 @@ class Graph(tk.Frame):
         self.combo_z4.bind("<<ComboboxSelected>>")
         self.combo_z4.place(relx = 0.795, rely = 0.96)   
         '''
-        try:
-            if sweeper_flag1 == True:
-                self.combo_x1.current(0)
-                x1_status = 0
-                self.combo_y1.current(2)
-                y1_status = 2
-                self.combo_x2.current(0)
-                x2_status = 0
-                self.combo_y2.current(2)
-                y2_status = 2
-                self.combo_x3.current(0)
-                x3_status = 0
-                self.combo_y3.current(2)
-                y3_status = 2
-            if sweeper_flag2 == True:
-                self.combo_x1.current(0)
-                x1_status = 0
-                self.combo_y1.current(3)
-                y1_status = 3
-                self.combo_x2.current(0)
-                x2_status = 0
-                self.combo_y2.current(3)
-                y2_status = 3
-                self.combo_x3.current(0)
-                x3_status = 0
-                self.combo_y3.current(3)
-                y3_status = 3
-            if sweeper_flag3 == True:
-                self.combo_x1.current(0)
-                x1_status = 0
-                self.combo_y1.current(4)
-                y1_status = 4
-                self.combo_x2.current(0)
-                x2_status = 0
-                self.combo_y2.current(4)
-                y2_status = 4
-                self.combo_x3.current(0)
-                x3_status = 0
-                self.combo_y3.current(4)
-                y3_status = 4
-        except tk.TclError:
-            pass
+        if sweeper_flag1 == True:
+            self.combo_x1.current(0)
+            x1_status = 0
+            self.combo_y1.current(2)
+            y1_status = 2
+            self.combo_x2.current(0)
+            x2_status = 0
+            self.combo_y2.current(2)
+            y2_status = 2
+            self.combo_x3.current(0)
+            x3_status = 0
+            self.combo_y3.current(2)
+            y3_status = 2
+        if sweeper_flag2 == True:
+            self.combo_x1.current(0)
+            x1_status = 0
+            self.combo_y1.current(3)
+            y1_status = 3
+            self.combo_x2.current(0)
+            x2_status = 0
+            self.combo_y2.current(3)
+            y2_status = 3
+            self.combo_x3.current(0)
+            x3_status = 0
+            self.combo_y3.current(3)
+            y3_status = 3
+        if sweeper_flag3 == True:
+            self.combo_x1.current(0)
+            x1_status = 0
+            self.combo_y1.current(4)
+            y1_status = 4
+            self.combo_x2.current(0)
+            x2_status = 0
+            self.combo_y2.current(4)
+            y2_status = 4
+            self.combo_x3.current(0)
+            x3_status = 0
+            self.combo_y3.current(4)
+            y3_status = 4
+            
+        #defining plots initial parameters
+        labelsize = 4
+        pad = 1
+
+        self.fig221 = Figure(figsize = (1.8, 1), dpi = 300)
+        self.ax1 = self.fig221.add_subplot(111)
+        self.ax1.tick_params(axis='both', which='major', pad=pad, labelsize = labelsize)
+
+        self.fig222 = Figure(figsize = (1.8, 1), dpi = 300)
+        self.ax2 = self.fig222.add_subplot(111)
+        self.ax2.tick_params(axis='both', which='major', pad=pad, labelsize = labelsize)
+
+        self.fig223 = Figure(figsize = (1.8, 1), dpi = 300)
+        self.ax3 = self.fig223.add_subplot(111)
+        self.ax3.tick_params(axis='both', which='major', pad=pad, labelsize = labelsize)
+
+        self.fig224 = Figure(figsize = (1.8, 1), dpi = 300)
+        self.ax4 = self.fig224.add_subplot(111)
+        self.ax4.tick_params(axis='both', which='major', pad=pad, labelsize = labelsize)    
+            
+        self.ani221 = animation.FuncAnimation(self.fig221, self.animate221, interval = interval, fargs = self)
         
-        self.interval = 100
-    '''    
-    def combos_update(self):
-        self.combo_x1['values'] = columns
-        self.combo_x1.after(interval, self.combos_update)
-        self.combo_y1['values'] = columns
-        self.combo_y1.after(interval, self.combos_update)
-        self.combo_x2['values'] = columns
-        self.combo_x2.after(interval, self.combos_update)
-        self.combo_y2['values'] = columns
-        self.combo_y2.after(interval, self.combos_update)
-        self.combo_x3['values'] = columns
-        self.combo_x3.after(interval, self.combos_update)
-        self.combo_y3['values'] = columns
-        self.combo_y3.after(interval, self.combos_update)
-    '''
+        plot221 = FigureCanvasTkAgg(self.fig221, self)
+        plot221.draw()
+        plot221.get_tk_widget().place(relx = 0.02, rely = 0)
+        
+        toolbar221 = VerticalNavigationToolbar2Tk(plot221, self)
+        toolbar221.update()
+        toolbar221.place(relx = 0.45, rely = 0)
+        plot221._tkcanvas.place(relx = 0.02, rely = 0)
+        
+        self.ani222 = animation.FuncAnimation(self.fig222, self.animate222, interval = interval, fargs = self)
     
+        plot222 = FigureCanvasTkAgg(self.fig222, self)
+        plot222.draw()
+        plot222.get_tk_widget().place(relx = 0.52, rely = 0)
+        
+        toolbar222 = VerticalNavigationToolbar2Tk(plot222, self)
+        toolbar222.update()
+        toolbar222.place(relx = 0.95, rely = 0)
+        plot222._tkcanvas.place(relx = 0.52, rely = 0)
+        
+        self.ani223 = animation.FuncAnimation(self.fig223, self.animate223, interval = interval, fargs = self)
+        
+        plot223 = FigureCanvasTkAgg(self.fig223, self)
+        plot223.draw()
+        plot223.get_tk_widget().place(relx = 0.02, rely = 0.50)
+        
+        toolbar223 = VerticalNavigationToolbar2Tk(plot223, self)
+        toolbar223.update()
+        toolbar223.place(relx = 0.45, rely = 0.5)
+        plot223._tkcanvas.place(relx = 0.02, rely = 0.5)
+        
+        '''
+        self.ani224 = animation.FuncAnimation(self.fig224, self.animate224, interval = 3 * interval, fargs = self)
+        plot224 = FigureCanvasTkAgg(self.fig224, self)
+        plot224.draw()
+        plot224.get_tk_widget().place(relx = 0.52, rely = 0.5)
+        
+        toolbar224 = VerticalNavigationToolbar2Tk(plot224, self)
+        toolbar224.update()
+        toolbar224.place(relx = 0.95, rely = 0.5)
+        plot224._tkcanvas.place(relx = 0.52, rely = 0.5)
+        '''
+        
+    def animate221(i, self):
+    #function to animate graph on each step    
+        global x1
+        global y1
+        global x1_status
+        global y1_status
+        global columns
+        global filename_sweep
+        
+        try:
+            data = pd.read_csv(filename_sweep)
+            x1 = data[columns[x1_status]].values
+            y1 = data[columns[y1_status]].values
+            self.ax1.clear()
+            self.ax1.plot(x1, y1, '-', lw = 1, color = 'darkblue')
+            print(x1, y1)
+        except FileNotFoundError:
+            self.ax1.clear()
+            self.ax1.plot(x1, y1, '-', lw = 1, color = 'darkblue')
+            
+        
+    def animate222(i, self):
+    #function to animate graph on each step    
+        global x2
+        global y2
+        global x2_status
+        global y2_status
+        global columns
+        global filename_sweep
+        
+        try:
+            data = pd.read_csv(filename_sweep)
+            x2 = data[columns[x2_status + 1]].values
+            y2 = data[columns[y2_status + 1]].values 
+            self.ax2.clear()
+            self.ax2.plot(x2, y2, '-', lw = 1, color = 'crimson')
+        except FileNotFoundError:
+            self.ax1.clear()
+            self.ax1.plot(x1, y1, '-', lw = 1, color = 'darkblue')
+        
+    def animate223(i, self):
+    #function to animate graph on each step    
+        global x3
+        global y3
+        global x3_status
+        global y3_status
+        global columns
+        global filename_sweep
+        
+        try:
+            data = pd.read_csv(filename_sweep)
+            x3 = data[columns[x3_status + 1]].values
+            y3 = data[columns[y3_status + 1]].values 
+            self.ax3.clear()
+            self.ax3.plot(x3, y3, '-', lw = 1, color = 'darkgreen')
+        except FileNotFoundError:
+            self.ax1.clear()
+            self.ax1.plot(x1, y1, '-', lw = 1, color = 'darkblue')
+
+    '''
+    def animate224(i, self):
+    #function to animate graph on each step    
+        global x4
+        global y4
+        global z4
+        try:   
+            self.ax4.clear()
+            colorbar = self.ax4.imshow(z4, interpolation ='nearest')
+            self.ax4.colorbar(colorbar)
+            try:
+                self.ax4.yticks(np.arange(x4.shape[0], step = x4.shape[0] // 10), 
+                              round(x4[::x4.shape[0] // 10], 2))
+                self.ax4.xticks(np.arange(y4.shape[0], step = y4.shape[0] // 10), 
+                              round(y4[::y4.shape[0] // 10], 2))
+            except ZeroDivisionError or ValueError:
+                pass
+        except:
+            pass
+    '''
+        
     def x1_update(self, event):
         global x1_status
         x1_status = self.combo_x1.current()
@@ -2059,13 +2495,8 @@ interval = 100
 def main():
     write_config_parameters()
     write_config_channels()
-    app = Universal_frontend(classes = (StartPage, Lock_in_settings, Sweeper1d, Sweeper2d, Sweeper3d),
+    Universal_frontend(classes = (StartPage, Lock_in_settings, Sweeper1d, Sweeper2d, Sweeper3d),
                              start = StartPage)
-    ani221 = animation.FuncAnimation(fig221, animate221, interval = interval)
-    ani222 = animation.FuncAnimation(fig222, animate222, interval = interval)
-    ani223 = animation.FuncAnimation(fig223, animate223, interval = interval)
-    #ani224 = animation.FuncAnimation(fig224, animate224, frames = self, interval = 3 * interval)
-    app.mainloop()
     while True:
         pass
     
