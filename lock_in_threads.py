@@ -73,7 +73,8 @@ sweeper_flag2 = False
 sweeper_flag3 = False
 
 manual_sweep_flags = [0]
-manual_filenames = ['']
+manual_filenames = [r'C:\NUS\Transport lab\Test\data_files\manual' + datetime.today().strftime(
+                                '%H_%M_%d_%m_%Y') + '.csv']
 columns = []
 
 #variables for plotting
@@ -1062,24 +1063,19 @@ class Sweeper1d(tk.Frame):
     def open_blank(self, filename):
         global manual_filenames
         global manual_sweep_flags
-        if manual_sweep_flags[0] == 1:
-            with open(filename, 'w') as _:
-                pass
-            manual_filenames[0] = filename
-            os.startfile(filename)
-        else:
+        with open(filename, 'w') as _:
             pass
+        manual_filenames[0] = filename
+        os.startfile(filename)
         
     def explore_files(self):
         global manual_sweep_flags
-        if manual_sweep_flags[0] == 1:
-            filename = tk.filedialog.askopenfilename(initialdir = r'C:\NUS\Transport lab\Test',
-                                          title = 'Select a manual sweeper',
-                                          filetypes = (('CSV files', '*.csv*'),
-                                                       ('all files', '*.*')))
-            manual_filenames[0] = filename
-        else:
-            pass
+        global manual_filenames
+        filename = tk.filedialog.askopenfilename(initialdir = r'C:\NUS\Transport lab\Test',
+                                      title = 'Select a manual sweeper',
+                                      filetypes = (('CSV files', '*.csv*'),
+                                                   ('all files', '*.*')))
+        manual_filenames[0] = filename
         
     def set_filename_sweep(self):
         global filename_sweep
@@ -1251,7 +1247,7 @@ class Sweeper2d(tk.Frame):
         button_new_manual1.place(relx = 0.17, rely = 0.52)
         
         button_explore_manual1 = ttk.Button(self, text = 'Explore', command = lambda: self.explore_files(i = 0))
-        button_explore_manual1.place(relx = 0.25, rely = 0.52)
+        button_explore_manual1.place(relx = 0.17, rely = 0.6)
         
         checkbox_manual2 = ttk.Checkbutton(self, text = 'Maunal sweep select', 
                                           variable = self.status_manual2, onvalue = 1,
@@ -1262,7 +1258,7 @@ class Sweeper2d(tk.Frame):
         button_new_manual2.place(relx = 0.37, rely = 0.52)
         
         button_explore_manual2 = ttk.Button(self, text = 'Explore', command = lambda: self.explore_files(i = 1))
-        button_explore_manual2.place(relx = 0.45, rely = 0.52)
+        button_explore_manual2.place(relx = 0.37, rely = 0.6)
         
         button_filename = ttk.Button(self, text = 'Filename', command = lambda: self.set_filename_sweep())
         button_filename.place(relx = 0.7, rely = 0.6)
@@ -1295,30 +1291,26 @@ class Sweeper2d(tk.Frame):
             
     def save_manual_status(self, i):
         global manual_sweep_flags
-        if manual_sweep_flags[i] != self.status_manual.get():
-            manual_sweep_flags[i] = self.status_manual.get()
+        if manual_sweep_flags[i] != globals()['self.status_manual' + str(i)].get():
+            manual_sweep_flags[i] = globals()['self.status_manual' + str(i)].get()
                 
     def open_blank(self, filename, i):
         global manual_filenames
         global manual_sweep_flags
-        if manual_sweep_flags[i] == 1:
-            with open(filename, 'w') as _:
-                pass
-            manual_filenames[i] = filename
-            os.startfile(filename)
-        else:
+        with open(filename, 'w') as _:
             pass
+        manual_filenames[i] = filename
+        os.startfile(filename)
         
     def explore_files(self, i):
         global manual_sweep_flags
-        if manual_sweep_flags[i] == 1:
-            filename = tk.filedialog.askopenfilename(initialdir = r'C:\NUS\Transport lab\Test',
-                                          title = 'Select a manual sweeper',
-                                          filetypes = (('CSV files', '*.csv*'),
-                                                       ('all files', '*.*')))
-            manual_filenames[i] = filename
-        else:
-            pass
+        global manual_filenames
+        filename = tk.filedialog.askopenfilename(initialdir = r'C:\NUS\Transport lab\Test',
+                                      title = 'Select a manual sweeper',
+                                      filetypes = (('CSV files', '*.csv*'),
+                                                   ('all files', '*.*')))
+        manual_filenames[i] = filename
+
         
     def set_filename_sweep(self):
         global filename_sweep
@@ -1535,7 +1527,7 @@ class Sweeper3d(tk.Frame):
         button_new_manual1.place(relx = 0.17, rely = 0.52)
         
         button_explore_manual1 = ttk.Button(self, text = 'Explore', command = lambda: self.explore_files(i = 0))
-        button_explore_manual1.place(relx = 0.25, rely = 0.52)
+        button_explore_manual1.place(relx = 0.17, rely = 0.6)
         
         checkbox_manual2 = ttk.Checkbutton(self, text = 'Maunal sweep select', 
                                           variable = self.status_manual2, onvalue = 1,
@@ -1546,7 +1538,7 @@ class Sweeper3d(tk.Frame):
         button_new_manual2.place(relx = 0.37, rely = 0.52)
         
         button_explore_manual2 = ttk.Button(self, text = 'Explore', command = lambda: self.explore_files(i = 1))
-        button_explore_manual2.place(relx = 0.45, rely = 0.52)
+        button_explore_manual2.place(relx = 0.37, rely = 0.6)
         
         checkbox_manual3 = ttk.Checkbutton(self, text = 'Maunal sweep select', 
                                           variable = self.status_manual3, onvalue = 1,
@@ -1557,7 +1549,7 @@ class Sweeper3d(tk.Frame):
         button_new_manual3.place(relx = 0.57, rely = 0.52)
         
         button_explore_manual3 = ttk.Button(self, text = 'Explore', command = lambda: self.explore_files(i = 2))
-        button_explore_manual3.place(relx = 0.65, rely = 0.52)
+        button_explore_manual3.place(relx = 0.57, rely = 0.6)
         
         button_filename = ttk.Button(self, text = 'Filename', command = lambda: self.set_filename_sweep())
         button_filename.place(relx = 0.7, rely = 0.6)
@@ -1600,30 +1592,25 @@ class Sweeper3d(tk.Frame):
                     
     def save_manual_status(self, i):
         global manual_sweep_flags
-        if manual_sweep_flags[i] != self.status_manual.get():
-            manual_sweep_flags[i] = self.status_manual.get()
+        if manual_sweep_flags[i] != globals()['self.status_manual' + str(i)].get():
+            manual_sweep_flags[i] = globals()['self.status_manual' + str(i)].get()
                 
     def open_blank(self, filename, i):
         global manual_filenames
         global manual_sweep_flags
-        if manual_sweep_flags[i] == 1:
-            with open(filename, 'w') as _:
-                pass
-            manual_filenames[i] = filename
-            os.startfile(filename)
-        else:
+        with open(filename, 'w') as _:
             pass
+        manual_filenames[i] = filename
+        os.startfile(filename)
         
     def explore_files(self, i):
         global manual_sweep_flags
-        if manual_sweep_flags[i] == 1:
-            filename = tk.filedialog.askopenfilename(initialdir = r'C:\NUS\Transport lab\Test',
-                                          title = 'Select a manual sweeper',
-                                          filetypes = (('CSV files', '*.csv*'),
-                                                       ('all files', '*.*')))
-            manual_filenames[i] = filename
-        else:
-            pass
+        global manual_filenames
+        filename = tk.filedialog.askopenfilename(initialdir = r'C:\NUS\Transport lab\Test',
+                                      title = 'Select a manual sweeper',
+                                      filetypes = (('CSV files', '*.csv*'),
+                                                   ('all files', '*.*')))
+        manual_filenames[i] = filename
         
     def set_filename_sweep(self):
         global filename_sweep
@@ -1729,16 +1716,16 @@ class Sweeper_write(threading.Thread):
         self.value2 = float(min_sweep2)
         self.value3 = float(min_sweep3)
         self.columns = columns
-        self.sweeper_flag1 = bool(sweeper_flag1)
-        self.sweeper_flag2 = bool(sweeper_flag2)
-        self.sweeper_flag3 = bool(sweeper_flag3)
+        self.sweeper_flag1 = sweeper_flag1
+        self.sweeper_flag2 = sweeper_flag2
+        self.sweeper_flag3 = sweeper_flag3
         self.step1 = float(delay_factor1) * float(ratio_sweep1)
         self.step2 = float(delay_factor2) * float(ratio_sweep2)
         self.step3 = float(delay_factor3) * float(ratio_sweep3)
         self.time1 = (float(min_sweep1) - float(max_sweep1)) / float(ratio_sweep1)
         self.time2 = (float(min_sweep2) - float(max_sweep2)) / float(ratio_sweep2)
         self.time3 = (float(min_sweep3) - float(max_sweep3)) / float(ratio_sweep3)
-        
+        '''
         try:
             self.nstep1 = (float(max_sweep1) - float(min_sweep1)) / self.ratio_sweep1 / self.delay_factor1
         except ValueError:
@@ -1751,7 +1738,7 @@ class Sweeper_write(threading.Thread):
             self.nstep3 = (float(max_sweep3) - float(min_sweep3)) / self.ratio_sweep3 / self.delay_factor3
         except ValueError:
             self.nstep3 = 1
-            
+        '''
         try:
             threading.Thread.__init__(self)
             self.daemon = True
@@ -1759,85 +1746,98 @@ class Sweeper_write(threading.Thread):
         except NameError:
             pass
         
+    def transposition(self, a, b):
+        #changes device_a and device_b order
+        a = str(a)
+        b = str(b)
+        globals()['self.device_to_sweep' + a] = globals()['device_to_sweep' + b]
+        globals()['self.device_to_sweep' + b] = globals()['device_to_sweep' + a]
+        globals()['self.parameter_to_sweep' + a] = globals()['parameter_to_sweep' + b]
+        globals()['self.parameter_to_sweep' + b] = globals()['parameter_to_sweep' + a]
+        globals()['self.min_sweep' + a] = float(globals()['min_sweep' + b]) 
+        globals()['self.max_sweep' + a] = float(globals()['max_sweep' + b])
+        globals()['self.ratio_sweep' + a] = float(globals()['ratio_sweep' + b]) 
+        globals()['self.delay_factor' + a] = float(globals()['delay_factor' + b])
+        globals()['self.min_sweep' + b] = float(globals()['min_sweep' + a]) 
+        globals()['self.max_sweep' + b] = float(globals()['max_sweep' + a])
+        globals()['self.ratio_sweep' + b] = float(globals()['ratio_sweep' + a]) 
+        globals()['self.delay_factor' + b] = float(globals()['delay_factor' + a])
+        globals()['self.step' + a] = float(globals()['delay_factor' + b]) * float(globals()['ratio_sweep' + b])
+        globals()['self.step' + b] = float(globals()['delay_factor' + a]) * float(globals()['ratio_sweep' + a])
+        globals()['self.value' + a] = float(globals()['min_sweep' + b])
+        globals()['self.value' + b] = float(globals()['min_sweep' + a])
+        globals()['self.time' + a] = (float(globals()['min_sweep' + b]) - float(globals()['max_sweep' + b])) / float(globals()['ratio_sweep' + b])
+        globals()['self.time' + b] = (float(globals()['min_sweep' + a]) - float(globals()['max_sweep' + a])) / float(globals()['ratio_sweep' + a])
+        
     def run(self):
-        global manual_filenames
-        global manual_sweep_flags
         if self.sweeper_flag1 == True:
             dataframe = pd.DataFrame(columns = self.columns)
             dataframe.to_csv(self.filename_sweep, index = False)
-            if manual_sweep_flags[0] == 0:
-                while self.value1 <= self.max_sweep1:
-                    if manual_sweep_flags[0] == 0:
-                        if self.device_to_sweep1 == 'Time':
-                            dataframe = [time.process_time() - zero_time]
-                        else:
-                            dataframe = [time.process_time() - zero_time]
-                            #sweep process here
-                            ###################
-                            #set 'parameter_to_sweep' to 'value'
-                            getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress = self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value = self.value1)
-                            self.value1 += self.step1
-                            time.sleep(self.delay_factor1)
-                            ###################
-                            dataframe.append(self.value1)
-                        for parameter in self.parameters_to_read:
-                            index_dot = parameter.find('.')
-                            adress = parameter[:index_dot]
-                            option = parameter[index_dot + 1:]
-                            dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
-                    
-                        with open(self.filename_sweep, 'a') as f_object:
-                            try:
-                                writer_object = writer(f_object)
-                                writer_object.writerow(dataframe)
-                                f_object.close()
-                            except KeyboardInterrupt():
-                                f_object.close()
-                            finally:
-                                f_object.close()
-                    else:
-                        for value in pd.read_csv(manual_filenames[0]):
-                            dataframe = [time.process_time() - zero_time]
-                            #manual sweep process here
-                            ###################
-                            #set 'parameter_to_sweep' to 'value'
-                            getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress = self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value = value)
-                            time.sleep(self.delay_factor1)
-                            ###################
-                            dataframe.append(value)
-                            for parameter in self.parameters_to_read:
-                                index_dot = parameter.find('.')
-                                adress = parameter[:index_dot]
-                                option = parameter[index_dot + 1:]
-                                dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
-                        
-                            with open(self.filename_sweep, 'a') as f_object:
-                                try:
-                                    writer_object = writer(f_object)
-                                    writer_object.writerow(dataframe)
-                                    f_object.close()
-                                except KeyboardInterrupt():
-                                    f_object.close()
-                                finally:
-                                    f_object.close()
-                        break
-                self.sweeper_flag1 = False
-            else:
-                for value in pd.read_csv(manual_filenames[0]):
+            while self.value1 <= self.max_sweep1:
+                if self.device_to_sweep1 == 'Time':
                     dataframe = [time.process_time() - zero_time]
-                    #manual sweep process here
+                else:
+                    dataframe = [time.process_time() - zero_time]
+                    #sweep process here
                     ###################
                     #set 'parameter_to_sweep' to 'value'
-                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress = self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value = value)
+                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress = self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value = self.value1)
+                    self.value1 += self.step1
                     time.sleep(self.delay_factor1)
                     ###################
-                    dataframe.append(value)
+                    dataframe.append(self.value1)
+                for parameter in self.parameters_to_read:
+                    index_dot = parameter.find('.')
+                    adress = parameter[:index_dot]
+                    option = parameter[index_dot + 1:]
+                    dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
+            
+                with open(self.filename_sweep, 'a') as f_object:
+                    try:
+                        writer_object = writer(f_object)
+                        writer_object.writerow(dataframe)
+                        f_object.close()
+                    except KeyboardInterrupt():
+                        f_object.close()
+                    finally:
+                        f_object.close()
+            self.sweeper_flag1 = False
+                        
+        if self.sweeper_flag2 == True:
+            dataframe = pd.DataFrame(columns = self.columns)
+            dataframe.to_csv(self.filename_sweep, index = False)
+
+            if self.time1 > self.time2:
+                self.transposition(1, 2)
+            
+            while self.value1 <= self.max_sweep1:
+                dataframe = [time.process_time() - zero_time]
+                #sweep process 1 here
+                ###################
+                #set 'parameter_to_sweep1' to 'value1'
+                getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress = self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value = self.value1)
+                self.value1 += self.step1
+                time.sleep(self.delay_factor1)
+                ###################
+                dataframe.append(self.value1)
+                dataframe_after = [*dataframe]
+                while self.value2 <= self.max_sweep2:
+                    #sweep process 2 here
+                    ###################
+                    #set 'parameter_to_sweep2' to 'value2'
+                    dataframe = [*dataframe_after]
+                    dataframe[0] = time.process_time() - zero_time
+                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](adress = self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value = self.value2)
+                    self.value2 += self.step2
+                    time.sleep(self.delay_factor2)
+                    ###################
+                    dataframe.append(self.value2)
                     for parameter in self.parameters_to_read:
                         index_dot = parameter.find('.')
                         adress = parameter[:index_dot]
                         option = parameter[index_dot + 1:]
                         dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
-                
+        
                     with open(self.filename_sweep, 'a') as f_object:
                         try:
                             writer_object = writer(f_object)
@@ -1847,284 +1847,19 @@ class Sweeper_write(threading.Thread):
                             f_object.close()
                         finally:
                             f_object.close()
-            self.sweeper_flag1 = False
-                
-                        
-        if self.sweeper_flag2 == True:
-            dataframe = pd.DataFrame(columns = self.columns)
-            dataframe.to_csv(self.filename_sweep, index = False)
-            
-            
-            if self.time1 > self.time2 or manual_sweep_flags == [1, 0]:
-                self.device_to_sweep1 = device_to_sweep2
-                self.device_to_sweep2 = device_to_sweep1
-                self.parameter_to_sweep1 = parameter_to_sweep2
-                self.parameter_to_sweep2 = parameter_to_sweep1
-                self.min_sweep1 = float(min_sweep2) 
-                self.max_sweep1 = float(max_sweep2)
-                self.ratio_sweep1 = float(ratio_sweep2)
-                self.delay_factor1 = float(delay_factor2)
-                self.min_sweep2 = float(min_sweep1) 
-                self.max_sweep2 = float(max_sweep1)
-                self.ratio_sweep2 = float(ratio_sweep1)
-                self.delay_factor2 = float(delay_factor1)
-                self.step1 = float(delay_factor2) * float(ratio_sweep2)
-                self.step2 = float(delay_factor1) * float(ratio_sweep1)
-                self.value1 = float(min_sweep2)
-                self.value2 = float(min_sweep1)
-                manual_sweeper_flags = [0, 1]
-            if manual_sweeper_flags[0] == 0:
-                while self.value1 <= self.max_sweep1:
-                    if manual_sweeper_flags[0] == 0:
-                        dataframe = [time.process_time() - zero_time]
-                        #sweep process 1 here
-                        ###################
-                        #set 'parameter_to_sweep1' to 'value1'
-                        getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress = self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value = self.value1)
-                        self.value1 += self.step1
-                        time.sleep(self.delay_factor1)
-                        ###################
-                        dataframe.append(self.value1)
-                        dataframe_after = [*dataframe]
-                        if manual_sweeper_flags[1] == 0:
-                            while self.value2 <= self.max_sweep2:
-                                if manual_sweeper_flags[1] == 0:
-                                    #sweep process 2 here
-                                    ###################
-                                    #set 'parameter_to_sweep2' to 'value2'
-                                    dataframe = [*dataframe_after]
-                                    dataframe[0] = time.process_time() - zero_time
-                                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](adress = self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value = self.value2)
-                                    self.value2 += self.step2
-                                    time.sleep(self.delay_factor2)
-                                    ###################
-                                    dataframe.append(self.value2)
-                                    for parameter in self.parameters_to_read:
-                                        index_dot = parameter.find('.')
-                                        adress = parameter[:index_dot]
-                                        option = parameter[index_dot + 1:]
-                                        dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
-                        
-                                    with open(self.filename_sweep, 'a') as f_object:
-                                        try:
-                                            writer_object = writer(f_object)
-                                            writer_object.writerow(dataframe)
-                                            f_object.close()
-                                        except KeyboardInterrupt():
-                                            f_object.close()
-                                        finally:
-                                            f_object.close()
-                                else:
-                                    #manual sweep process 2 here
-                                    ###################
-                                    #set 'parameter_to_sweep2' to 'value2'
-                                    for value2 in pd.read_csv(manual_filenames[1]):
-                                        dataframe = [*dataframe_after]
-                                        dataframe[0] = time.process_time() - zero_time
-                                        getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](adress = self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value = value2)
-                                        time.sleep(self.delay_factor2)
-                                        ###################
-                                        dataframe.append(value2)
-                                        for parameter in self.parameters_to_read:
-                                            index_dot = parameter.find('.')
-                                            adress = parameter[:index_dot]
-                                            option = parameter[index_dot + 1:]
-                                            dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
-                            
-                                        with open(self.filename_sweep, 'a') as f_object:
-                                            try:
-                                                writer_object = writer(f_object)
-                                                writer_object.writerow(dataframe)
-                                                f_object.close()
-                                            except KeyboardInterrupt():
-                                                f_object.close()
-                                            finally:
-                                                f_object.close()
-                                    break
-                            self.value2 = self.min_sweep2
-                        else:
-                            #manual sweep process 2 here
-                            ###################
-                            #set 'parameter_to_sweep2' to 'value2'
-                            for value2 in pd.read_csv(manual_filenames[1]):
-                                dataframe = [*dataframe_after]
-                                dataframe[0] = time.process_time() - zero_time
-                                getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](adress = self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value = value2)
-                                time.sleep(self.delay_factor2)
-                                ###################
-                                dataframe.append(value2)
-                                for parameter in self.parameters_to_read:
-                                    index_dot = parameter.find('.')
-                                    adress = parameter[:index_dot]
-                                    option = parameter[index_dot + 1:]
-                                    dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
-                    
-                                with open(self.filename_sweep, 'a') as f_object:
-                                    try:
-                                        writer_object = writer(f_object)
-                                        writer_object.writerow(dataframe)
-                                        f_object.close()
-                                    except KeyboardInterrupt():
-                                        f_object.close()
-                                    finally:
-                                       f_object.close()
-                    if manual_sweep_flags == [1, 0]:
-                        self.device_to_sweep1 = device_to_sweep2
-                        self.device_to_sweep2 = device_to_sweep1
-                        self.parameter_to_sweep1 = parameter_to_sweep2
-                        self.parameter_to_sweep2 = parameter_to_sweep1
-                        self.min_sweep1 = float(min_sweep2) 
-                        self.max_sweep1 = float(max_sweep2)
-                        self.ratio_sweep1 = float(ratio_sweep2)
-                        self.delay_factor1 = float(delay_factor2)
-                        self.min_sweep2 = float(min_sweep1) 
-                        self.max_sweep2 = float(max_sweep1)
-                        self.ratio_sweep2 = float(ratio_sweep1)
-                        self.delay_factor2 = float(delay_factor1)
-                        self.step1 = float(delay_factor2) * float(ratio_sweep2)
-                        self.step2 = float(delay_factor1) * float(ratio_sweep1)
-                        self.value1 = float(min_sweep2)
-                        self.value2 = float(min_sweep1)
-                        manual_sweeper_flags = [0, 1]
-                    else:
-                        #manual sweep process 1 here
-                        ###################
-                        #set 'parameter_to_sweep1' to 'value1'
-                        for value1 in pd.read_csv(manual_filenames[1]):
-                            for value2 in pd.read_csv(manual_filenames[1]):
-                                dataframe = [*dataframe_after]
-                                dataframe[0] = time.process_time() - zero_time
-                                getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress = self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value = value1)
-                                time.sleep(self.delay_factor1)
-                                dataframe.append(value1)
-                                getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](adress = self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value = value2)
-                                time.sleep(self.delay_factor2)
-                                dataframe.append(value2)
-                                for parameter in self.parameters_to_read:
-                                    index_dot = parameter.find('.')
-                                    adress = parameter[:index_dot]
-                                    option = parameter[index_dot + 1:]
-                                    dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
-                    
-                                with open(self.filename_sweep, 'a') as f_object:
-                                    try:
-                                        writer_object = writer(f_object)
-                                        writer_object.writerow(dataframe)
-                                        f_object.close()
-                                    except KeyboardInterrupt():
-                                        f_object.close()
-                                    finally:
-                                       f_object.close()
-            if manual_sweep_flags == [1, 0]:
-                self.device_to_sweep1 = device_to_sweep2
-                self.device_to_sweep2 = device_to_sweep1
-                self.parameter_to_sweep1 = parameter_to_sweep2
-                self.parameter_to_sweep2 = parameter_to_sweep1
-                self.min_sweep1 = float(min_sweep2) 
-                self.max_sweep1 = float(max_sweep2)
-                self.ratio_sweep1 = float(ratio_sweep2)
-                self.delay_factor1 = float(delay_factor2)
-                self.min_sweep2 = float(min_sweep1) 
-                self.max_sweep2 = float(max_sweep1)
-                self.ratio_sweep2 = float(ratio_sweep1)
-                self.delay_factor2 = float(delay_factor1)
-                self.step1 = float(delay_factor2) * float(ratio_sweep2)
-                self.step2 = float(delay_factor1) * float(ratio_sweep1)
-                self.value1 = float(min_sweep2)
-                self.value2 = float(min_sweep1)
-                manual_sweeper_flags = [0, 1]
-            else:
-                #manual sweep process 1 here
-                ###################
-                #set 'parameter_to_sweep1' to 'value1'
-                for value1 in pd.read_csv(manual_filenames[1]):
-                    for value2 in pd.read_csv(manual_filenames[1]):
-                        dataframe = [*dataframe_after]
-                        dataframe[0] = time.process_time() - zero_time
-                        getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress = self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value = value1)
-                        time.sleep(self.delay_factor1)
-                        dataframe.append(value1)
-                        getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](adress = self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value = value2)
-                        time.sleep(self.delay_factor2)
-                        dataframe.append(value2)
-                        for parameter in self.parameters_to_read:
-                            index_dot = parameter.find('.')
-                            adress = parameter[:index_dot]
-                            option = parameter[index_dot + 1:]
-                            dataframe.append(getattr(globals()[types_of_devices[list_of_devices.index(str(adress))]](adress = adress), option)()) 
-            
-                        with open(self.filename_sweep, 'a') as f_object:
-                            try:
-                                writer_object = writer(f_object)
-                                writer_object.writerow(dataframe)
-                                f_object.close()
-                            except KeyboardInterrupt():
-                                f_object.close()
-                            finally:
-                               f_object.close()
+                self.value2 = self.min_sweep2
             self.sweeper_flag2 == False
-            
+
         if self.sweeper_flag3 == True:
             dataframe = pd.DataFrame(columns = self.columns)
             dataframe.to_csv(self.filename_sweep, index = False)
-            
+
             if self.time1 > self.time2:             
-                self.device_to_sweep1 = device_to_sweep2
-                self.device_to_sweep2 = device_to_sweep1
-                self.parameter_to_sweep1 = parameter_to_sweep2
-                self.parameter_to_sweep2 = parameter_to_sweep1
-                self.min_sweep1 = float(min_sweep2) 
-                self.max_sweep1 = float(max_sweep2)
-                self.ratio_sweep1 = float(ratio_sweep2)
-                self.delay_factor1 = float(delay_factor2)
-                self.min_sweep2 = float(min_sweep1) 
-                self.max_sweep2 = float(max_sweep1)
-                self.ratio_sweep2 = float(ratio_sweep1)
-                self.delay_factor2 = float(delay_factor1)
-                self.step1 = float(delay_factor2) * float(ratio_sweep2)
-                self.step2 = float(delay_factor1) * float(ratio_sweep1)
-                self.value1 = float(min_sweep2)
-                self.value2 = float(min_sweep1)
-                self.time1 = (float(min_sweep2) - float(max_sweep2)) / float(ratio_sweep2)
-                self.time2 = (float(min_sweep1) - float(max_sweep1)) / float(ratio_sweep1)
+                self.transposition(1, 2)
             if self.time1 > self.time3:
-                self.device_to_sweep1 = device_to_sweep3
-                self.device_to_sweep3 = device_to_sweep1
-                self.parameter_to_sweep1 = parameter_to_sweep3
-                self.parameter_to_sweep3 = parameter_to_sweep1
-                self.min_sweep1 = float(min_sweep3) 
-                self.max_sweep1 = float(max_sweep3)
-                self.ratio_sweep1 = float(ratio_sweep3)
-                self.delay_factor1 = float(delay_factor3)
-                self.min_sweep3 = float(min_sweep1) 
-                self.max_sweep3 = float(max_sweep1)
-                self.ratio_sweep3 = float(ratio_sweep1)
-                self.delay_factor3 = float(delay_factor1)
-                self.step1 = float(delay_factor3) * float(ratio_sweep3)
-                self.step3 = float(delay_factor1) * float(ratio_sweep1)
-                self.value1 = float(min_sweep3)
-                self.value3 = float(min_sweep1)
-                self.time1 = (float(min_sweep3) - float(max_sweep3)) / float(ratio_sweep3)
-                self.time3 = (float(min_sweep1) - float(max_sweep1)) / float(ratio_sweep1)
+                self.transposition(1, 3)
             if self.time2 > self.time3:
-                self.device_to_sweep2 = device_to_sweep3
-                self.device_to_sweep3 = device_to_sweep2
-                self.parameter_to_sweep2 = parameter_to_sweep3
-                self.parameter_to_sweep3 = parameter_to_sweep2
-                self.min_sweep2 = float(min_sweep3) 
-                self.max_sweep2 = float(max_sweep3)
-                self.ratio_sweep2 = float(ratio_sweep3)
-                self.delay_factor2 = float(delay_factor3)
-                self.min_sweep3 = float(min_sweep2) 
-                self.max_sweep3 = float(max_sweep2)
-                self.ratio_sweep3 = float(ratio_sweep2)
-                self.delay_factor3 = float(delay_factor2)
-                self.step2 = float(delay_factor3) * float(ratio_sweep3)
-                self.step3 = float(delay_factor2) * float(ratio_sweep2)
-                self.value2 = float(min_sweep3)
-                self.value3 = float(min_sweep2)
-                self.time2 = (float(min_sweep3) - float(max_sweep3)) / float(ratio_sweep3)
-                self.time3 = (float(min_sweep2) - float(max_sweep2)) / float(ratio_sweep2)
+                self.transposition(2, 3)
                 
             while self.value1 <= self.max_sweep1:
                 dataframe = [time.process_time() - zero_time]
