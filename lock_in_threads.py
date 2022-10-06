@@ -1,10 +1,10 @@
 import os
 import re
 from csv import writer
-import multiprocessing as mp
 import threading
 from tkinter import ttk
 import tkinter as tk
+from PIL import Image, ImageTk
 import matplotlib.animation as animation
 from matplotlib import style
 from matplotlib.figure import Figure
@@ -59,17 +59,17 @@ parameter_to_sweep1 = ''
 parameter_to_sweep2 = ''
 parameter_to_sweep3 = ''
 min_sweep1 = 0
-max_sweep1 = 0
+max_sweep1 = 1
 ratio_sweep1 = 1
-delay_factor1 = 0
+delay_factor1 = 0.1
 min_sweep2 = 0
-max_sweep2 = 0
+max_sweep2 = 1
 ratio_sweep2 = 1
-delay_factor2 = 0
+delay_factor2 = 0.1
 min_sweep3 = 0
-max_sweep3 = 0
+max_sweep3 = 1
 ratio_sweep3 = 1
-delay_factor3 = 0
+delay_factor3 = 0.1
 filename_sweep = r'C:\NUS\Transport lab\Test\data_files\sweep' + datetime.today().strftime(
     '%H_%M_%d_%m_%Y') + '.csv'
 sweeper_flag1 = False
@@ -79,6 +79,11 @@ sweeper_flag3 = False
 manual_sweep_flags = [0]
 manual_filenames = [r'C:\NUS\Transport lab\Test\data_files\manual' + datetime.today().strftime(
     '%H_%M_%d_%m_%Y') + '.csv']
+
+master_flag1 = np.nan
+master_flag2 = np.nan
+master_flag3 = np.nan
+
 columns = []
 
 # variables for plotting
@@ -659,7 +664,7 @@ class write_config_channels(threading.Thread):
 zero_time = time.process_time()
 
 
-class Universal_frontend(tk.Tk):
+class Universal_frontend(tk.Toplevel):
 
     def __init__(self, classes, start, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
@@ -1171,11 +1176,7 @@ class Sweeper1d(tk.Frame):
                 'manual' + filename_sweep[index_sweep + 5:]
         else:
             self.filename[:-4] + '_manual' + '.csv'
-
-        # icons
-        save = tk.PhotoImage(file=r'C:\NUS\Transport lab\App\save.png')
-        explore = tk.PhotoImage(file=r'C:\NUS\Transport lab\App\explore.png')
-        create = tk.PhotoImage(file=r'C:\NUS\Transport lab\App\create.png')
+            
         # initials
         self.manual_sweep_flags = [0]
         self.manual_filenames = [self.filename]
@@ -1185,17 +1186,20 @@ class Sweeper1d(tk.Frame):
                                           offvalue=0, command=lambda: self.save_manual_status())
         checkbox_manual.place(relx=0.12, rely=0.52)
 
-        button_new_manual = ttk.Button(self, text='New', command=lambda: self.open_blank(
+        button_new_manual = ttk.Button(self, text = 'New', command=lambda: self.open_blank(
             filename=self.manual_filenames[0]))
         button_new_manual.place(relx=0.17, rely=0.52)
 
         button_explore_manual = ttk.Button(
-            self, text='Explore', command=lambda: self.explore_files())
-        button_explore_manual.place(relx=0.25, rely=0.52)
+            self, text = 'Explore', command=lambda: self.explore_files())
+        button_explore_manual.place(relx=0.17, rely=0.56)
+
+        self.label_filename = tk.Label(self, text = filename_sweep, font = LARGE_FONT)
+        self.label_filename.place(relx = 0.6, rely = 0.9)
 
         button_filename = ttk.Button(
-            self, text='Filename', command=lambda: self.set_filename_sweep())
-        button_filename.place(relx=0.7, rely=0.6)
+            self, text = 'filename', command=lambda: self.set_filename_sweep())
+        button_filename.place(relx=0.85, rely=0.9)
 
         button_start_sweeping = ttk.Button(
             self, text="Start sweeping", command=lambda: self.start_sweeping())
@@ -1242,6 +1246,7 @@ class Sweeper1d(tk.Frame):
                                                          initialfile=r'C:\NUS\Transport lab\Test\data_files\sweep' + datetime.today().strftime(
                                                              '%H_%M_%d_%m_%Y'),
                                                          defaultextension='.csv')
+        self.label_filename.config(text = filename_sweep)
 
     def open_graph(self):
         global fig221
@@ -1297,10 +1302,14 @@ class Sweeper1d(tk.Frame):
             columns.append(option)
 
         # fixing sweeper parmeters
-        min_sweep1 = self.entry_min.get()
-        max_sweep1 = self.entry_max.get()
-        ratio_sweep1 = self.entry_ratio.get()
-        delay_factor1 = self.entry_delay_factor.get()
+        if self.entry_min.get() != '':
+            min_sweep1 = self.entry_min.get()
+        if self.entry_max.get() != '':
+            max_sweep1 = self.entry_max.get()
+        if self.entry_ratio.get() != '':
+            ratio_sweep1 = self.entry_ratio.get()
+        if self.delay_factor.get() != '':
+            delay_factor1 = self.entry_delay_factor.get()
         sweeper_flag1 = True
         sweeper_flag2 = False
         sweeper_flag3 = False
@@ -1324,87 +1333,93 @@ class Sweeper2d(tk.Frame):
 
         label_to_sweep1 = tk.Label(self, text='To sweep:', font=LARGE_FONT)
         label_to_sweep1.place(relx=0.15, rely=0.12)
-
+    
         label_to_sweep2 = tk.Label(self, text='To sweep:', font=LARGE_FONT)
         label_to_sweep2.place(relx=0.3, rely=0.12)
-
+    
         label_to_read = tk.Label(self, text='To read:', font=LARGE_FONT)
-        label_to_read.place(relx=0.45, rely=0.12)
+        label_to_read.place(relx=0.45, rely=0.17)
+
+        self.combo_master1 = ttk.Combobox(self, value = ['Master', 'Slave'], font = LARGE_FONT)
+        self.combo_master1.place(relx = 0.15, rely = 0.17)
+        
+        self.combo_master2 = ttk.Combobox(self, value = ['Master', 'Slave'], font = LARGE_FONT)
+        self.combo_master2.place(relx = 0.3, rely = 0.17)
 
         self.combo_to_sweep1 = ttk.Combobox(self, value=list_of_devices)
         self.combo_to_sweep1.current(0)
         self.combo_to_sweep1.bind(
             "<<ComboboxSelected>>", self.update_sweep_parameters1)
-        self.combo_to_sweep1.place(relx=0.15, rely=0.16)
+        self.combo_to_sweep1.place(relx=0.15, rely=0.21)
 
         self.combo_to_sweep2 = ttk.Combobox(self, value=list_of_devices)
         self.combo_to_sweep2.current(0)
         self.combo_to_sweep2.bind(
             "<<ComboboxSelected>>", self.update_sweep_parameters2)
-        self.combo_to_sweep2.place(relx=0.3, rely=0.16)
+        self.combo_to_sweep2.place(relx=0.3, rely=0.21)
 
         devices = tk.StringVar()
         devices.set(value=parameters_to_read)
         self.lstbox_to_read = tk.Listbox(self, listvariable=devices,
                                          selectmode='multiple', width=20,
                                          height=len(parameters_to_read) * 2)
-        self.lstbox_to_read.place(relx=0.45, rely=0.16)
+        self.lstbox_to_read.place(relx=0.45, rely=0.21)
 
         self.sweep_options1 = ttk.Combobox(self)
-        self.sweep_options1.place(relx=0.15, rely=0.2)
+        self.sweep_options1.place(relx=0.15, rely=0.25)
 
         self.sweep_options2 = ttk.Combobox(self)
-        self.sweep_options2.place(relx=0.3, rely=0.2)
+        self.sweep_options2.place(relx=0.3, rely=0.25)
 
         label_min1 = tk.Label(self, text='MIN', font=LARGE_FONT)
-        label_min1.place(relx=0.12, rely=0.24)
+        label_min1.place(relx=0.12, rely=0.29)
 
         label_max1 = tk.Label(self, text='MAX', font=LARGE_FONT)
-        label_max1.place(relx=0.12, rely=0.28)
+        label_max1.place(relx=0.12, rely=0.33)
 
         label_step1 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
-        label_step1.place(relx=0.12, rely=0.32)
+        label_step1.place(relx=0.12, rely=0.37)
 
         self.entry_min1 = tk.Entry(self)
-        self.entry_min1.place(relx=0.17, rely=0.24)
+        self.entry_min1.place(relx=0.17, rely=0.29)
 
         self.entry_max1 = tk.Entry(self)
-        self.entry_max1.place(relx=0.17, rely=0.28)
+        self.entry_max1.place(relx=0.17, rely=0.33)
 
         self.entry_ratio1 = tk.Entry(self)
-        self.entry_ratio1.place(relx=0.17, rely=0.32)
+        self.entry_ratio1.place(relx=0.17, rely=0.37)
 
         label_delay_factor1 = tk.Label(
             self, text='Delay factor, s', justify=tk.LEFT, font=LARGE_FONT)
-        label_delay_factor1.place(relx=0.12, rely=0.4)
+        label_delay_factor1.place(relx=0.12, rely=0.45)
 
         self.entry_delay_factor1 = tk.Entry(self)
-        self.entry_delay_factor1.place(relx=0.12, rely=0.46)
+        self.entry_delay_factor1.place(relx=0.12, rely=0.51)
 
         label_min2 = tk.Label(self, text='MIN', font=LARGE_FONT)
-        label_min2.place(relx=0.27, rely=0.24)
+        label_min2.place(relx=0.27, rely=0.29)
 
         label_max2 = tk.Label(self, text='MAX', font=LARGE_FONT)
-        label_max2.place(relx=0.27, rely=0.28)
+        label_max2.place(relx=0.27, rely=0.33)
 
         label_step2 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
-        label_step2.place(relx=0.27, rely=0.32)
+        label_step2.place(relx=0.27, rely=0.37)
 
         self.entry_min2 = tk.Entry(self)
-        self.entry_min2.place(relx=0.32, rely=0.24)
+        self.entry_min2.place(relx=0.32, rely=0.29)
 
         self.entry_max2 = tk.Entry(self)
-        self.entry_max2.place(relx=0.32, rely=0.28)
+        self.entry_max2.place(relx=0.32, rely=0.33)
 
         self.entry_ratio2 = tk.Entry(self)
-        self.entry_ratio2.place(relx=0.32, rely=0.32)
+        self.entry_ratio2.place(relx=0.32, rely=0.37)
 
         label_delay_factor2 = tk.Label(
             self, text='Delay factor, s', justify=tk.LEFT, font=LARGE_FONT)
-        label_delay_factor2.place(relx=0.27, rely=0.4)
+        label_delay_factor2.place(relx=0.27, rely=0.45)
 
         self.entry_delay_factor2 = tk.Entry(self)
-        self.entry_delay_factor2.place(relx=0.27, rely=0.46)
+        self.entry_delay_factor2.place(relx=0.27, rely=0.51)
 
         # section of manual sweep points selection
         self.status_manual1 = tk.IntVar()
@@ -1416,10 +1431,6 @@ class Sweeper2d(tk.Frame):
         else:
             self.filename[:-4] + '_manual' + '.csv'
 
-        # icons
-        save = tk.PhotoImage(file=r'C:\NUS\Transport lab\App\save.png')
-        explore = tk.PhotoImage(file=r'C:\NUS\Transport lab\App\explore.png')
-        create = tk.PhotoImage(file=r'C:\NUS\Transport lab\App\create.png')
         # initials
 
         self.manual_sweep_flags = [0, 0]
@@ -1429,32 +1440,35 @@ class Sweeper2d(tk.Frame):
         checkbox_manual1 = ttk.Checkbutton(self, text='Maunal sweep select',
                                            variable=self.status_manual1, onvalue=1,
                                            offvalue=0, command=lambda: self.save_manual_status(i=1))
-        checkbox_manual1.place(relx=0.12, rely=0.52)
+        checkbox_manual1.place(relx=0.12, rely=0.57)
 
         button_new_manual1 = ttk.Button(self, text='New', command=lambda: self.open_blank(
             filename=self.manual_filenames[0], i=1))
-        button_new_manual1.place(relx=0.17, rely=0.52)
+        button_new_manual1.place(relx=0.17, rely=0.57)
 
         button_explore_manual1 = ttk.Button(
             self, text='Explore', command=lambda: self.explore_files(i=0))
-        button_explore_manual1.place(relx=0.17, rely=0.6)
+        button_explore_manual1.place(relx=0.17, rely=0.61)
 
         checkbox_manual2 = ttk.Checkbutton(self, text='Maunal sweep select',
                                            variable=self.status_manual2, onvalue=1,
                                            offvalue=0, command=lambda: self.save_manual_status(i=2))
-        checkbox_manual2.place(relx=0.32, rely=0.52)
+        checkbox_manual2.place(relx=0.27, rely=0.57)
 
         button_new_manual2 = ttk.Button(self, text='New', command=lambda: self.open_blank(
             filename=self.manual_filenames[1], i=0))
-        button_new_manual2.place(relx=0.37, rely=0.52)
+        button_new_manual2.place(relx=0.32, rely=0.57)
 
         button_explore_manual2 = ttk.Button(
             self, text='Explore', command=lambda: self.explore_files(i=1))
-        button_explore_manual2.place(relx=0.37, rely=0.6)
+        button_explore_manual2.place(relx=0.32, rely=0.61)
+
+        self.label_filename = tk.Label(self, text = filename_sweep, font = LARGE_FONT)
+        self.label_filename.place(relx = 0.6, rely = 0.9)
 
         button_filename = ttk.Button(
-            self, text='Filename', command=lambda: self.set_filename_sweep())
-        button_filename.place(relx=0.7, rely=0.6)
+            self, text = 'filename', command=lambda: self.set_filename_sweep())
+        button_filename.place(relx=0.85, rely=0.9)
 
         button_start_sweeping = ttk.Button(
             self, text="Start sweeping", command=lambda: self.start_sweeping())
@@ -1507,10 +1521,12 @@ class Sweeper2d(tk.Frame):
 
     def set_filename_sweep(self):
         global filename_sweep
+
         filename_sweep = tk.filedialog.asksaveasfilename(title='Save the file',
                                                          initialfile=r'C:\NUS\Transport lab\Test\data_files\sweep' + datetime.today().strftime(
                                                              '%H_%M_%d_%m_%Y'),
                                                          defaultextension='.csv')
+        self.label_filename.config(text = filename_sweep)
 
     def open_graph(self):
         global fig221
@@ -1550,6 +1566,8 @@ class Sweeper2d(tk.Frame):
         global columns
         global manual_sweep_flags
         global manual_filenames
+        global master_flag1
+        global master_flag2
 
         # asking multichoise to get parameters to read
         self.list_to_read = list()
@@ -1574,19 +1592,29 @@ class Sweeper2d(tk.Frame):
             columns.append(option)
 
         # fixing sweeper parmeters
-        min_sweep1 = self.entry_min1.get()
-        max_sweep1 = self.entry_max1.get()
-        ratio_sweep1 = self.entry_ratio1.get()
-        delay_factor1 = self.entry_delay_factor1.get()
-        min_sweep2 = self.entry_min2.get()
-        max_sweep2 = self.entry_max2.get()
-        ratio_sweep2 = self.entry_ratio2.get()
-        delay_factor2 = self.entry_delay_factor2.get()
+        if self.entry_min1.get() != '':
+            min_sweep1 = self.entry_min1.get()
+        if self.entry_max1.get() != '':
+            max_sweep1 = self.entry_max1.get()
+        if self.entry_ratio1.get() != '':
+            ratio_sweep1 = self.entry_ratio1.get()
+        if self.delay_factor1.get() != '':
+            delay_factor1 = self.entry_delay_factor1.get()
+        if self.entry_min2.get() != '':
+            min_sweep2 = self.entry_min2.get()
+        if self.entry_max2.get() != '':
+            max_sweep2 = self.entry_max2.get()
+        if self.entry_ratio2.get() != '':
+            ratio_sweep2 = self.entry_ratio2.get()
+        if self.delay_factor2.get() != '':
+            delay_factor2 = self.entry_delay_factor2.get()
         sweeper_flag1 = False
         sweeper_flag2 = True
         sweeper_flag3 = False
         manual_sweep_flags = self.manual_sweep_flags
         manual_filenames = self.manual_filenames
+        master_flag1 = self.combo_master1.current()
+        master_flag2 = self.combo_master2.current()
 
         Sweeper_write()
 
@@ -1613,116 +1641,125 @@ class Sweeper3d(tk.Frame):
         label_to_sweep3.place(relx=0.3, rely=0.12)
 
         label_to_read = tk.Label(self, text='To read:', font=LARGE_FONT)
-        label_to_read.place(relx=0.6, rely=0.12)
+        label_to_read.place(relx=0.6, rely=0.17)
+
+        self.combo_master1 = ttk.Combobox(self, value = ['Master', 'Slave', 'Slave-slave'], font = LARGE_FONT)
+        self.combo_master1.place(relx = 0.15, rely = 0.17)
+        
+        self.combo_master2 = ttk.Combobox(self, value = ['Master', 'Slave', 'Slave-slave'], font = LARGE_FONT)
+        self.combo_master2.place(relx = 0.3, rely = 0.17)
+        
+        self.combo_master3 = ttk.Combobox(self, value = ['Master', 'Slave', 'Slave-slave'], font = LARGE_FONT)
+        self.combo_master3.place(relx = 0.45, rely = 0.17)
 
         self.combo_to_sweep1 = ttk.Combobox(self, value=list_of_devices)
         self.combo_to_sweep1.current(0)
         self.combo_to_sweep1.bind(
             "<<ComboboxSelected>>", self.update_sweep_parameters1)
-        self.combo_to_sweep1.place(relx=0.15, rely=0.16)
+        self.combo_to_sweep1.place(relx=0.15, rely=0.21)
 
         self.combo_to_sweep2 = ttk.Combobox(self, value=list_of_devices)
         self.combo_to_sweep2.current(0)
         self.combo_to_sweep2.bind(
             "<<ComboboxSelected>>", self.update_sweep_parameters2)
-        self.combo_to_sweep2.place(relx=0.3, rely=0.16)
+        self.combo_to_sweep2.place(relx=0.3, rely=0.21)
 
         self.combo_to_sweep3 = ttk.Combobox(self, value=list_of_devices)
         self.combo_to_sweep3.current(0)
         self.combo_to_sweep3.bind(
             "<<ComboboxSelected>>", self.update_sweep_parameters3)
-        self.combo_to_sweep3.place(relx=0.45, rely=0.16)
+        self.combo_to_sweep3.place(relx=0.45, rely=0.21)
 
         devices = tk.StringVar()
         devices.set(value=parameters_to_read)
         self.lstbox_to_read = tk.Listbox(self, listvariable=devices,
                                          selectmode='multiple', width=20,
                                          height=len(parameters_to_read) * 2)
-        self.lstbox_to_read.place(relx=0.6, rely=0.16)
+        self.lstbox_to_read.place(relx=0.6, rely=0.21)
 
         self.sweep_options1 = ttk.Combobox(self)
-        self.sweep_options1.place(relx=0.15, rely=0.2)
+        self.sweep_options1.place(relx=0.15, rely=0.25)
 
         self.sweep_options2 = ttk.Combobox(self)
-        self.sweep_options2.place(relx=0.3, rely=0.2)
+        self.sweep_options2.place(relx=0.3, rely=0.25)
 
         self.sweep_options2 = ttk.Combobox(self)
-        self.sweep_options2.place(relx=0.45, rely=0.2)
+        self.sweep_options2.place(relx=0.45, rely=0.25)
 
         label_min1 = tk.Label(self, text='MIN', font=LARGE_FONT)
-        label_min1.place(relx=0.12, rely=0.24)
+        label_min1.place(relx=0.12, rely=0.29)
 
         label_max1 = tk.Label(self, text='MAX', font=LARGE_FONT)
-        label_max1.place(relx=0.12, rely=0.28)
+        label_max1.place(relx=0.12, rely=0.33)
 
         label_step1 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
-        label_step1.place(relx=0.12, rely=0.32)
+        label_step1.place(relx=0.12, rely=0.37)
 
         self.entry_min1 = tk.Entry(self)
-        self.entry_min1.place(relx=0.17, rely=0.24)
+        self.entry_min1.place(relx=0.17, rely=0.29)
 
         self.entry_max1 = tk.Entry(self)
-        self.entry_max1.place(relx=0.17, rely=0.28)
+        self.entry_max1.place(relx=0.17, rely=0.33)
 
         self.entry_ratio1 = tk.Entry(self)
-        self.entry_ratio1.place(relx=0.17, rely=0.32)
+        self.entry_ratio1.place(relx=0.17, rely=0.37)
 
         label_delay_factor1 = tk.Label(
             self, text='Delay factor, s', justify=tk.LEFT, font=LARGE_FONT)
-        label_delay_factor1.place(relx=0.12, rely=0.4)
+        label_delay_factor1.place(relx=0.12, rely=0.45)
 
         self.entry_delay_factor1 = tk.Entry(self)
-        self.entry_delay_factor1.place(relx=0.12, rely=0.46)
+        self.entry_delay_factor1.place(relx=0.12, rely=0.51)
 
         label_min2 = tk.Label(self, text='MIN', font=LARGE_FONT)
-        label_min2.place(relx=0.27, rely=0.24)
+        label_min2.place(relx=0.27, rely=0.29)
 
         label_max2 = tk.Label(self, text='MAX', font=LARGE_FONT)
-        label_max2.place(relx=0.27, rely=0.28)
+        label_max2.place(relx=0.27, rely=0.33)
 
         label_step2 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
-        label_step2.place(relx=0.27, rely=0.32)
+        label_step2.place(relx=0.27, rely=0.37)
 
         self.entry_min2 = tk.Entry(self)
-        self.entry_min2.place(relx=0.32, rely=0.24)
+        self.entry_min2.place(relx=0.32, rely=0.29)
 
         self.entry_max2 = tk.Entry(self)
-        self.entry_max2.place(relx=0.32, rely=0.28)
+        self.entry_max2.place(relx=0.32, rely=0.33)
 
         self.entry_ratio2 = tk.Entry(self)
-        self.entry_ratio2.place(relx=0.32, rely=0.32)
+        self.entry_ratio2.place(relx=0.32, rely=0.37)
 
         label_delay_factor2 = tk.Label(
             self, text='Delay factor, s', justify=tk.LEFT, font=LARGE_FONT)
-        label_delay_factor2.place(relx=0.27, rely=0.4)
+        label_delay_factor2.place(relx=0.27, rely=0.45)
 
         self.entry_delay_factor2 = tk.Entry(self)
-        self.entry_delay_factor2.place(relx=0.27, rely=0.46)
+        self.entry_delay_factor2.place(relx=0.27, rely=0.51)
 
         label_min3 = tk.Label(self, text='MIN', font=LARGE_FONT)
-        label_min3.place(relx=0.42, rely=0.24)
+        label_min3.place(relx=0.42, rely=0.29)
 
         label_max3 = tk.Label(self, text='MAX', font=LARGE_FONT)
-        label_max3.place(relx=0.42, rely=0.28)
+        label_max3.place(relx=0.42, rely=0.33)
 
         label_step3 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
-        label_step3.place(relx=0.42, rely=0.32)
+        label_step3.place(relx=0.42, rely=0.37)
 
         self.entry_min3 = tk.Entry(self)
-        self.entry_min3.place(relx=0.47, rely=0.24)
+        self.entry_min3.place(relx=0.47, rely=0.29)
 
         self.entry_max3 = tk.Entry(self)
-        self.entry_max3.place(relx=0.47, rely=0.28)
+        self.entry_max3.place(relx=0.47, rely=0.33)
 
         self.entry_ratio3 = tk.Entry(self)
-        self.entry_ratio3.place(relx=0.47, rely=0.32)
+        self.entry_ratio3.place(relx=0.47, rely=0.37)
 
         label_delay_factor3 = tk.Label(
             self, text='Delay factor, s', justify=tk.LEFT, font=LARGE_FONT)
-        label_delay_factor3.place(relx=0.42, rely=0.4)
+        label_delay_factor3.place(relx=0.42, rely=0.45)
 
         self.entry_delay_factor3 = tk.Entry(self)
-        self.entry_delay_factor3.place(relx=0.42, rely=0.46)
+        self.entry_delay_factor3.place(relx=0.42, rely=0.51)
 
         # section of manual sweep points selection
         self.status_manual1 = tk.IntVar()
@@ -1735,10 +1772,6 @@ class Sweeper3d(tk.Frame):
         else:
             self.filename[:-4] + '_manual' + '.csv'
 
-        # icons
-        save = tk.PhotoImage(file=r'C:\NUS\Transport lab\App\save.png')
-        explore = tk.PhotoImage(file=r'C:\NUS\Transport lab\App\explore.png')
-        create = tk.PhotoImage(file=r'C:\NUS\Transport lab\App\create.png')
         # initials
         self.manual_sweep_flags = [0, 0, 0]
         self.manual_filenames = [self.filename[:-4] + '1.csv',
@@ -1747,45 +1780,48 @@ class Sweeper3d(tk.Frame):
         checkbox_manual1 = ttk.Checkbutton(self, text='Maunal sweep select',
                                            variable=self.status_manual1, onvalue=1,
                                            offvalue=0, command=lambda: self.save_manual_status(i=1))
-        checkbox_manual1.place(relx=0.12, rely=0.52)
+        checkbox_manual1.place(relx=0.12, rely=0.57)
 
         button_new_manual1 = ttk.Button(self, text='New', command=lambda: self.open_blank(
             filename=self.manual_filenames[0], i=0))
-        button_new_manual1.place(relx=0.17, rely=0.52)
+        button_new_manual1.place(relx=0.17, rely=0.57)
 
         button_explore_manual1 = ttk.Button(
             self, text='Explore', command=lambda: self.explore_files(i=0))
-        button_explore_manual1.place(relx=0.17, rely=0.6)
+        button_explore_manual1.place(relx=0.17, rely=0.61)
 
         checkbox_manual2 = ttk.Checkbutton(self, text='Maunal sweep select',
                                            variable=self.status_manual2, onvalue=1,
                                            offvalue=0, command=lambda: self.save_manual_status(i=2))
-        checkbox_manual2.place(relx=0.32, rely=0.52)
+        checkbox_manual2.place(relx=0.27, rely=0.57)
 
         button_new_manual2 = ttk.Button(self, text='New', command=lambda: self.open_blank(
             filename=self.manual_filenames[1], i=1))
-        button_new_manual2.place(relx=0.37, rely=0.52)
+        button_new_manual2.place(relx=0.32, rely=0.57)
 
         button_explore_manual2 = ttk.Button(
             self, text='Explore', command=lambda: self.explore_files(i=1))
-        button_explore_manual2.place(relx=0.37, rely=0.6)
+        button_explore_manual2.place(relx=0.32, rely=0.61)
 
         checkbox_manual3 = ttk.Checkbutton(self, text='Maunal sweep select',
                                            variable=self.status_manual3, onvalue=1,
                                            offvalue=0, command=lambda: self.save_manual_status(i=3))
-        checkbox_manual3.place(relx=0.52, rely=0.52)
+        checkbox_manual3.place(relx=0.42, rely=0.57)
 
         button_new_manual3 = ttk.Button(self, text='New', command=lambda: self.open_blank(
             filename=self.manual_filenames[2], i=2))
-        button_new_manual3.place(relx=0.57, rely=0.52)
+        button_new_manual3.place(relx=0.47, rely=0.57)
 
         button_explore_manual3 = ttk.Button(
             self, text='Explore', command=lambda: self.explore_files(i=2))
-        button_explore_manual3.place(relx=0.57, rely=0.6)
+        button_explore_manual3.place(relx=0.47, rely=0.61)
+
+        self.label_filename = tk.Label(self, text = filename_sweep, font = LARGE_FONT)
+        self.label_filename.place(relx = 0.6, rely = 0.9)
 
         button_filename = ttk.Button(
-            self, text='Filename', command=lambda: self.set_filename_sweep())
-        button_filename.place(relx=0.7, rely=0.6)
+            self, text = 'filename', command=lambda: self.set_filename_sweep())
+        button_filename.place(relx=0.85, rely=0.9)
 
         button_start_sweeping = ttk.Button(
             self, text="Start sweeping", command=lambda: self.start_sweeping())
@@ -1855,6 +1891,7 @@ class Sweeper3d(tk.Frame):
                                                          initialfile=r'C:\NUS\Transport lab\Test\data_files\sweep' + datetime.today().strftime(
                                                              '%H_%M_%d_%m_%Y'),
                                                          defaultextension='.csv')
+        self.label_filename.config(text = filename_sweep)
 
     def open_graph(self):
         global fig221
@@ -1900,6 +1937,9 @@ class Sweeper3d(tk.Frame):
         global columns
         global manual_filenames
         global manual_sweep_flags
+        global master_flag1
+        global master_flag2
+        global master_flag3
 
         # asking multichoise to get parameters to read
         self.list_to_read = list()
@@ -1929,23 +1969,38 @@ class Sweeper3d(tk.Frame):
             columns.append(option)
 
         # fixing sweeper parmeters
-        min_sweep1 = self.entry_min1.get()
-        max_sweep1 = self.entry_max1.get()
-        ratio_sweep1 = self.entry_ratio1.get()
-        delay_factor1 = self.entry_delay_factor1.get()
-        min_sweep2 = self.entry_min2.get()
-        max_sweep2 = self.entry_max2.get()
-        ratio_sweep2 = self.entry_ratio2.get()
-        delay_factor2 = self.entry_delay_factor2.get()
-        min_sweep3 = self.entry_min3.get()
-        max_sweep3 = self.entry_max3.get()
-        ratio_sweep3 = self.entry_ratio3.get()
-        delay_factor3 = self.entry_delay_factor3.get()
+        if self.entry_min1.get() != '':
+            min_sweep1 = self.entry_min1.get()
+        if self.entry_max1.get() != '':
+            max_sweep1 = self.entry_max1.get()
+        if self.entry_ratio1.get() != '':
+            ratio_sweep1 = self.entry_ratio1.get()
+        if self.delay_factor1.get() != '':
+            delay_factor1 = self.entry_delay_factor1.get()
+        if self.entry_min2.get() != '':
+            min_sweep2 = self.entry_min2.get()
+        if self.entry_max2.get() != '':
+            max_sweep2 = self.entry_max2.get()
+        if self.entry_ratio2.get() != '':
+            ratio_sweep2 = self.entry_ratio2.get()
+        if self.delay_factor2.get() != '':
+            delay_factor2 = self.entry_delay_factor2.get()
+        if self.entry_min3.get() != '':
+            min_sweep3 = self.entry_min3.get()
+        if self.entry_max3.get() != '':
+            max_sweep3 = self.entry_max3.get()
+        if self.entry_ratio3.get() != '':
+            ratio_sweep3 = self.entry_ratio3.get()
+        if self.delay_factor3.get() != '':
+            delay_factor3 = self.entry_delay_factor3.get()
         sweeper_flag1 = False
         sweeper_flag2 = False
         sweeper_flag3 = True
         manual_filenames = self.manual_filenames
         manual_sweep_flags = self.manual_sweep_flags
+        master_flag1 = self.combo_master1.current()
+        master_flag2 = self.combo_master2.current()
+        master_flag3 = self.combo_master3.current()
 
         Sweeper_write()
 
@@ -2047,6 +2102,9 @@ class Sweeper_write(threading.Thread):
     def run(self):
         global manual_filenames
         global manual_sweep_flags
+        global master_flag1
+        global master_flag2
+        global master_flag3
         if self.sweeper_flag1 == True:
             dataframe = pd.DataFrame(columns=self.columns)
             dataframe.to_csv(self.filename_sweep, index=False)
@@ -2116,7 +2174,7 @@ class Sweeper_write(threading.Thread):
             dataframe = pd.DataFrame(columns=self.columns)
             dataframe.to_csv(self.filename_sweep, index=False)
 
-            if self.time1 > self.time2:
+            if self.time1 > self.time2 and master_flag1 != 0 and master_flag2 != 1:
                 self.transposition(1, 2)
 
             while self.value1 <= self.max_sweep1 and manual_sweep_flags == [0, 0]:
@@ -2302,11 +2360,11 @@ class Sweeper_write(threading.Thread):
             dataframe = pd.DataFrame(columns=self.columns)
             dataframe.to_csv(self.filename_sweep, index=False)
 
-            if self.time1 > self.time2:
+            if self.time1 > self.time2 and (master_flag1 != 0 or master_flag1 != 1) and (master_flag2 != 1 or master_flag2 != 2):
                 self.transposition(1, 2)
-            if self.time1 > self.time3:
+            if self.time1 > self.time3 and (master_flag1 != 0 or master_flag1 != 1) and (master_flag3 != 1 or master_flag3 != 2):
                 self.transposition(1, 3)
-            if self.time2 > self.time3:
+            if self.time2 > self.time3 and (master_flag2 != 0 or master_flag2 != 1) and (master_flag3 != 1 or master_flag3 != 2):
                 self.transposition(2, 3)
 
             while self.value1 <= self.max_sweep1 and manual_sweep_flags == [0, 0, 0]:
