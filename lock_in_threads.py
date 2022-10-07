@@ -4,7 +4,6 @@ from csv import writer
 import threading
 from tkinter import ttk
 import tkinter as tk
-from PIL import Image, ImageTk
 import matplotlib.animation as animation
 from matplotlib import style
 from matplotlib.figure import Figure
@@ -75,6 +74,8 @@ filename_sweep = r'C:\NUS\Transport lab\Test\data_files\sweep' + datetime.today(
 sweeper_flag1 = False
 sweeper_flag2 = False
 sweeper_flag3 = False
+
+condition = ''
 
 manual_sweep_flags = [0]
 manual_filenames = [r'C:\NUS\Transport lab\Test\data_files\manual' + datetime.today().strftime(
@@ -380,12 +381,12 @@ class TC300():
 
         self.set_options = ['T1', 'T2']
 
-        self.get_options = ['T1', 'T2']
+        self.get_options = ['t1', 't2']
 
     def IDN(self):
         return(get(self.tc, 'IDN?')[2:])
 
-    def T1(self):
+    def t1(self):
         # Get the CH1 target temperature; returned value is the actual temperature in °C
         value_str = get(self.tc, 'TACT1?')
         value_float = re.findall(r'\d*\.\d+|\d+', value_str)
@@ -403,8 +404,8 @@ class TC300():
     def set_T1(self, value=20):
         # Set the CH1 target temperature to value/10 °C, the range is defined by
         # TMIN1 and TMAX1, the setting resolution of value is 1.
-        self.tc.write('TSET1=' + str(int(value * 10)))
         self.tc.write('EN1=1')
+        self.tc.write('TSET1=' + str(int(value * 10)))
 
     def set_T1_min(self, t1_min=0):
         # Set the CH1 Target Temperature Min value,
@@ -416,7 +417,7 @@ class TC300():
         # TMIN1 to 400°C, with a resolution of 1°C).
         self.tc.write('T1MAX=' + str(t1_max))
 
-    def T2(self):
+    def t2(self):
         # Get the CH2 target temperature; returned value is the actual temperature in °C
         value_str = get(self.tc, 'TACT2?')
         if value_str == '':
@@ -428,8 +429,8 @@ class TC300():
     def set_T2(self, value=20):
         # Set the CH2 target temperature to value/10 °C, the range is defined by
         # TMIN1 and TMAX1, the setting resolution of value is 1.
-        self.tc.write('TSET2=' + str(int(value * 10)))
         self.tc.write('EN2=1')
+        self.tc.write('TSET2=' + str(int(value * 10)))
 
     def set_T2_min(self, t2_min=0):
         # Set the CH2 Target Temperature Min value,
@@ -569,7 +570,7 @@ def animate222(i):
         ax2.plot(x2, y2, '-', lw=1, color='crimson')
     except FileNotFoundError:
         ax2.clear()
-        ax2.plot(x2, y2, '-', lw=1, color='darkblue')
+        ax2.plot(x2, y2, '-', lw=1, color='crimson')
 
 
 def animate223(i):
@@ -589,7 +590,7 @@ def animate223(i):
         ax3.plot(x3, y3, '-', lw=1, color='darkgreen')
     except FileNotFoundError:
         ax3.clear()
-        ax3.plot(x3, y3, '-', lw=1, color='darkblue')
+        ax3.plot(x3, y3, '-', lw=1, color='darkgreen')
 
 
 config_parameters_filename = r'C:\NUS\Transport lab\App\config\parameters_' + datetime.today().strftime(
@@ -664,12 +665,13 @@ class write_config_channels(threading.Thread):
 zero_time = time.process_time()
 
 
-class Universal_frontend(tk.Toplevel):
+class Universal_frontend(tk.Tk):
 
     def __init__(self, classes, start, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
 
         tk.Tk.iconbitmap(self)
+        tk.Tk.geometry(self, newGeometry = '1920x1080')
         tk.Tk.wm_title(self, 'Lock in test')
 
         container = tk.Frame(self)
@@ -689,6 +691,7 @@ class Universal_frontend(tk.Toplevel):
     def show_frame(self, cont):
         frame = self.frames[cont]
         frame.tkraise()
+        
 
 
 class StartPage(tk.Frame):
@@ -1137,7 +1140,7 @@ class Sweeper1d(tk.Frame):
         devices.set(value=parameters_to_read)
         self.lstbox_to_read = tk.Listbox(self, listvariable=devices,
                                          selectmode='multiple', width=20,
-                                         height=len(parameters_to_read) * 2)
+                                         height=len(parameters_to_read) * 1)
         self.lstbox_to_read.place(relx=0.3, rely=0.16)
 
         self.sweep_options = ttk.Combobox(self)
@@ -1194,8 +1197,11 @@ class Sweeper1d(tk.Frame):
             self, text = 'Explore', command=lambda: self.explore_files())
         button_explore_manual.place(relx=0.17, rely=0.56)
 
-        self.label_filename = tk.Label(self, text = filename_sweep, font = LARGE_FONT)
-        self.label_filename.place(relx = 0.6, rely = 0.9)
+        self.filename_textvariable = tk.StringVar(self, value = filename_sweep)
+        width = int(len(self.filename_textvariable.get()) * 0.95)
+        self.entry_filename = tk.Entry(self, textvariable = self.filename_textvariable, font = LARGE_FONT, 
+                                       width = width)
+        self.entry_filename.place(relx = 0.97 - width / 100, rely = 0.9)
 
         button_filename = ttk.Button(
             self, text = 'filename', command=lambda: self.set_filename_sweep())
@@ -1246,7 +1252,10 @@ class Sweeper1d(tk.Frame):
                                                          initialfile=r'C:\NUS\Transport lab\Test\data_files\sweep' + datetime.today().strftime(
                                                              '%H_%M_%d_%m_%Y'),
                                                          defaultextension='.csv')
-        self.label_filename.config(text = filename_sweep)
+        
+        self.entry_filename.delete(0, tk.END)
+        self.entry_filename.insert(0, filename_sweep)
+        self.entry_filename.after(1)
 
     def open_graph(self):
         global fig221
@@ -1308,8 +1317,10 @@ class Sweeper1d(tk.Frame):
             max_sweep1 = self.entry_max.get()
         if self.entry_ratio.get() != '':
             ratio_sweep1 = self.entry_ratio.get()
-        if self.delay_factor.get() != '':
+        if self.entry_delay_factor.get() != '':
             delay_factor1 = self.entry_delay_factor.get()
+        if self.entry_filename.get() != '':
+            filename_sweep = self.entry_filename.get()
         sweeper_flag1 = True
         sweeper_flag2 = False
         sweeper_flag3 = False
@@ -1340,10 +1351,10 @@ class Sweeper2d(tk.Frame):
         label_to_read = tk.Label(self, text='To read:', font=LARGE_FONT)
         label_to_read.place(relx=0.45, rely=0.17)
 
-        self.combo_master1 = ttk.Combobox(self, value = ['Master', 'Slave'], font = LARGE_FONT)
+        self.combo_master1 = ttk.Combobox(self, value = ['Master', 'Slave'])
         self.combo_master1.place(relx = 0.15, rely = 0.17)
         
-        self.combo_master2 = ttk.Combobox(self, value = ['Master', 'Slave'], font = LARGE_FONT)
+        self.combo_master2 = ttk.Combobox(self, value = ['Master', 'Slave'])
         self.combo_master2.place(relx = 0.3, rely = 0.17)
 
         self.combo_to_sweep1 = ttk.Combobox(self, value=list_of_devices)
@@ -1362,7 +1373,7 @@ class Sweeper2d(tk.Frame):
         devices.set(value=parameters_to_read)
         self.lstbox_to_read = tk.Listbox(self, listvariable=devices,
                                          selectmode='multiple', width=20,
-                                         height=len(parameters_to_read) * 2)
+                                         height=len(parameters_to_read) * 1)
         self.lstbox_to_read.place(relx=0.45, rely=0.21)
 
         self.sweep_options1 = ttk.Combobox(self)
@@ -1463,8 +1474,11 @@ class Sweeper2d(tk.Frame):
             self, text='Explore', command=lambda: self.explore_files(i=1))
         button_explore_manual2.place(relx=0.32, rely=0.61)
 
-        self.label_filename = tk.Label(self, text = filename_sweep, font = LARGE_FONT)
-        self.label_filename.place(relx = 0.6, rely = 0.9)
+        self.filename_textvariable = tk.StringVar(self, value = filename_sweep)
+        width = int(len(self.filename_textvariable.get()) * 0.95)
+        self.entry_filename = tk.Entry(self, textvariable = self.filename_textvariable, font = LARGE_FONT, 
+                                       width = width)
+        self.entry_filename.place(relx = 0.97 - width / 100, rely = 0.9)
 
         button_filename = ttk.Button(
             self, text = 'filename', command=lambda: self.set_filename_sweep())
@@ -1526,7 +1540,10 @@ class Sweeper2d(tk.Frame):
                                                          initialfile=r'C:\NUS\Transport lab\Test\data_files\sweep' + datetime.today().strftime(
                                                              '%H_%M_%d_%m_%Y'),
                                                          defaultextension='.csv')
-        self.label_filename.config(text = filename_sweep)
+        
+        self.entry_filename.delete(0, tk.END)
+        self.entry_filename.insert(0, filename_sweep)
+        self.entry_filename.after(1)
 
     def open_graph(self):
         global fig221
@@ -1598,7 +1615,7 @@ class Sweeper2d(tk.Frame):
             max_sweep1 = self.entry_max1.get()
         if self.entry_ratio1.get() != '':
             ratio_sweep1 = self.entry_ratio1.get()
-        if self.delay_factor1.get() != '':
+        if self.entry_delay_factor1.get() != '':
             delay_factor1 = self.entry_delay_factor1.get()
         if self.entry_min2.get() != '':
             min_sweep2 = self.entry_min2.get()
@@ -1606,7 +1623,7 @@ class Sweeper2d(tk.Frame):
             max_sweep2 = self.entry_max2.get()
         if self.entry_ratio2.get() != '':
             ratio_sweep2 = self.entry_ratio2.get()
-        if self.delay_factor2.get() != '':
+        if self.entry_delay_factor2.get() != '':
             delay_factor2 = self.entry_delay_factor2.get()
         sweeper_flag1 = False
         sweeper_flag2 = True
@@ -1674,7 +1691,7 @@ class Sweeper3d(tk.Frame):
         devices.set(value=parameters_to_read)
         self.lstbox_to_read = tk.Listbox(self, listvariable=devices,
                                          selectmode='multiple', width=20,
-                                         height=len(parameters_to_read) * 2)
+                                         height=len(parameters_to_read) * 1)
         self.lstbox_to_read.place(relx=0.6, rely=0.21)
 
         self.sweep_options1 = ttk.Combobox(self)
@@ -1816,8 +1833,11 @@ class Sweeper3d(tk.Frame):
             self, text='Explore', command=lambda: self.explore_files(i=2))
         button_explore_manual3.place(relx=0.47, rely=0.61)
 
-        self.label_filename = tk.Label(self, text = filename_sweep, font = LARGE_FONT)
-        self.label_filename.place(relx = 0.6, rely = 0.9)
+        self.filename_textvariable = tk.StringVar(self, value = filename_sweep)
+        width = int(len(self.filename_textvariable.get()) * 0.95)
+        self.entry_filename = tk.Entry(self, textvariable = self.filename_textvariable, font = LARGE_FONT, 
+                                       width = width)
+        self.entry_filename.place(relx = 0.97 - width / 100, rely = 0.9)
 
         button_filename = ttk.Button(
             self, text = 'filename', command=lambda: self.set_filename_sweep())
@@ -1891,7 +1911,10 @@ class Sweeper3d(tk.Frame):
                                                          initialfile=r'C:\NUS\Transport lab\Test\data_files\sweep' + datetime.today().strftime(
                                                              '%H_%M_%d_%m_%Y'),
                                                          defaultextension='.csv')
-        self.label_filename.config(text = filename_sweep)
+        
+        self.entry_filename.delete(0, tk.END)
+        self.entry_filename.insert(0, filename_sweep)
+        self.entry_filename.after(1)
 
     def open_graph(self):
         global fig221
@@ -1975,7 +1998,7 @@ class Sweeper3d(tk.Frame):
             max_sweep1 = self.entry_max1.get()
         if self.entry_ratio1.get() != '':
             ratio_sweep1 = self.entry_ratio1.get()
-        if self.delay_factor1.get() != '':
+        if self.entry_delay_factor1.get() != '':
             delay_factor1 = self.entry_delay_factor1.get()
         if self.entry_min2.get() != '':
             min_sweep2 = self.entry_min2.get()
@@ -1983,7 +2006,7 @@ class Sweeper3d(tk.Frame):
             max_sweep2 = self.entry_max2.get()
         if self.entry_ratio2.get() != '':
             ratio_sweep2 = self.entry_ratio2.get()
-        if self.delay_factor2.get() != '':
+        if self.entry_delay_factor2.get() != '':
             delay_factor2 = self.entry_delay_factor2.get()
         if self.entry_min3.get() != '':
             min_sweep3 = self.entry_min3.get()
@@ -1991,7 +2014,7 @@ class Sweeper3d(tk.Frame):
             max_sweep3 = self.entry_max3.get()
         if self.entry_ratio3.get() != '':
             ratio_sweep3 = self.entry_ratio3.get()
-        if self.delay_factor3.get() != '':
+        if self.entry_delay_factor3.get() != '':
             delay_factor3 = self.entry_delay_factor3.get()
         sweeper_flag1 = False
         sweeper_flag2 = False
@@ -2037,16 +2060,14 @@ class Sweeper_write(threading.Thread):
         self.sweeper_flag1 = sweeper_flag1
         self.sweeper_flag2 = sweeper_flag2
         self.sweeper_flag3 = sweeper_flag3
+        self.condition = condition
         self.step1 = float(delay_factor1) * float(ratio_sweep1)
         self.step2 = float(delay_factor2) * float(ratio_sweep2)
         self.step3 = float(delay_factor3) * float(ratio_sweep3)
-        self.time1 = (float(min_sweep1) - float(max_sweep1)) / \
-            float(ratio_sweep1)
-        self.time2 = (float(min_sweep2) - float(max_sweep2)) / \
-            float(ratio_sweep2)
-        self.time3 = (float(min_sweep3) - float(max_sweep3)) / \
-            float(ratio_sweep3)
-        '''
+        self.time1 = (float(min_sweep1) - float(max_sweep1)) / float(ratio_sweep1)
+        self.time2 = (float(min_sweep2) - float(max_sweep2)) / float(ratio_sweep2)
+        self.time3 = (float(min_sweep3) - float(max_sweep3)) / float(ratio_sweep3)
+        
         try:
             self.nstep1 = (float(max_sweep1) - float(min_sweep1)) / self.ratio_sweep1 / self.delay_factor1
         except ValueError:
@@ -2059,7 +2080,7 @@ class Sweeper_write(threading.Thread):
             self.nstep3 = (float(max_sweep3) - float(min_sweep3)) / self.ratio_sweep3 / self.delay_factor3
         except ValueError:
             self.nstep3 = 1
-        '''
+            
         try:
             threading.Thread.__init__(self)
             self.daemon = True
@@ -2067,7 +2088,191 @@ class Sweeper_write(threading.Thread):
         except NameError:
             pass
 
-        print(manual_sweep_flags, manual_filenames)
+        if self.condition != '':
+            #creating grid space for sweep parameters
+            if self.sweeper_flag2 == True:
+                ax1 = np.linspace(self.min_sweep1, self.max_sweep1, self.nstep1)
+                ax2 = np.linspace(self.min_sweep2, self.max_sweep2, self.nstep2)
+                AX1, AX2 = np.meshgrid(ax1, ax2)
+                AX1 = AX1.tolist()
+                AX2 = AX2.tolist()
+                self.grid_space = AX1.copy()
+                for i in range(len(AX1[0])):
+                    for j in range(len(AX1[1])):
+                        self.grid_space[i][j] = tuple((AX1[i][j], AX2[i][j])) * self.func(tup = tuple((AX1[i][j], AX2[i][j])), dtup = tuple((self.step1 / 2, self.step2 / 2)), condition_str = self.condition, sweep_dimension = 2)
+            if self.sweeper_flag3 == True: 
+                ax1 = np.linspace(self.min_sweep1, self.max_sweep1, self.nstep1)
+                ax2 = np.linspace(self.min_sweep2, self.max_sweep2, self.nstep2)
+                ax3 = np.linspace(self.min_sweep3, self.max_sweep3, self.nstep3)
+                AX1, AX2, AX3 = np.meshgrid(ax1, ax2, ax3)
+                AX1 = AX1.tolist()
+                AX2 = AX2.tolist()
+                AX3 = AX3.tolist()
+                self.grid_space = AX1.copy
+                for i in range(len(AX1[0])):
+                    for j in range(len(AX1[1])):
+                        for k in range(len(AX1[2])):
+                            self.grid_space[i][j][k] = tuple((AX1[i][j][k], AX2[i][j][k], AX3[i][j][k])) * self.func(tup = tuple((AX1[i][j][k], AX2[i][j][k], AX3[i][j][k])), dtup = tuple((self.step1 / 2, self.step2 / 2, self.step3 / 3)), condition_str = self.condition, sweep_dimension = 3)
+
+    def func(self, tup, dtup, condition_str, sweep_dimension):
+        #input: tup - tuple, contains coordinates of phase space of sweep parameters,
+        #dtup: tuple of steps along sweep axis
+        #condition_str - python-like condition, written by user in a form of string
+        #sweep_dimension - 2 or 3: how many sweep parameters are there
+        #############
+        #return 1 if point in fase space with coordinates in tup included in condition
+        #np.nan if not included
+        
+        def isequal(a, b, abs_tol):
+            #equality with tolerance
+            return abs(a-b) <= abs_tol
+
+        def notequal(a, b, abs_tol):
+            #not equality with tolerance
+            return abs(a-b) > abs_tol
+
+        def ismore(a, b, abs_tol):
+            #if one lement is more than other with tolerance
+            return (a-b) > abs_tol
+
+        def ismoreequal(a, b, abs_tol):
+            #if one lement is more or equal than other with tolerance
+            return (a-b) >= abs_tol
+
+        def isless(a, b, abs_tol):
+            #if one lement is less than other with tolerance
+            return (a-b) < abs_tol
+
+        def islessequal(a, b, abs_tol):
+            #if one lement is less or equal than other with tolerance
+            return (a-b) <= abs_tol
+        
+        def insert(string, index, ins):
+            A_l = string[:index]
+            A_r = string[index + 1:]
+            return A_l + ins + A_r
+        
+        result = 1
+        rows_ends = [0]
+        for index, elem in enumerate(condition_str):
+            if elem == '/n':
+                rows_ends.append(index)
+        if len(rows_ends) == 0:
+            rows_ends.append(-1)
+        
+        dict_operations = {' == ': isequal, ' != ': notequal, ' > ': ismore, 
+                           ' < ': isless, ' >= ': ismoreequal, ' <= ': islessequal, 
+                             '==': isequal, '!=': notequal, '>': ismore, 
+                             '<': isless, '>=': ismoreequal, '<=':islessequal}
+        list_operations = list(dict_operations.keys())
+        
+        for rows_end in rows_ends[:-1]:
+            indexes = []
+            try:
+                if rows_end == 0:
+                    for eq_operation in list_operations:
+                        cur_index = condition_str[:rows_ends.index(rows_end) + 1].find(eq_operation)
+                        if cur_index > 0:
+                            indexes.append([cur_index, eq_operation])
+                else:
+                    for eq_operation in list_operations:
+                        cur_index = condition_str[rows_end + 2:rows_ends.index(rows_end) + 1].find(eq_operation)
+                        if cur_index > 0:
+                            indexes.append([cur_index, eq_operation])
+            except IndexError:
+                if rows_end == 0:
+                    for eq_operation in list_operations:
+                        cur_index = condition_str.find(eq_operation)
+                        if cur_index > 0:
+                            indexes.append([cur_index, len(eq_operation)])
+                else:
+                    for eq_operation in list_operations:
+                        cur_index = condition_str[rows_end + 2:].find(eq_operation)
+                        if cur_index > 0:
+                            indexes.append([cur_index, len(eq_operation)])
+            min_index = np.min(indexes, axis = 0)
+            lhs = condition_str[:min_index[0]]
+            rhs = condition_str[min_index[0] + len(min_index[1]):]
+            if sweep_dimension == 2:
+                x_in_lhs = []
+                x_in_rhs = []
+                y_in_lhs = []
+                y_in_rhs = []
+                
+                for index, elem in enumerate(lhs):
+                    if elem == 'x':
+                        x_in_lhs.append(index)
+                for index, elem in enumerate(rhs):
+                    if elem == 'x':
+                        x_in_rhs.append(index)
+                for i in x_in_lhs:
+                    lhs = insert(lhs, i, 'tup[0]')
+                for i in x_in_rhs:
+                    rhs = insert(rhs, i, 'tup[0]')
+                for index, elem in enumerate(lhs):
+                    if elem == 'y':
+                        y_in_lhs.append(index)
+                for index, elem in enumerate(rhs):
+                    if elem == 'y':
+                        y_in_rhs.append(index)
+                for i in y_in_lhs:
+                    lhs = insert(lhs, i, 'tup[1]')
+                for i in y_in_rhs:
+                    rhs = insert(rhs, i, 'tup[1]')
+                
+                
+                if dict_operations[min_index[1]](exec(lhs), exec(rhs), np.sqrt(dtup[0]**2 + dtup[1]**2)):
+                    result *= 1
+                else:
+                    result *= np.nan
+            
+            elif sweep_dimension == 3:
+                x_in_lhs = []
+                x_in_rhs = []
+                y_in_lhs = []
+                y_in_rhs = []
+                z_in_lhs = []
+                z_in_rhs = []
+                
+                for index, elem in enumerate(lhs):
+                    if elem == 'x':
+                        x_in_lhs.append(index)
+                for index, elem in enumerate(rhs):
+                    if elem == 'x':
+                        x_in_rhs.append(index)
+                for i in x_in_lhs:
+                    lhs = insert(lhs, i, 'tup[0]')
+                for i in x_in_rhs:
+                    rhs = insert(rhs, i, 'tup[0]')
+                for index, elem in enumerate(lhs):
+                    if elem == 'y':
+                        y_in_lhs.append(index)
+                for index, elem in enumerate(rhs):
+                    if elem == 'y':
+                        y_in_rhs.append(index)
+                for i in y_in_lhs:
+                    lhs = insert(lhs, i, 'tup[1]')
+                for i in y_in_rhs:
+                    rhs = insert(rhs, i, 'tup[1]')
+                for index, elem in enumerate(lhs):
+                    if elem == 'z':
+                        z_in_lhs.append(index)
+                for index, elem in enumerate(rhs):
+                    if elem == 'z':
+                        z_in_rhs.append(index)
+                for i in z_in_lhs:
+                    lhs = insert(lhs, i, 'tup[2]')
+                for i in z_in_rhs:
+                    rhs = insert(rhs, i, 'tup[2]')
+                
+                
+                if dict_operations[min_index[1]](exec(lhs), exec(rhs), np.sqrt(dtup[0]**2 + dtup[1]**2 + dtup[2]**2)):
+                    result *= 1
+                else:
+                    result *= np.nan
+            else:
+                return 1
+        return result
 
     def transposition(self, a, b):
         # changes device_a and device_b order
@@ -2076,10 +2281,8 @@ class Sweeper_write(threading.Thread):
         b = str(b)
         setattr(self, 'device_to_sweep' + a, globals()['device_to_sweep' + b])
         setattr(self, 'device_to_sweep' + b, globals()['device_to_sweep' + a])
-        setattr(self, 'parameter_to_sweep' + a,
-                globals()['parameter_to_sweep' + b])
-        setattr(self, 'parameter_to_sweep' + b,
-                globals()['parameter_to_sweep' + a])
+        setattr(self, 'parameter_to_sweep' + a, globals()['parameter_to_sweep' + b])
+        setattr(self, 'parameter_to_sweep' + b, globals()['parameter_to_sweep' + a])
         setattr(self, 'min_sweep' + a, float(globals()['min_sweep' + b]))
         setattr(self, 'max_sweep' + a, float(globals()['max_sweep' + b]))
         setattr(self, 'ratio_sweep' + a, float(globals()['ratio_sweep' + b]))
@@ -2088,16 +2291,30 @@ class Sweeper_write(threading.Thread):
         setattr(self, 'max_sweep' + b, float(globals()['max_sweep' + a]))
         setattr(self, 'ratio_sweep' + b, float(globals()['ratio_sweep' + a]))
         setattr(self, 'delay_factor' + b, float(globals()['delay_factor' + a]))
-        setattr(self, 'step' + a, float(globals()
-                ['delay_factor' + b]) * float(globals()['ratio_sweep' + b]))
-        setattr(self, 'step' + b, float(globals()
-                ['delay_factor' + a]) * float(globals()['ratio_sweep' + a]))
+        setattr(self, 'step' + a, float(globals()['delay_factor' + b]) * float(globals()['ratio_sweep' + b]))
+        setattr(self, 'step' + b, float(globals()['delay_factor' + a]) * float(globals()['ratio_sweep' + a]))
         setattr(self, 'value' + a, float(globals()['min_sweep' + b]))
         setattr(self, 'value' + b, float(globals()['min_sweep' + a]))
-        setattr(self, 'time' + a, (float(globals()['min_sweep' + b]) - float(
-            globals()['max_sweep' + b])) / float(globals()['ratio_sweep' + b]))
-        setattr(self, 'time' + b, (float(globals()['min_sweep' + a]) - float(
-            globals()['max_sweep' + a])) / float(globals()['ratio_sweep' + a]))
+        setattr(self, 'time' + a, (float(globals()['min_sweep' + b]) - float(globals()['max_sweep' + b])) / float(globals()['ratio_sweep' + b]))
+        setattr(self, 'time' + b, (float(globals()['min_sweep' + a]) - float(globals()['max_sweep' + a])) / float(globals()['ratio_sweep' + a]))
+
+    def isinarea(self, point):
+        if self.condition == '':
+            return True
+        else:
+            if self.sweeper_flag2 == True:
+                for area in np.unique(np.array(self.grid_space).reshape(-1, 2), axis = 0):
+                    if point in area:
+                        return True
+                    else: 
+                        return False
+            if self.sweeper_flag3 == True:
+                for area in np.unique(np.array(self.grid_space).reshape(-1, 3), axis = 0):
+                    if point in area:
+                        return True
+                    else: 
+                        return False
+                
 
     def run(self):
         global manual_filenames
@@ -2171,11 +2388,15 @@ class Sweeper_write(threading.Thread):
                 self.sweeper_flag1 = False
 
         if self.sweeper_flag2 == True:
-            dataframe = pd.DataFrame(columns=self.columns)
-            dataframe.to_csv(self.filename_sweep, index=False)
 
             if self.time1 > self.time2 and master_flag1 != 0 and master_flag2 != 1:
                 self.transposition(1, 2)
+                manual_sweep_flags = manual_sweep_flags[::-1]
+                manual_filenames = manual_filenames[::-1]
+                columns[1:3] = columns[1:3][:-1]
+                
+            dataframe = pd.DataFrame(columns=self.columns)
+            dataframe.to_csv(self.filename_sweep, index=False)
 
             while self.value1 <= self.max_sweep1 and manual_sweep_flags == [0, 0]:
                 print([0, 0], ' = ', manual_sweep_flags)
@@ -2357,15 +2578,25 @@ class Sweeper_write(threading.Thread):
             self.sweeper_flag2 == False
 
         if self.sweeper_flag3 == True:
-            dataframe = pd.DataFrame(columns=self.columns)
-            dataframe.to_csv(self.filename_sweep, index=False)
 
             if self.time1 > self.time2 and (master_flag1 != 0 or master_flag1 != 1) and (master_flag2 != 1 or master_flag2 != 2):
                 self.transposition(1, 2)
+                manual_sweep_flags[0:2] = manual_sweep_flags[0:2][::-1]
+                manual_filenames[0:2] = manual_filenames[0:2][::-1]
+                columns[1:3] = columns[1:3][:-1]
             if self.time1 > self.time3 and (master_flag1 != 0 or master_flag1 != 1) and (master_flag3 != 1 or master_flag3 != 2):
                 self.transposition(1, 3)
+                manual_sweep_flags = manual_sweep_flags[::-1]
+                manual_filenames = manual_filenames[::-1]
+                columns[1:4] = columns[1:4][:-1]
             if self.time2 > self.time3 and (master_flag2 != 0 or master_flag2 != 1) and (master_flag3 != 1 or master_flag3 != 2):
                 self.transposition(2, 3)
+                manual_sweep_flags[1:3] = manual_sweep_flags[1:3][::-1]
+                manual_filenames[1:3] = manual_filenames[1:3][::-1]
+                columns[2:4] = columns[1:3][:-1]
+
+            dataframe = pd.DataFrame(columns=self.columns)
+            dataframe.to_csv(self.filename_sweep, index=False)
 
             while self.value1 <= self.max_sweep1 and manual_sweep_flags == [0, 0, 0]:
                 dataframe = [time.process_time() - zero_time]
