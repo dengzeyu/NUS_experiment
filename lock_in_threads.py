@@ -2115,25 +2115,67 @@ class Sweeper_write(threading.Thread):
                 ax1 = np.linspace(self.min_sweep1, self.max_sweep1, self.nstep1)
                 ax2 = np.linspace(self.min_sweep2, self.max_sweep2, self.nstep2)
                 AX1, AX2 = np.meshgrid(ax1, ax2)
-                AX1 = AX1.tolist()
-                AX2 = AX2.tolist()
-                self.grid_space = AX1.copy()
-                for i in range(self.nstep1):
-                    for j in range(self.nstep2):
-                        self.grid_space[i][j] = tuple((AX1[i][j], AX2[i][j])) * self.func(tup = tuple((AX1[i][j], AX2[i][j])), dtup = tuple((self.step1 / 2, self.step2 / 2)), condition_str = self.condition, sweep_dimension = 2)
+                space = AX1.tolist().copy()
+                for i in range(AX1.shape[0]):
+                    for j in range(AX1.shape[1]):
+                        space[i][j] = (np.array([AX1[i][j], AX2[i][j]]) * self.func(tup = tuple((AX1[i][j], AX2[i][j])), dtup = tuple((self.step1 / 2, self.step2 / 2)), condition_str = self.condition, sweep_dimension = 2)).tolist()
+                space = np.array(space).reshape(-1, 2)
+                
+                xnans = []
+                ynans = []
+
+                for index, elem in enumerate(space.T[0]):
+                    if np.isnan(elem):
+                        xnans.append(index)
+                        
+                for index, elem in enumerate(space.T[1]):
+                    if np.isnan(elem):
+                        ynans.append(index)
+                        
+                x = np.delete(space.T[0], xnans)
+                y = np.delete(space.T[1], ynans)
+                
+                self.grid_space = []
+                
+                for i in range(x.shape[0]):
+                    self.grid_space.append([x[i], y[i]])
+                        
             if self.sweeper_flag3 == True: 
                 ax1 = np.linspace(self.min_sweep1, self.max_sweep1, self.nstep1)
                 ax2 = np.linspace(self.min_sweep2, self.max_sweep2, self.nstep2)
                 ax3 = np.linspace(self.min_sweep3, self.max_sweep3, self.nstep3)
                 AX1, AX2, AX3 = np.meshgrid(ax1, ax2, ax3)
-                AX1 = AX1.tolist()
-                AX2 = AX2.tolist()
-                AX3 = AX3.tolist()
-                self.grid_space = AX1.copy
-                for i in range(len(AX1[0])):
-                    for j in range(len(AX1[1])):
-                        for k in range(len(AX1[2])):
-                            self.grid_space[i][j][k] = tuple((AX1[i][j][k], AX2[i][j][k], AX3[i][j][k])) * self.func(tup = tuple((AX1[i][j][k], AX2[i][j][k], AX3[i][j][k])), dtup = tuple((self.step1 / 2, self.step2 / 2, self.step3 / 3)), condition_str = self.condition, sweep_dimension = 3)
+                space = AX1.tolist().copy()
+                for i in range(AX1.shape[0]):
+                    for j in range(AX1.shape[1]):
+                        for k in range(AX1.shape[2]):
+                            space[i][j][k] = tuple((AX1[i][j][k], AX2[i][j][k], AX3[i][j][k])) * self.func(tup = tuple((AX1[i][j][k], AX2[i][j][k], AX3[i][j][k])), dtup = tuple((self.step1 / 2, self.step2 / 2, self.step3 / 3)), condition_str = self.condition, sweep_dimension = 3)
+
+                xnans = []
+                ynans = []
+                znans = []
+
+                for index, elem in enumerate(space.T[0]):
+                    if np.isnan(elem):
+                        xnans.append(index)
+                        
+                for index, elem in enumerate(space.T[1]):
+                    if np.isnan(elem):
+                        ynans.append(index)
+                        
+                for index, elem in enumerate(space.T[2]):
+                    if np.isnan(elem):
+                        znans.append(index)
+                        
+                x = np.delete(space.T[0], xnans)
+                y = np.delete(space.T[1], ynans)
+                z = np.delete(space.T[2], ynans)
+                
+                self.grid_space = []
+                
+                for i in range(x.shape[0]):
+                    self.grid_space.append([x[i], y[i], z[i]])
+
 
     def func(self, tup, dtup, condition_str, sweep_dimension):
         #input: tup - tuple, contains coordinates of phase space of sweep parameters,
@@ -2154,7 +2196,7 @@ class Sweeper_write(threading.Thread):
 
         def ismore(a, b, abs_tol):
             #if one lement is more than other with tolerance
-            return (a-b) > abs_tol
+            return (a-b) > 0
 
         def ismoreequal(a, b, abs_tol):
             #if one lement is more or equal than other with tolerance
@@ -2162,7 +2204,7 @@ class Sweeper_write(threading.Thread):
 
         def isless(a, b, abs_tol):
             #if one lement is less than other with tolerance
-            return (a-b) < abs_tol
+            return (a-b) < 0
 
         def islessequal(a, b, abs_tol):
             #if one lement is less or equal than other with tolerance
@@ -2184,37 +2226,30 @@ class Sweeper_write(threading.Thread):
         dict_operations = {' == ': isequal, ' != ': notequal, ' > ': ismore, 
                            ' < ': isless, ' >= ': ismoreequal, ' <= ': islessequal, 
                              '==': isequal, '!=': notequal, '>': ismore, 
-                             '<': isless, '>=': ismoreequal, '<=':islessequal}
+                             '<': isless, '>=': ismoreequal, '<=': islessequal}
         list_operations = list(dict_operations.keys())
         
-        for rows_end in rows_ends[:-1]:
+        for rows_end in rows_ends:
             indexes = []
             try:
-                if rows_end == 0:
-                    for eq_operation in list_operations:
-                        cur_index = condition_str[:rows_ends.index(rows_end) + 1].find(eq_operation)
-                        if cur_index > 0:
-                            indexes.append([cur_index, eq_operation])
-                else:
-                    for eq_operation in list_operations:
-                        cur_index = condition_str[rows_end + 1:rows_ends.index(rows_end) + 1].find(eq_operation)
-                        if cur_index > 0:
-                            indexes.append([cur_index, eq_operation])
+                for eq_operation in list_operations:
+                    cur_index = condition_str[rows_end:rows_ends[rows_ends.index(rows_end) + 1]].find(eq_operation)
+                    if cur_index > 0:
+                        indexes.append([cur_index, eq_operation])
+                        break
+                lhs = condition_str[rows_end:rows_ends[rows_ends.index(rows_end) + 1]][:indexes[0][0]]
+                rhs = condition_str[rows_end:rows_ends[rows_ends.index(rows_end) + 1]][indexes[0][0] + len(indexes[0][1]):]
             except IndexError:
-                if rows_end == 0:
-                    for eq_operation in list_operations:
-                        cur_index = condition_str.find(eq_operation)
-                        if cur_index > 0:
-                            indexes.append([cur_index, len(eq_operation)])
-                else:
-                    for eq_operation in list_operations:
-                        cur_index = condition_str[rows_end + 1:].find(eq_operation)
-                        if cur_index > 0:
-                            indexes.append([cur_index, len(eq_operation)])
-            min_index = np.min(indexes, axis = 0)
-            lhs = condition_str[:min_index[0]]
-            rhs = condition_str[min_index[0] + len(min_index[1]):]
+                for eq_operation in list_operations:
+                    cur_index = condition_str[rows_end:].find(eq_operation)
+                    if cur_index > 0:
+                        indexes.append([cur_index, eq_operation])
+                        break
+                lhs = condition_str[rows_end:][:indexes[0][0]]
+                rhs = condition_str[rows_end:][indexes[0][0] + len(indexes[0][1]):]
+     
             if sweep_dimension == 2:
+                
                 x_in_lhs = []
                 x_in_rhs = []
                 y_in_lhs = []
@@ -2241,11 +2276,15 @@ class Sweeper_write(threading.Thread):
                 for i in y_in_rhs:
                     rhs = insert(rhs, i, 'tup[1]')
                 
+                if lhs != '' and rhs != '':
                 
-                if dict_operations[min_index[1]](exec(lhs), exec(rhs), np.sqrt(dtup[0]**2 + dtup[1]**2)):
-                    result *= 1
+                    if dict_operations[indexes[0][1]](eval(lhs, locals()), eval(rhs, locals()), np.sqrt(dtup[0]**2 + dtup[1]**2)):
+                        result *= 1
+                    else:
+                        result *= np.nan
+                
                 else:
-                    result *= np.nan
+                    result *= 1
             
             elif sweep_dimension == 3:
                 x_in_lhs = []
@@ -2286,12 +2325,15 @@ class Sweeper_write(threading.Thread):
                 for i in z_in_rhs:
                     rhs = insert(rhs, i, 'tup[2]')
                 
-                
-                if dict_operations[min_index[1]](exec(lhs), exec(rhs), np.sqrt(dtup[0]**2 + dtup[1]**2 + dtup[2]**2)):
-                    result *= 1
+                if lhs != '' and rhs != '':
+                    if dict_operations[indexes[0][1]](eval(lhs, locals()), eval(rhs, locals()), np.sqrt(dtup[0]**2 + dtup[1]**2 + dtup[2]**2)):
+                        result *= 1
+                    else:
+                        result *= np.nan
                 else:
-                    result *= np.nan
+                    result *= 1
             else:
+                print('else')
                 return 1
         return result
 
@@ -2333,16 +2375,13 @@ class Sweeper_write(threading.Thread):
                     return abs(np.sqrt(point[0]**2 + point[1]**2 + point[2]**2) - np.sqrt(reference[0]**2 + reference[1]**2 + reference[2]**2)) <= np.sqrt(dgrid_area[0]**2 + dgrid_area[1]**2 + dgrid_area[2]**2)
                 
             if sweep_dimension == 2:
-                for reference in np.array(grid_area).reshape(-1, 2):
-                    print('Point = ', point)
-                    print('Reference =', reference)
-                    print('Space = ', np.array(grid_area).reshape(-1, 2))
+                for reference in grid_area:
                     if includance(point = point, reference = reference, dgrid_area = dgrid_area):
                         return True
                     else: 
                         return False
             if sweep_dimension == 3:
-                for reference in np.array(grid_area).reshape(-1, 3):
+                for reference in grid_area:
                     if includance(point = point, reference = reference, dgrid_area = dgrid_area, 
                                   sweep_dimension = 3):
                         return True
@@ -2481,7 +2520,7 @@ class Sweeper_write(threading.Thread):
                 self.value2 = self.min_sweep2
                 i += 1
                 dataframe = pd.DataFrame(columns=self.columns)
-                self.filename_sweep = self.filename_sweep[:-6] + str(-i) + '.csv'
+                self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
                 dataframe.to_csv(self.filename_sweep, index=False)
 
             if manual_sweep_flags == [1, 0]:
@@ -2529,7 +2568,7 @@ class Sweeper_write(threading.Thread):
                         self.value2 = self.min_sweep2
                         i += 1
                         dataframe = pd.DataFrame(columns=self.columns)
-                        self.filename_sweep = self.filename_sweep[:-6] + str(-i) + '.csv'
+                        self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
                         dataframe.to_csv(self.filename_sweep, index=False)
                     else:
                         break
@@ -2578,7 +2617,7 @@ class Sweeper_write(threading.Thread):
                                 f_object.close()
                         i += 1
                         dataframe = pd.DataFrame(columns=self.columns)
-                        self.filename_sweep = self.filename_sweep[:-4] + str(i) + '.csv'
+                        self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
                         dataframe.to_csv(self.filename_sweep, index=False)
                     else:
                         break
@@ -2628,7 +2667,7 @@ class Sweeper_write(threading.Thread):
                                 
                     i += 1
                     dataframe = pd.DataFrame(columns=self.columns)
-                    self.filename_sweep = self.filename_sweep[:-4] + str(i) + '.csv'
+                    self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
                     dataframe.to_csv(self.filename_sweep, index=False)
 
             self.sweeper_flag2 == False
@@ -2715,7 +2754,7 @@ class Sweeper_write(threading.Thread):
                     self.value3 = self.min_sweep3
                     i += 1
                     dataframe = pd.DataFrame(columns=self.columns)
-                    self.filename_sweep = self.filename_sweep[:-4] + str(i) + '.csv'
+                    self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
                     dataframe.to_csv(self.filename_sweep, index=False)
                 self.value2 = self.min_sweep3
             self.sweeper_flag3 == False
@@ -2779,7 +2818,7 @@ class Sweeper_write(threading.Thread):
                             self.value3 = self.min_sweep3
                             i += 1
                             dataframe = pd.DataFrame(columns=self.columns)
-                            self.filename_sweep = self.filename_sweep[:-4] + str(i) + '.csv'
+                            self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
                             dataframe.to_csv(self.filename_sweep, index=False)
 
             while self.value1 <= self.max_sweep1 and manual_sweep_flags == [0, 1, 0]:
@@ -2841,7 +2880,7 @@ class Sweeper_write(threading.Thread):
                         self.value3 = self.min_sweep3
                         i += 1
                         dataframe = pd.DataFrame(columns=self.columns)
-                        self.filename_sweep = self.filename_sweep[:-4] + str(i) + '.csv'
+                        self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
                         dataframe.to_csv(self.filename_sweep, index=False)
 
             while self.value1 <= self.max_sweep1 and manual_sweep_flags == [0, 0, 1]:
@@ -2902,7 +2941,7 @@ class Sweeper_write(threading.Thread):
                             break
                     i += 1
                     dataframe = pd.DataFrame(columns=self.columns)
-                    self.filename_sweep = self.filename_sweep[:-4] + str(i) + '.csv'
+                    self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
                     dataframe.to_csv(self.filename_sweep, index=False)
                 self.value2 = self.min_sweep3
 
@@ -2968,7 +3007,7 @@ class Sweeper_write(threading.Thread):
                                                 f_object.close()
                                     i += 1
                                     dataframe = pd.DataFrame(columns=self.columns)
-                                    self.filename_sweep = self.filename_sweep[:-4] + str(i) + '.csv'
+                                    self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
                                     dataframe.to_csv(self.filename_sweep, index=False)
 
                 if manual_sweep_flags == [1, 0, 1]:
@@ -3033,7 +3072,7 @@ class Sweeper_write(threading.Thread):
                                         break
                                 i += 1
                                 dataframe = pd.DataFrame(columns=self.columns)
-                                self.filename_sweep = self.filename_sweep[:-4] + str(i) + '.csv'
+                                self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
                                 dataframe.to_csv(self.filename_sweep, index=False)
 
                 while self.value1 <= self.max_sweep1 and manual_sweep_flags == [0, 1, 1]:
@@ -3099,7 +3138,7 @@ class Sweeper_write(threading.Thread):
                                     break
                             i += 1
                             dataframe = pd.DataFrame(columns=self.columns)
-                            self.filename_sweep = self.filename_sweep[:-4] + str(i) + '.csv'
+                            self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
                             dataframe.to_csv(self.filename_sweep, index=False)
 
                 if manual_sweep_flags == [1, 1, 1]:
@@ -3160,7 +3199,7 @@ class Sweeper_write(threading.Thread):
                                         f_object.close()
                             i += 1
                             dataframe = pd.DataFrame(columns=self.columns)
-                            self.filename_sweep = self.filename_sweep[:-4] + str(i) + '.csv'
+                            self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
                             dataframe.to_csv(self.filename_sweep, index=False)
 
 
