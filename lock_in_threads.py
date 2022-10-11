@@ -1209,7 +1209,7 @@ class Sweeper1d(tk.Frame):
         self.entry_filename.place(relx = 0.97 - width / 100, rely = 0.9)
 
         button_filename = ttk.Button(
-            self, text = 'filename', command=lambda: self.set_filename_sweep())
+            self, text = 'Browse...', command=lambda: self.set_filename_sweep())
         button_filename.place(relx=0.85, rely=0.9)
 
         button_start_sweeping = ttk.Button(
@@ -1219,6 +1219,10 @@ class Sweeper1d(tk.Frame):
         graph_button = ttk.Button(
             self, text='Graph', command=lambda: self.open_graph())
         graph_button.place(relx=0.7, rely=0.8)
+
+        updating = threading.Thread(target = self.update_sweep_configurarion())
+        updating.start()
+        updating.join()
 
     def update_sweep_parameters(self, event, interval=1000):
         if self.combo_to_sweep.current() == 0:
@@ -1233,6 +1237,37 @@ class Sweeper1d(tk.Frame):
                 self.sweep_options['value'] = getattr(
                     globals()[class_of_sweeper_device](), 'set_options')
                 self.sweep_options.after(interval)
+
+    def update_sweep_configurarion(self):
+        global min_sweep1
+        global max_sweep1
+        global ratio_sweep1
+        global delay_factor1
+        
+        try:
+            min_sweep1 = float(self.entry_min.get())
+        except ValueError:
+            pass
+        
+        try:
+            max_sweep1 = float(self.entry_max.get())
+        except ValueError:
+            pass
+        
+        try:
+            ratio_sweep1 = float(self.entry_ratio.get())
+        except ValueError:
+            pass
+        
+        try:
+            delay_factor1 = float(self.entry_delay_factor.get())
+        except ValueError:
+            pass
+        
+        time.sleep(1)
+        
+        self.update_sweep_configurarion()
+        
 
     def save_manual_status(self):
         if self.manual_sweep_flags[0] != self.status_manual.get():
@@ -1507,7 +1542,7 @@ class Sweeper2d(tk.Frame):
         self.entry_filename.place(relx = 0.97 - width / 100, rely = 0.9)
 
         button_filename = ttk.Button(
-            self, text = 'filename', command=lambda: self.set_filename_sweep())
+            self, text = 'Browse...', command=lambda: self.set_filename_sweep())
         button_filename.place(relx=0.85, rely=0.9)
 
         button_start_sweeping = ttk.Button(
@@ -1517,6 +1552,10 @@ class Sweeper2d(tk.Frame):
         graph_button = ttk.Button(
             self, text='Graph', command=lambda: self.open_graph())
         graph_button.place(relx=0.7, rely=0.8)
+        
+        updating = threading.Thread(target = self.update_sweep_configurarion())
+        updating.start()
+        updating.join()
         
     def update_master2_combo(self, event, interval = 1000):
         if self.combo_master1['value'][self.combo_master1.current()] == '':
@@ -1569,6 +1608,60 @@ class Sweeper2d(tk.Frame):
             self.sweep_options2['value'] = ['']
             self.sweep_options2.current(0)
             self.sweep_options2.after(interval)
+
+    def update_sweep_configurarion(self):
+        global min_sweep1
+        global max_sweep1
+        global ratio_sweep1
+        global delay_factor1
+        global min_sweep2
+        global max_sweep2
+        global ratio_sweep2
+        global delay_factor2
+        
+        try:
+            min_sweep1 = float(self.entry_min1.get())
+        except ValueError:
+            pass
+        
+        try:
+            max_sweep1 = float(self.entry_max1.get())
+        except ValueError:
+            pass
+        
+        try:
+            ratio_sweep1 = float(self.entry_ratio1.get())
+        except ValueError:
+            pass
+        
+        try:
+            delay_factor1 = float(self.entry_delay_factor1.get())
+        except ValueError:
+            pass
+        
+        try:
+            min_sweep2 = float(self.entry_min2.get())
+        except ValueError:
+            pass
+        
+        try:
+            max_sweep2 = float(self.entry_max2.get())
+        except ValueError:
+            pass
+        
+        try:
+            ratio_sweep2 = float(self.entry_ratio2.get())
+        except ValueError:
+            pass
+        
+        try:
+            delay_factor2 = float(self.entry_delay_factor2.get())
+        except ValueError:
+            pass
+        
+        time.sleep(1)
+        
+        self.update_sweep_configurarion()
 
     def save_manual_status(self, i):
         if self.manual_sweep_flags[i - 1] != getattr(self, 'status_manual' + str(i)).get():
@@ -1924,7 +2017,7 @@ class Sweeper3d(tk.Frame):
         self.entry_filename.place(relx = 0.97 - width / 100, rely = 0.9)
 
         button_filename = ttk.Button(
-            self, text = 'filename', command=lambda: self.set_filename_sweep())
+            self, text = 'Browse...', command=lambda: self.set_filename_sweep())
         button_filename.place(relx=0.85, rely=0.9)
 
         button_start_sweeping = ttk.Button(
@@ -2060,6 +2153,84 @@ class Sweeper3d(tk.Frame):
             self.sweep_options3['value'] = ['']
             self.sweep_options3.current(0)
             self.sweep_options3.after(interval)
+            
+    def update_sweep_configurarion(self):
+        global min_sweep1
+        global max_sweep1
+        global ratio_sweep1
+        global delay_factor1
+        global min_sweep2
+        global max_sweep2
+        global ratio_sweep2
+        global delay_factor2
+        global min_sweep3
+        global max_sweep3
+        global ratio_sweep3
+        global delay_factor3
+        
+        try:
+            min_sweep1 = float(self.entry_min1.get())
+        except ValueError:
+            pass
+        
+        try:
+            max_sweep1 = float(self.entry_max1.get())
+        except ValueError:
+            pass
+        
+        try:
+            ratio_sweep1 = float(self.entry_ratio1.get())
+        except ValueError:
+            pass
+        
+        try:
+            delay_factor1 = float(self.entry_delay_factor1.get())
+        except ValueError:
+            pass
+        
+        try:
+            min_sweep2 = float(self.entry_min2.get())
+        except ValueError:
+            pass
+        
+        try:
+            max_sweep2 = float(self.entry_max2.get())
+        except ValueError:
+            pass
+        
+        try:
+            ratio_sweep2 = float(self.entry_ratio2.get())
+        except ValueError:
+            pass
+        
+        try:
+            delay_factor2 = float(self.entry_delay_factor2.get())
+        except ValueError:
+            pass
+        
+        try:
+            min_sweep3 = float(self.entry_min3.get())
+        except ValueError:
+            pass
+        
+        try:
+            max_sweep3 = float(self.entry_max3.get())
+        except ValueError:
+            pass
+        
+        try:
+            ratio_sweep3 = float(self.entry_ratio3.get())
+        except ValueError:
+            pass
+        
+        try:
+            delay_factor3 = float(self.entry_delay_factor3.get())
+        except ValueError:
+            pass
+        
+        time.sleep(1)
+        
+        self.update_sweep_configurarion()
 
     def save_manual_status(self, i):
         if self.manual_sweep_flags[i - 1] != getattr(self, 'status_manual' + str(i)).get():
