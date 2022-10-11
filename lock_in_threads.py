@@ -1129,6 +1129,9 @@ class Sweeper1d(tk.Frame):
         label_to_read = tk.Label(self, text='To read:', font=LARGE_FONT)
         label_to_read.place(relx=0.3, rely=0.12)
 
+        label_devices = tk.Label(self, text = 'Devices:', font = LARGE_FONT)
+        label_devices.place(relx = 0.05, rely = 0.16)
+
         self.combo_to_sweep = ttk.Combobox(
             self, value=['Time', *list_of_devices])
         self.combo_to_sweep.current(0)
@@ -1142,6 +1145,10 @@ class Sweeper1d(tk.Frame):
                                          selectmode='multiple', width=20,
                                          height=len(parameters_to_read) * 1)
         self.lstbox_to_read.place(relx=0.3, rely=0.16)
+
+        label_options = tk.Label(self, text = 'Options:', font = LARGE_FONT)
+        label_options.place(relx = 0.05, rely = 0.2)
+        
 
         self.sweep_options = ttk.Combobox(self)
         self.sweep_options.place(relx=0.15, rely=0.2)
@@ -1350,12 +1357,18 @@ class Sweeper2d(tk.Frame):
     
         label_to_read = tk.Label(self, text='To read:', font=LARGE_FONT)
         label_to_read.place(relx=0.45, rely=0.17)
+        
+        label_hierarchy = tk.Label(self, text = 'Hierarchy:', font=LARGE_FONT)
+        label_hierarchy.place(relx = 0.05, rely = 0.17)
 
         self.combo_master1 = ttk.Combobox(self, value = ['Master', 'Slave'])
         self.combo_master1.place(relx = 0.15, rely = 0.17)
         
         self.combo_master2 = ttk.Combobox(self, value = ['Master', 'Slave'])
         self.combo_master2.place(relx = 0.3, rely = 0.17)
+
+        label_devices = tk.Label(self, text = 'Devices:', font=LARGE_FONT)
+        label_devices.place(relx = 0.05, rely = 0.21)
 
         self.combo_to_sweep1 = ttk.Combobox(self, value=list_of_devices)
         self.combo_to_sweep1.current(0)
@@ -1375,6 +1388,9 @@ class Sweeper2d(tk.Frame):
                                          selectmode='multiple', width=20,
                                          height=len(parameters_to_read) * 1)
         self.lstbox_to_read.place(relx=0.45, rely=0.21)
+
+        label_options = tk.Label(self, text = 'Options:', font=LARGE_FONT)
+        label_options.place(relx = 0.05, rely = 0.25)
 
         self.sweep_options1 = ttk.Combobox(self)
         self.sweep_options1.place(relx=0.15, rely=0.25)
@@ -1668,6 +1684,9 @@ class Sweeper3d(tk.Frame):
         label_to_read = tk.Label(self, text='To read:', font=LARGE_FONT)
         label_to_read.place(relx=0.6, rely=0.17)
 
+        label_hierarchy = tk.Label(self, text = 'Hierarchy:', font=LARGE_FONT)
+        label_hierarchy.place(relx = 0.05, rely = 0.17)
+
         self.combo_master1 = ttk.Combobox(self, value = ['Master', 'Slave', 'Slave-slave'])
         self.combo_master1.place(relx = 0.15, rely = 0.17)
         
@@ -1676,6 +1695,9 @@ class Sweeper3d(tk.Frame):
         
         self.combo_master3 = ttk.Combobox(self, value = ['Master', 'Slave', 'Slave-slave'])
         self.combo_master3.place(relx = 0.45, rely = 0.17)
+        
+        label_devices = tk.Label(self, text = 'Devices:', font=LARGE_FONT)
+        label_devices.place(relx = 0.05, rely = 0.21)
 
         self.combo_to_sweep1 = ttk.Combobox(self, value=list_of_devices)
         self.combo_to_sweep1.current(0)
@@ -1701,6 +1723,9 @@ class Sweeper3d(tk.Frame):
                                          selectmode='multiple', width=20,
                                          height=len(parameters_to_read) * 1)
         self.lstbox_to_read.place(relx=0.6, rely=0.21)
+        
+        label_options = tk.Label(self, text = 'Options:', font=LARGE_FONT)
+        label_options.place(relx = 0.05, rely = 0.25)
 
         self.sweep_options1 = ttk.Combobox(self)
         self.sweep_options1.place(relx=0.15, rely=0.25)
@@ -2256,20 +2281,20 @@ class Sweeper_write(threading.Thread):
                 y_in_rhs = []
                 
                 for index, elem in enumerate(lhs):
-                    if elem == 'x':
+                    if elem == 'x' or elem == 'X' or elem == 'master' or elem == 'Master':
                         x_in_lhs.append(index)
                 for index, elem in enumerate(rhs):
-                    if elem == 'x':
+                    if elem == 'x' or elem == 'X' or elem == 'master' or elem == 'Master':
                         x_in_rhs.append(index)
                 for i in x_in_lhs:
                     lhs = insert(lhs, i, 'tup[0]')
                 for i in x_in_rhs:
                     rhs = insert(rhs, i, 'tup[0]')
                 for index, elem in enumerate(lhs):
-                    if elem == 'y':
+                    if elem == 'y' or elem == 'Y' or elem == 'slave' or elem == 'Slave':
                         y_in_lhs.append(index)
                 for index, elem in enumerate(rhs):
-                    if elem == 'y':
+                    if elem == 'y' or elem == 'Y' or elem == 'slave' or elem == 'Slave':
                         y_in_rhs.append(index)
                 for i in y_in_lhs:
                     lhs = insert(lhs, i, 'tup[1]')
@@ -2295,30 +2320,30 @@ class Sweeper_write(threading.Thread):
                 z_in_rhs = []
                 
                 for index, elem in enumerate(lhs):
-                    if elem == 'x':
+                    if elem == 'x' or elem == 'X':
                         x_in_lhs.append(index)
                 for index, elem in enumerate(rhs):
-                    if elem == 'x':
+                    if elem == 'x' or elem == 'X':
                         x_in_rhs.append(index)
                 for i in x_in_lhs:
                     lhs = insert(lhs, i, 'tup[0]')
                 for i in x_in_rhs:
                     rhs = insert(rhs, i, 'tup[0]')
                 for index, elem in enumerate(lhs):
-                    if elem == 'y':
+                    if elem == 'y' or elem == 'Y':
                         y_in_lhs.append(index)
                 for index, elem in enumerate(rhs):
-                    if elem == 'y':
+                    if elem == 'y' or elem == 'Y':
                         y_in_rhs.append(index)
                 for i in y_in_lhs:
                     lhs = insert(lhs, i, 'tup[1]')
                 for i in y_in_rhs:
                     rhs = insert(rhs, i, 'tup[1]')
                 for index, elem in enumerate(lhs):
-                    if elem == 'z':
+                    if elem == 'z' or elem == 'Z':
                         z_in_lhs.append(index)
                 for index, elem in enumerate(rhs):
-                    if elem == 'z':
+                    if elem == 'z' or elem == 'Z':
                         z_in_rhs.append(index)
                 for i in z_in_lhs:
                     lhs = insert(lhs, i, 'tup[2]')
@@ -2370,31 +2395,31 @@ class Sweeper_write(threading.Thread):
             def includance(point, reference, dgrid_area, sweep_dimension = 2):
                 #equity with tolerance
                 if sweep_dimension == 2:
-                    return abs(np.sqrt(point[0]**2 + point[1]**2) - np.sqrt(reference[0]**2 + reference[1]**2)) <= np.sqrt(dgrid_area[0]**2 + dgrid_area[1]**2)
+                    return abs(point[0] - reference[0]) <= np.sqrt(dgrid_area[0]**2 + dgrid_area[1]**2) and abs(point[1] - reference[1]) <= np.sqrt(dgrid_area[0]**2 + dgrid_area[1]**2)
                 if sweep_dimension == 3:
-                    return abs(np.sqrt(point[0]**2 + point[1]**2 + point[2]**2) - np.sqrt(reference[0]**2 + reference[1]**2 + reference[2]**2)) <= np.sqrt(dgrid_area[0]**2 + dgrid_area[1]**2 + dgrid_area[2]**2)
-                
+                    return abs(point[0] - reference[0]) <= np.sqrt(dgrid_area[0]**2 + dgrid_area[1]**2 + dgrid_area[2]**2) and abs(point[1] - reference[1]) <= np.sqrt(dgrid_area[0]**2 + dgrid_area[1]**2 + dgrid_area[2]**2) and abs(point[2] - reference[2]) <= np.sqrt(dgrid_area[0]**2 + dgrid_area[1]**2 + dgrid_area[2]**2)
+            
             if sweep_dimension == 2:
                 for reference in grid_area:
                     if includance(point = point, reference = reference, dgrid_area = dgrid_area):
                         return True
-                    else: 
-                        return False
+
             if sweep_dimension == 3:
                 for reference in grid_area:
                     if includance(point = point, reference = reference, dgrid_area = dgrid_area, 
                                   sweep_dimension = 3):
                         return True
-                    else: 
-                        return False
-                
 
+            return False
+        
     def run(self):
         global manual_filenames
         global manual_sweep_flags
         global master_flag1
         global master_flag2
         global master_flag3
+        global filename_sweep
+        
         if self.sweeper_flag1 == True:
             dataframe = pd.DataFrame(columns=self.columns)
             dataframe.to_csv(self.filename_sweep, index=False)
@@ -2471,6 +2496,7 @@ class Sweeper_write(threading.Thread):
             i = 1
             dataframe = pd.DataFrame(columns=self.columns)
             self.filename_sweep = self.filename_sweep[:-4] + str(-i) + '.csv'
+            filename_sweep = self.filename_sweep
             dataframe.to_csv(self.filename_sweep, index=False)
             
 
@@ -2521,6 +2547,7 @@ class Sweeper_write(threading.Thread):
                 i += 1
                 dataframe = pd.DataFrame(columns=self.columns)
                 self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
+                filename_sweep = self.filename_sweep
                 dataframe.to_csv(self.filename_sweep, index=False)
 
             if manual_sweep_flags == [1, 0]:
@@ -2569,6 +2596,7 @@ class Sweeper_write(threading.Thread):
                         i += 1
                         dataframe = pd.DataFrame(columns=self.columns)
                         self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
+                        filename_sweep = self.filename_sweep
                         dataframe.to_csv(self.filename_sweep, index=False)
                     else:
                         break
@@ -2618,6 +2646,7 @@ class Sweeper_write(threading.Thread):
                         i += 1
                         dataframe = pd.DataFrame(columns=self.columns)
                         self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
+                        filename_sweep = self.filename_sweep
                         dataframe.to_csv(self.filename_sweep, index=False)
                     else:
                         break
@@ -2668,6 +2697,7 @@ class Sweeper_write(threading.Thread):
                     i += 1
                     dataframe = pd.DataFrame(columns=self.columns)
                     self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
+                    filename_sweep = self.filename_sweep
                     dataframe.to_csv(self.filename_sweep, index=False)
 
             self.sweeper_flag2 == False
@@ -2755,6 +2785,7 @@ class Sweeper_write(threading.Thread):
                     i += 1
                     dataframe = pd.DataFrame(columns=self.columns)
                     self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
+                    filename_sweep = self.filename_sweep
                     dataframe.to_csv(self.filename_sweep, index=False)
                 self.value2 = self.min_sweep3
             self.sweeper_flag3 == False
@@ -2819,6 +2850,7 @@ class Sweeper_write(threading.Thread):
                             i += 1
                             dataframe = pd.DataFrame(columns=self.columns)
                             self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
+                            filename_sweep = self.filename_sweep
                             dataframe.to_csv(self.filename_sweep, index=False)
 
             while self.value1 <= self.max_sweep1 and manual_sweep_flags == [0, 1, 0]:
@@ -2881,6 +2913,7 @@ class Sweeper_write(threading.Thread):
                         i += 1
                         dataframe = pd.DataFrame(columns=self.columns)
                         self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
+                        filename_sweep = self.filename_sweep
                         dataframe.to_csv(self.filename_sweep, index=False)
 
             while self.value1 <= self.max_sweep1 and manual_sweep_flags == [0, 0, 1]:
@@ -2942,6 +2975,7 @@ class Sweeper_write(threading.Thread):
                     i += 1
                     dataframe = pd.DataFrame(columns=self.columns)
                     self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
+                    filename_sweep = self.filename_sweep
                     dataframe.to_csv(self.filename_sweep, index=False)
                 self.value2 = self.min_sweep3
 
@@ -3008,6 +3042,7 @@ class Sweeper_write(threading.Thread):
                                     i += 1
                                     dataframe = pd.DataFrame(columns=self.columns)
                                     self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
+                                    filename_sweep = self.filename_sweep
                                     dataframe.to_csv(self.filename_sweep, index=False)
 
                 if manual_sweep_flags == [1, 0, 1]:
@@ -3073,6 +3108,7 @@ class Sweeper_write(threading.Thread):
                                 i += 1
                                 dataframe = pd.DataFrame(columns=self.columns)
                                 self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
+                                filename_sweep = self.filename_sweep
                                 dataframe.to_csv(self.filename_sweep, index=False)
 
                 while self.value1 <= self.max_sweep1 and manual_sweep_flags == [0, 1, 1]:
@@ -3139,6 +3175,7 @@ class Sweeper_write(threading.Thread):
                             i += 1
                             dataframe = pd.DataFrame(columns=self.columns)
                             self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
+                            filename_sweep = self.filename_sweep
                             dataframe.to_csv(self.filename_sweep, index=False)
 
                 if manual_sweep_flags == [1, 1, 1]:
@@ -3200,6 +3237,7 @@ class Sweeper_write(threading.Thread):
                             i += 1
                             dataframe = pd.DataFrame(columns=self.columns)
                             self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
+                            filename_sweep = self.filename_sweep
                             dataframe.to_csv(self.filename_sweep, index=False)
 
 
