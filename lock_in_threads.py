@@ -367,6 +367,47 @@ class lock_in():
         line = 'AUXV4,' + str(value)
         self.sr830.write(line)
 
+class SourceMeter():
+    
+    def __init__(self, adress = 'GPIB0::4::INSTR'):
+        self.sm = rm.open_resource(
+            adress, write_termination='\n', read_termination='\n')
+        
+        self.sm.write(':SOUR:CLE:AUTO OFF') # auto on/off
+        
+        self.set_options = ['V', 'I']
+        
+        self.get_options = ['v', 'i', 'r']
+        
+    def IDN(self):
+        return get(self.sm, '*IDN?')
+    
+    def v(self):
+        try:
+            answer = get(self.sm, ':MEAS:VOLT?').split(',')[0]
+        except ValueError:
+            answer = get(self.sm, ':MEAS:VOLT?').split(',')[0]
+        return answer
+        
+    def i(self):
+        try:
+            answer = get(self.sm, ':MEAS:CURR?').split(',')[1]
+        except ValueError:
+            answer = get(self.sm, ':MEAS:CURR?').split(',')[1]
+        return answer
+        
+    def r(self):
+        try:
+            answer = get(self.sm, ':MEAS:RES?').split(',')[2]
+        except ValueError:
+            answer = get(self.sm, ':MEAS:RES?').split(',')[2]
+        return answer
+    
+    def set_I(self, value = 0):
+        self.sm.write(':SOUR:CURR ' + str(value))
+        
+    def set_V(self, value = 0):
+        self.sm.write(':SOUR:VOLT ' + str(value))
 
 class TC300():
 
@@ -380,7 +421,7 @@ class TC300():
         self.set_options = ['T1', 'T2']
 
         self.get_options = ['t1', 't2']
-
+        
     def IDN(self):
         return(get(self.tc, 'IDN?')[2:])
 
@@ -441,7 +482,7 @@ class TC300():
         self.tc.write('T1MAX=' + str(t2_max))
 
 
-device_classes = (lock_in, TC300)
+device_classes = (lock_in, TC300, SourceMeter)
 
 
 def devices_list():
@@ -1264,9 +1305,7 @@ class Sweeper1d(tk.Frame):
         except ValueError:
             pass
         
-        time.sleep(1)
-        
-        self.update_sweep_configurarion()
+        self.entry_delay_factor.after(1000, self.update_sweep_configurarion)
         
 
     def save_manual_status(self):
@@ -1659,9 +1698,7 @@ class Sweeper2d(tk.Frame):
         except ValueError:
             pass
         
-        time.sleep(1)
-        
-        self.update_sweep_configurarion()
+        self.entry_delay_factor2.after(1000, self.update_sweep_configurarion)
 
     def save_manual_status(self, i):
         if self.manual_sweep_flags[i - 1] != getattr(self, 'status_manual' + str(i)).get():
@@ -2027,6 +2064,10 @@ class Sweeper3d(tk.Frame):
         graph_button = ttk.Button(
             self, text='Graph', command=lambda: self.open_graph())
         graph_button.place(relx=0.7, rely=0.8)
+        
+        updating = threading.Thread(target = self.update_sweep_configurarion())
+        updating.start()
+        updating.join()
 
     def update_master23_combo(self, event, interval = 1000):
         if self.combo_master1['value'][self.combo_master1.current()] == '':
@@ -2230,7 +2271,7 @@ class Sweeper3d(tk.Frame):
         
         time.sleep(1)
         
-        self.update_sweep_configurarion()
+        self.entry_delay_factor3.after(1000, self.update_sweep_configurarion)
 
     def save_manual_status(self, i):
         if self.manual_sweep_flags[i - 1] != getattr(self, 'status_manual' + str(i)).get():
