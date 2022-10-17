@@ -27,12 +27,13 @@ style.use('ggplot')
 rm = visa.ResourceManager()
 list_of_devices = rm.list_resources()
 
+'''
 temp = rm.open_resource('ASRL3::INSTR', baud_rate=115200,
                         data_bits=8, parity=constants.VI_ASRL_PAR_NONE,
                         stop_bits=constants.VI_ASRL_STOP_ONE,
                         flow_control=constants.VI_ASRL_FLOW_NONE,
                         write_termination='\r', read_termination='\r')
-
+'''
 
 # Write command to a device and get it's output
 def get(device, command):
@@ -40,7 +41,7 @@ def get(device, command):
     return device.query(command)
 
 
-print(get(temp, 'IDN?'))
+#print(get(temp, 'IDN?'))
 
 print(rm.list_resources(), '\n')
 
@@ -59,15 +60,15 @@ parameter_to_sweep2 = ''
 parameter_to_sweep3 = ''
 min_sweep1 = 0
 max_sweep1 = 1
-ratio_sweep1 = 1
+ratio_sweep1 = 0.1
 delay_factor1 = 0.1
 min_sweep2 = 0
 max_sweep2 = 1
-ratio_sweep2 = 1
+ratio_sweep2 = 0.1
 delay_factor2 = 0.1
 min_sweep3 = 0
 max_sweep3 = 1
-ratio_sweep3 = 1
+ratio_sweep3 = 0.1
 delay_factor3 = 0.1
 filename_sweep = r'C:\NUS\Transport lab\Test\data_files\sweep' + datetime.today().strftime(
     '%H_%M_%d_%m_%Y') + '.csv'
@@ -482,7 +483,7 @@ class TC300():
         self.tc.write('T1MAX=' + str(t2_max))
 
 
-device_classes = (lock_in, TC300, SourceMeter)
+device_classes = (lock_in,)
 
 
 def devices_list():
@@ -496,7 +497,6 @@ def devices_list():
                     adress, read_termination='\r'), 'IDN?')
                 if name.startswith('\n'):
                     name = name[2:]
-                list_of_devices.append(name)
                 if name == '':
                     raise UserWarning
             except UserWarning:
@@ -504,14 +504,12 @@ def devices_list():
                     adress, read_termination='\n'), 'IDN?')
                 if name.startswith('\n'):
                     name = name[2:]
-                list_of_devices.append(name)
         except visa.errors.VisaIOError:
             try:
                 name = get(rm.open_resource(
                     adress, read_termination='\n'), '*IDN?')
                 if name.startswith('\n'):
                     name = name[2:]
-                list_of_devices.append(name)
                 if name == '':
                     raise UserWarning
             except UserWarning:
@@ -519,7 +517,7 @@ def devices_list():
                     adress, read_termination='\r'), '*IDN?')
                 if name.startswith('\n'):
                     name = name[2:]
-                list_of_devices.append(name)
+        list_of_devices.append(name)
 
         for class_of_device in device_classes:
             if globals()[var2str(class_of_device)]().IDN() == name:
@@ -706,12 +704,12 @@ zero_time = time.process_time()
 
 class Universal_frontend(tk.Tk):
 
-    def __init__(self, classes, start, *args, **kwargs):
+    def __init__(self, classes, start, size = '1920x1080', title = 'Lock in test', *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
 
         tk.Tk.iconbitmap(self)
-        tk.Tk.geometry(self, newGeometry = '1920x1080')
-        tk.Tk.wm_title(self, 'Lock in test')
+        tk.Tk.geometry(self, newGeometry = size)
+        tk.Tk.wm_title(self, title)
 
         container = tk.Frame(self)
         container.pack(side='top', fill='both', expand='True')
@@ -1171,12 +1169,12 @@ class Sweeper1d(tk.Frame):
         label_devices = tk.Label(self, text = 'Devices:', font = LARGE_FONT)
         label_devices.place(relx = 0.05, rely = 0.16)
 
-        self.combo_to_sweep = ttk.Combobox(
+        self.combo_to_sweep1 = ttk.Combobox(
             self, value=['Time', *list_of_devices])
-        self.combo_to_sweep.current(0)
-        self.combo_to_sweep.bind(
+        self.combo_to_sweep1.current(0)
+        self.combo_to_sweep1.bind(
             "<<ComboboxSelected>>", self.update_sweep_parameters)
-        self.combo_to_sweep.place(relx=0.15, rely=0.16)
+        self.combo_to_sweep1.place(relx=0.15, rely=0.16)
 
         devices = tk.StringVar()
         devices.set(value=parameters_to_read)
@@ -1184,13 +1182,16 @@ class Sweeper1d(tk.Frame):
                                          selectmode='multiple', width=20,
                                          height=len(parameters_to_read) * 1)
         self.lstbox_to_read.place(relx=0.3, rely=0.16)
+        
+        button_update_sweep = tk.Button(self, text = 'Update_sweep', command = lambda: self.update_sweep_configuration())
+        button_update_sweep.place(relx = 0.3, rely = 0.21 + 1080 / len(parameters_to_read))
 
         label_options = tk.Label(self, text = 'Options:', font = LARGE_FONT)
         label_options.place(relx = 0.05, rely = 0.2)
         
 
-        self.sweep_options = ttk.Combobox(self)
-        self.sweep_options.place(relx=0.15, rely=0.2)
+        self.sweep_options1 = ttk.Combobox(self)
+        self.sweep_options1.place(relx=0.15, rely=0.2)
 
         label_min = tk.Label(self, text='MIN', font=LARGE_FONT)
         label_min.place(relx=0.12, rely=0.24)
@@ -1261,23 +1262,19 @@ class Sweeper1d(tk.Frame):
             self, text='Graph', command=lambda: self.open_graph())
         graph_button.place(relx=0.7, rely=0.8)
 
-        updating = threading.Thread(target = self.update_sweep_configurarion())
-        updating.start()
-        updating.join()
-
     def update_sweep_parameters(self, event, interval=1000):
-        if self.combo_to_sweep.current() == 0:
-            self.sweep_options['value'] = ['']
-            self.sweep_options.current(0)
-            self.sweep_options.after(interval)
+        if self.combo_to_sweep1.current() == 0:
+            self.sweep_options1['value'] = ['']
+            self.sweep_options1.current(0)
+            self.sweep_options1.after(interval)
             pass
         else:
-            class_of_sweeper_device = types_of_devices[self.combo_to_sweep.current(
+            class_of_sweeper_device = types_of_devices[self.combo_to_sweep1.current(
             ) - 1]
             if class_of_sweeper_device != 'Not a class':
-                self.sweep_options['value'] = getattr(
+                self.sweep_options1['value'] = getattr(
                     globals()[class_of_sweeper_device](), 'set_options')
-                self.sweep_options.after(interval)
+                self.sweep_options1.after(interval)
 
     def update_sweep_configurarion(self):
         global min_sweep1
@@ -1304,10 +1301,7 @@ class Sweeper1d(tk.Frame):
             delay_factor1 = float(self.entry_delay_factor.get())
         except ValueError:
             pass
-        
-        self.entry_delay_factor.after(1000, self.update_sweep_configurarion)
-        
-
+    
     def save_manual_status(self):
         if self.manual_sweep_flags[0] != self.status_manual.get():
             self.manual_sweep_flags[0] = self.status_manual.get()
@@ -1378,12 +1372,12 @@ class Sweeper1d(tk.Frame):
         parameters_to_read = self.list_to_read
 
         # creating columns
-        if self.combo_to_sweep.current() == 0:
+        if self.combo_to_sweep1.current() == 0:
             columns = ['Time']
         else:
-            device_to_sweep1 = self.combo_to_sweep['value'][self.combo_to_sweep.current(
+            device_to_sweep1 = self.combo_to_sweep1['value'][self.combo_to_sweep1.current(
             )]
-            parameter_to_sweep1 = self.sweep_options['value'][self.sweep_options.current(
+            parameter_to_sweep1 = self.sweep_options1['value'][self.sweep_options1.current(
             )]
             columns = ['Time', device_to_sweep1 + '.' + parameter_to_sweep1]
         for option in parameters_to_read:
@@ -1428,7 +1422,7 @@ class Sweeper2d(tk.Frame):
         label_to_sweep2.place(relx=0.3, rely=0.12)
     
         label_to_read = tk.Label(self, text='To read:', font=LARGE_FONT)
-        label_to_read.place(relx=0.45, rely=0.17)
+        label_to_read.place(relx=0.45, rely=0.12)
         
         label_hierarchy = tk.Label(self, text = 'Hierarchy:', font=LARGE_FONT)
         label_hierarchy.place(relx = 0.05, rely = 0.17)
@@ -1446,7 +1440,7 @@ class Sweeper2d(tk.Frame):
         self.combo_master2.place(relx = 0.3, rely = 0.17)
 
         label_devices = tk.Label(self, text = 'Devices:', font=LARGE_FONT)
-        label_devices.place(relx = 0.05, rely = 0.21)
+        label_devices.place(relx = 0.05, rely = 0.17)
 
         self.combo_to_sweep1 = ttk.Combobox(self, value=list_of_devices)
         self.combo_to_sweep1.current(0)
@@ -1466,6 +1460,9 @@ class Sweeper2d(tk.Frame):
                                          selectmode='multiple', width=20,
                                          height=len(parameters_to_read) * 1)
         self.lstbox_to_read.place(relx=0.45, rely=0.21)
+        
+        button_update_sweep = tk.Button(self, text = 'Update sweep', command = lambda: self.update_sweep_configuration())
+        button_update_sweep.place(relx = 0.45, rely = 0.25 + 1080 / len(parameters_to_read))
 
         label_options = tk.Label(self, text = 'Options:', font=LARGE_FONT)
         label_options.place(relx = 0.05, rely = 0.25)
@@ -1592,10 +1589,6 @@ class Sweeper2d(tk.Frame):
             self, text='Graph', command=lambda: self.open_graph())
         graph_button.place(relx=0.7, rely=0.8)
         
-        updating = threading.Thread(target = self.update_sweep_configurarion())
-        updating.start()
-        updating.join()
-        
     def update_master2_combo(self, event, interval = 1000):
         if self.combo_master1['value'][self.combo_master1.current()] == '':
             self.combo_master2['value'] = self.master_option
@@ -1697,8 +1690,6 @@ class Sweeper2d(tk.Frame):
             delay_factor2 = float(self.entry_delay_factor2.get())
         except ValueError:
             pass
-        
-        self.entry_delay_factor2.after(1000, self.update_sweep_configurarion)
 
     def save_manual_status(self, i):
         if self.manual_sweep_flags[i - 1] != getattr(self, 'status_manual' + str(i)).get():
@@ -1857,7 +1848,7 @@ class Sweeper3d(tk.Frame):
         label_to_sweep3.place(relx=0.3, rely=0.12)
 
         label_to_read = tk.Label(self, text='To read:', font=LARGE_FONT)
-        label_to_read.place(relx=0.6, rely=0.17)
+        label_to_read.place(relx=0.6, rely=0.12)
 
         label_hierarchy = tk.Label(self, text = 'Hierarchy:', font=LARGE_FONT)
         label_hierarchy.place(relx = 0.05, rely = 0.17)
@@ -1872,7 +1863,10 @@ class Sweeper3d(tk.Frame):
         self.combo_master3.place(relx = 0.45, rely = 0.17)
         
         label_devices = tk.Label(self, text = 'Devices:', font=LARGE_FONT)
-        label_devices.place(relx = 0.05, rely = 0.21)
+        label_devices.place(relx = 0.05, rely = 0.17)
+        
+        button_update_sweep = tk.Button(self, text = 'Update sweep', command = lambda: self.update_sweep_configuration)
+        button_update_sweep.place(relx = 0.6, rely = 0.25 + 1080 / len(parameters_to_read))
 
         self.combo_to_sweep1 = ttk.Combobox(self, value=list_of_devices)
         self.combo_to_sweep1.current(0)
@@ -2064,10 +2058,6 @@ class Sweeper3d(tk.Frame):
         graph_button = ttk.Button(
             self, text='Graph', command=lambda: self.open_graph())
         graph_button.place(relx=0.7, rely=0.8)
-        
-        updating = threading.Thread(target = self.update_sweep_configurarion())
-        updating.start()
-        updating.join()
 
     def update_master23_combo(self, event, interval = 1000):
         if self.combo_master1['value'][self.combo_master1.current()] == '':
@@ -2268,10 +2258,6 @@ class Sweeper3d(tk.Frame):
             delay_factor3 = float(self.entry_delay_factor3.get())
         except ValueError:
             pass
-        
-        time.sleep(1)
-        
-        self.entry_delay_factor3.after(1000, self.update_sweep_configurarion)
 
     def save_manual_status(self, i):
         if self.manual_sweep_flags[i - 1] != getattr(self, 'status_manual' + str(i)).get():
@@ -2476,6 +2462,30 @@ class Sweeper3d(tk.Frame):
 
         Sweeper_write()
 
+class Settings(tk.Tk):
+    
+    def __init__(self, parent, controller):
+        tk.Tk.__inint__(self, parent)
+        
+        old_variables = parent.combo_to_sweep1['values']
+        if len(old_variables) != 0:
+            if old_variables[0] == 'Time':
+                old_variables = old_variables[1:]
+        
+        options = []
+        
+        for device in old_variables:
+            cur_options = getattr(
+                globals()[types_of_devices[list_of_devices.index(device)]](), 'set_options')
+            for option in cur_options:
+                options.append(option)
+                
+        self.combo_old = ttk.Combobox(self, )
+        
+        
+        
+        
+        
 
 class Sweeper_write(threading.Thread):
 
@@ -2771,28 +2781,33 @@ class Sweeper_write(threading.Thread):
         return result
 
     def transposition(self, a, b):
+        
+        global manual_sweep_flags
         # changes device_a and device_b order
-        print('Transposition happened')
-        a = str(a)
-        b = str(b)
-        setattr(self, 'device_to_sweep' + a, globals()['device_to_sweep' + b])
-        setattr(self, 'device_to_sweep' + b, globals()['device_to_sweep' + a])
-        setattr(self, 'parameter_to_sweep' + a, globals()['parameter_to_sweep' + b])
-        setattr(self, 'parameter_to_sweep' + b, globals()['parameter_to_sweep' + a])
-        setattr(self, 'min_sweep' + a, float(globals()['min_sweep' + b]))
-        setattr(self, 'max_sweep' + a, float(globals()['max_sweep' + b]))
-        setattr(self, 'ratio_sweep' + a, float(globals()['ratio_sweep' + b]))
-        setattr(self, 'delay_factor' + a, float(globals()['delay_factor' + b]))
-        setattr(self, 'min_sweep' + b, float(globals()['min_sweep' + a]))
-        setattr(self, 'max_sweep' + b, float(globals()['max_sweep' + a]))
-        setattr(self, 'ratio_sweep' + b, float(globals()['ratio_sweep' + a]))
-        setattr(self, 'delay_factor' + b, float(globals()['delay_factor' + a]))
-        setattr(self, 'step' + a, float(globals()['delay_factor' + b]) * float(globals()['ratio_sweep' + b]))
-        setattr(self, 'step' + b, float(globals()['delay_factor' + a]) * float(globals()['ratio_sweep' + a]))
-        setattr(self, 'value' + a, float(globals()['min_sweep' + b]))
-        setattr(self, 'value' + b, float(globals()['min_sweep' + a]))
-        setattr(self, 'time' + a, (float(globals()['min_sweep' + b]) - float(globals()['max_sweep' + b])) / float(globals()['ratio_sweep' + b]))
-        setattr(self, 'time' + b, (float(globals()['min_sweep' + a]) - float(globals()['max_sweep' + a])) / float(globals()['ratio_sweep' + a]))
+        if 1 in manual_sweep_flags:
+            pass
+        else:
+            print('Transposition happened')
+            a = str(a)
+            b = str(b)
+            setattr(self, 'device_to_sweep' + a, globals()['device_to_sweep' + b])
+            setattr(self, 'device_to_sweep' + b, globals()['device_to_sweep' + a])
+            setattr(self, 'parameter_to_sweep' + a, globals()['parameter_to_sweep' + b])
+            setattr(self, 'parameter_to_sweep' + b, globals()['parameter_to_sweep' + a])
+            setattr(self, 'min_sweep' + a, float(globals()['min_sweep' + b]))
+            setattr(self, 'max_sweep' + a, float(globals()['max_sweep' + b]))
+            setattr(self, 'ratio_sweep' + a, float(globals()['ratio_sweep' + b]))
+            setattr(self, 'delay_factor' + a, float(globals()['delay_factor' + b]))
+            setattr(self, 'min_sweep' + b, float(globals()['min_sweep' + a]))
+            setattr(self, 'max_sweep' + b, float(globals()['max_sweep' + a]))
+            setattr(self, 'ratio_sweep' + b, float(globals()['ratio_sweep' + a]))
+            setattr(self, 'delay_factor' + b, float(globals()['delay_factor' + a]))
+            setattr(self, 'step' + a, float(globals()['delay_factor' + b]) * float(globals()['ratio_sweep' + b]))
+            setattr(self, 'step' + b, float(globals()['delay_factor' + a]) * float(globals()['ratio_sweep' + a]))
+            setattr(self, 'value' + a, float(globals()['min_sweep' + b]))
+            setattr(self, 'value' + b, float(globals()['min_sweep' + a]))
+            setattr(self, 'time' + a, (float(globals()['min_sweep' + b]) - float(globals()['max_sweep' + b])) / float(globals()['ratio_sweep' + b]))
+            setattr(self, 'time' + b, (float(globals()['min_sweep' + a]) - float(globals()['max_sweep' + a])) / float(globals()['ratio_sweep' + a]))
 
     def isinarea(self, point, grid_area, dgrid_area, sweep_dimension = 2):
         #if point is in grid_area return True. grid size defined by dgrid_area which is tuple
@@ -2828,68 +2843,93 @@ class Sweeper_write(threading.Thread):
         global master_flag3
         global filename_sweep
         
+        def append_read_parameters():
+            #appends dataframe with parameters to read
+            
+            global dataframe
+            
+            for parameter in self.parameters_to_read:
+                index_dot = parameter.find('.')
+                adress = parameter[:index_dot]
+                option = parameter[index_dot + 1:]
+                dataframe.append(getattr(globals()[
+                                 types_of_devices[list_of_devices.index(str(adress))]](adress=adress), option)())
+        
+        def tofile():
+            #appends file with new row - dataframe
+            
+            global dataframe
+            global filename_sweep
+            
+            with open(filename_sweep, 'a') as f_object:
+                try:
+                    writer_object = writer(f_object)
+                    writer_object.writerow(dataframe)
+                    f_object.close()
+                except KeyboardInterrupt:
+                    f_object.close()
+                finally:
+                    f_object.close()
+            return
+                    
+        def step(axis = 1, value = None):
+            #performs a step along sweep axis
+            
+            global zero_time
+            global dataframe
+            global manual_sweep_flags
+            
+            if len(dataframe) == 0:
+                dataframe = [time.process_time() - zero_time]
+            else:
+                dataframe[0] = [time.process_time() - zero_time][0]
+                
+            device_to_sweep = getattr(self, 'device_to_sweep' + str(axis))
+            parameter_to_sweep = getattr(self, 'parameter_to_sweep' + str(axis))
+            
+            # sweep process here
+            ###################
+            # set 'parameter_to_sweep' to 'value'
+            if manual_sweep_flags[axis - 1] == 0:
+                value = getattr(self, 'value' + str(axis))
+                getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
+                    adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value)
+                dataframe.append(getattr(self, 'value' + str(axis)))
+                setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) + getattr(self, 'step' + str(axis)))
+            else:
+                getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
+                    adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value)
+                dataframe.append(value)
+            
+            delay_factor = getattr(self, 'delay_factor' + str(axis))
+            time.sleep(delay_factor)
+            ###################
+            return 
+        
+        def update_filename(i):
+            global filename_sweep
+            self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
+            filename_sweep = self.filename_sweep
+            return
+        
         if self.sweeper_flag1 == True:
-            dataframe = pd.DataFrame(columns=self.columns)
-            dataframe.to_csv(self.filename_sweep, index=False)
+            globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+            globals()['dataframe'].to_csv(self.filename_sweep, index=False)
+            
             while self.value1 <= self.max_sweep1 and manual_sweep_flags == [0]:
                 if self.device_to_sweep1 == 'Time':
-                    dataframe = [time.process_time() - zero_time]
+                    globals()['dataframe'] = [time.process_time() - zero_time]
                 else:
-                    dataframe = [time.process_time() - zero_time]
-                    # sweep process here
-                    ###################
-                    # set 'parameter_to_sweep' to 'value'
-                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](
-                        adress=self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value=self.value1)
-                    self.value1 += self.step1
-                    time.sleep(self.delay_factor1)
-                    ###################
-                    dataframe.append(self.value1)
-                for parameter in self.parameters_to_read:
-                    index_dot = parameter.find('.')
-                    adress = parameter[:index_dot]
-                    option = parameter[index_dot + 1:]
-                    dataframe.append(getattr(globals()[
-                                     types_of_devices[list_of_devices.index(str(adress))]](adress=adress), option)())
-
-                with open(self.filename_sweep, 'a') as f_object:
-                    try:
-                        writer_object = writer(f_object)
-                        writer_object.writerow(dataframe)
-                        f_object.close()
-                    except KeyboardInterrupt():
-                        f_object.close()
-                    finally:
-                        f_object.close()
+                    step(1)
+                append_read_parameters()
+                tofile()
 
             if self.sweeper_flag1 == True and manual_sweep_flags == [1]:
                 data = pd.read_csv(manual_filenames[0]).values.reshape(-1)
                 for value in data:
-                    dataframe = [time.process_time() - zero_time]
-                    # sweep process here
-                    ###################
-                    # set 'parameter_to_sweep' to 'value'
-                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](
-                        adress=self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value=value)
-                    time.sleep(self.delay_factor1)
-                    ###################
-                    dataframe.append(value)
-                    for parameter in self.parameters_to_read:
-                        index_dot = parameter.find('.')
-                        adress = parameter[:index_dot]
-                        option = parameter[index_dot + 1:]
-                        dataframe.append(getattr(globals()[
-                                         types_of_devices[list_of_devices.index(str(adress))]](adress=adress), option)())
-
-                    with open(self.filename_sweep, 'a') as f_object:
-                        try:
-                            writer_object = writer(f_object)
-                            writer_object.writerow(dataframe)
-                            f_object.close()
-                        except KeyboardInterrupt():
-                            f_object.close()
-                        finally:
-                            f_object.close()
+                    step(1, value = value)
+                    append_read_parameters()
+                    tofile()
 
                 self.sweeper_flag1 = False
 
@@ -2902,160 +2942,61 @@ class Sweeper_write(threading.Thread):
                 columns[1:3] = columns[1:3][:-1]
                 
             i = 1
-            dataframe = pd.DataFrame(columns=self.columns)
+            globals()['dataframe'] = pd.DataFrame(columns=self.columns)
             self.filename_sweep = self.filename_sweep[:-4] + str(-i) + '.csv'
             filename_sweep = self.filename_sweep
-            dataframe.to_csv(self.filename_sweep, index=False)
-            
+            globals()['dataframe'].to_csv(self.filename_sweep, index=False)
 
             while self.value1 <= self.max_sweep1 and manual_sweep_flags == [0, 0]:
-                dataframe = [time.process_time() - zero_time]
-                # sweep process 1 here
-                ###################
-                # set 'parameter_to_sweep1' to 'value1'
-                getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](
-                    adress=self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value=self.value1)
-                self.value1 += self.step1
-                time.sleep(self.delay_factor1)
-                ###################
-                dataframe.append(self.value1)
-                dataframe_after = [*dataframe]
+                step(1)
+                dataframe_after = [*globals()['dataframe']]
                 while self.value2 <= self.max_sweep2 and manual_sweep_flags == [0, 0]:
                     if self.isinarea(point = [self.value1, self.value2], grid_area = self.grid_space, dgrid_area = [self.step1 / 2, self.step2 / 2]):
-                        # sweep process 2 here
-                        ###################
-                        # set 'parameter_to_sweep2' to 'value2'
-                        dataframe = [*dataframe_after]
-                        dataframe[0] = time.process_time() - zero_time
-                        getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](
-                            adress=self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value=self.value2)
-                        self.value2 += self.step2
-                        time.sleep(self.delay_factor2)
-                        ###################
-                        dataframe.append(self.value2)
-                        for parameter in self.parameters_to_read:
-                            index_dot = parameter.find('.')
-                            adress = parameter[:index_dot]
-                            option = parameter[index_dot + 1:]
-                            dataframe.append(getattr(globals()[
-                                             types_of_devices[list_of_devices.index(str(adress))]](adress=adress), option)())
-    
-                        with open(self.filename_sweep, 'a') as f_object:
-                            try:
-                                writer_object = writer(f_object)
-                                writer_object.writerow(dataframe)
-                                f_object.close()
-                            except KeyboardInterrupt():
-                                f_object.close()
-                            finally:
-                                f_object.close()
+                        globals()['dataframe'] = [*dataframe_after]
+                        step(2)
+                        append_read_parameters()
+                        tofile()
                     else:
                         self.value2 += self.step2
                 self.value2 = self.min_sweep2
                 i += 1
-                dataframe = pd.DataFrame(columns=self.columns)
-                self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
-                filename_sweep = self.filename_sweep
-                dataframe.to_csv(self.filename_sweep, index=False)
+                globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                update_filename(i)
+                globals()['dataframe'].to_csv(self.filename_sweep, index=False)
 
             if manual_sweep_flags == [1, 0]:
                 data = pd.read_csv(manual_filenames[0]).values.reshape(-1)
                 for value in data:
                     if manual_sweep_flags == [1, 0]:
-                        dataframe = [time.process_time() - zero_time]
-                        # sweep process 1 here
-                        ###################
-                        # set 'parameter_to_sweep1' to 'value1'
-                        getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](
-                            adress=self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value=value)
-                        time.sleep(self.delay_factor1)
-                        ###################
-                        dataframe.append(value)
-                        dataframe_after = [*dataframe]
+                        step(1, value = value)
+                        dataframe_after = [*globals()['dataframe']]
                         while self.value2 <= self.max_sweep2 and manual_sweep_flags == [1, 0]:
-                            dataframe = [*dataframe_after]
-                            dataframe[0] = time.process_time() - zero_time
-                            # sweep process 2 here
-                            ###################
-                            # set 'parameter_to_sweep2' to 'value2'
-                            getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](
-                                adress=self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value=self.value2)
-                            self.value2 += self.step2
-                            time.sleep(self.delay_factor2)
-                            ###################
-                            dataframe.append(self.value2)
-                            for parameter in self.parameters_to_read:
-                                index_dot = parameter.find('.')
-                                adress = parameter[:index_dot]
-                                option = parameter[index_dot + 1:]
-                                dataframe.append(getattr(globals()[
-                                                 types_of_devices[list_of_devices.index(str(adress))]](adress=adress), option)())
-
-                            with open(self.filename_sweep, 'a') as f_object:
-                                try:
-                                    writer_object = writer(f_object)
-                                    writer_object.writerow(dataframe)
-                                    f_object.close()
-                                except KeyboardInterrupt():
-                                    f_object.close()
-                                finally:
-                                    f_object.close()
+                            globals()['dataframe'] = [*dataframe_after]
+                            step(2)
+                            append_read_parameters()
+                            tofile()
                         self.value2 = self.min_sweep2
                         i += 1
-                        dataframe = pd.DataFrame(columns=self.columns)
-                        self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
-                        filename_sweep = self.filename_sweep
-                        dataframe.to_csv(self.filename_sweep, index=False)
+                        globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                        update_filename(i)
+                        globals()['dataframe'].to_csv(self.filename_sweep, index=False)
                     else:
                         break
 
             while self.value1 <= self.max_sweep1 and manual_sweep_flags == [0, 1]:
-                print([0, 1], ' = ', manual_sweep_flags)
-                dataframe = [time.process_time() - zero_time]
-                # sweep process 1 here
-                ###################
-                # set 'parameter_to_sweep1' to 'value1'
-                getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](
-                    adress=self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value=self.value1)
-                self.value1 += self.step1
-                time.sleep(self.delay_factor1)
-                ###################
-                dataframe.append(self.value1)
-                dataframe_after = [*dataframe]
+                step(1)
+                dataframe_after = [*globals()['dataframe']]
                 data = pd.read_csv(manual_filenames[1]).values.reshape(-1)
                 for value in data:
                     if manual_sweep_flags == [0, 1]:
-                        # sweep process 2 here
-                        ###################
-                        # set 'parameter_to_sweep2' to 'value2'
-                        dataframe = [*dataframe_after]
-                        dataframe[0] = time.process_time() - zero_time
-                        getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](
-                            adress=self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value=value)
-                        time.sleep(self.delay_factor2)
-                        ###################
-                        dataframe.append(value)
-                        for parameter in self.parameters_to_read:
-                            index_dot = parameter.find('.')
-                            adress = parameter[:index_dot]
-                            option = parameter[index_dot + 1:]
-                            dataframe.append(getattr(globals()[
-                                             types_of_devices[list_of_devices.index(str(adress))]](adress=adress), option)())
-
-                        with open(self.filename_sweep, 'a') as f_object:
-                            try:
-                                writer_object = writer(f_object)
-                                writer_object.writerow(dataframe)
-                                f_object.close()
-                            except KeyboardInterrupt():
-                                f_object.close()
-                            finally:
-                                f_object.close()
+                        globals()['dataframe'] = [*dataframe_after]
+                        step(2, value = value)
+                        append_read_parameters()
+                        tofile()
                         i += 1
-                        dataframe = pd.DataFrame(columns=self.columns)
-                        self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
-                        filename_sweep = self.filename_sweep
-                        dataframe.to_csv(self.filename_sweep, index=False)
+                        globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                        update_filename(i)
+                        globals()['dataframe'].to_csv(self.filename_sweep, index=False)
                     else:
                         break
 
@@ -3064,49 +3005,18 @@ class Sweeper_write(threading.Thread):
                 data1 = pd.read_csv(manual_filenames[0]).values.reshape(-1)
                 data2 = pd.read_csv(manual_filenames[1]).values.reshape(-1)
                 for value1 in data1:
-                    dataframe = [time.process_time() - zero_time]
-                    # sweep process 1 here
-                    ###################
-                    # set 'parameter_to_sweep1' to 'value1'
-                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](
-                        adress=self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value=value1)
-                    time.sleep(self.delay_factor1)
-                    ###################
-                    dataframe.append(value1)
-                    dataframe_after = [*dataframe]
+                    step(1, value = value1)
+                    dataframe_after = [*globals()['dataframe']]
                     for value2 in data2:
-                        # sweep process 2 here
-                        ###################
-                        # set 'parameter_to_sweep2' to 'value2'
-                        dataframe = [*dataframe_after]
-                        dataframe[0] = time.process_time() - zero_time
-                        getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](
-                            adress=self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value=value2)
-                        time.sleep(self.delay_factor2)
-                        ###################
-                        dataframe.append(value2)
-                        for parameter in self.parameters_to_read:
-                            index_dot = parameter.find('.')
-                            adress = parameter[:index_dot]
-                            option = parameter[index_dot + 1:]
-                            dataframe.append(getattr(globals()[
-                                             types_of_devices[list_of_devices.index(str(adress))]](adress=adress), option)())
-
-                        with open(self.filename_sweep, 'a') as f_object:
-                            try:
-                                writer_object = writer(f_object)
-                                writer_object.writerow(dataframe)
-                                f_object.close()
-                            except KeyboardInterrupt():
-                                f_object.close()
-                            finally:
-                                f_object.close()
+                        globals()['dataframe'] = [*dataframe_after]
+                        step(2, value = value2)
+                        append_read_parameters()
+                        tofile()
                                 
                     i += 1
-                    dataframe = pd.DataFrame(columns=self.columns)
-                    self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
-                    filename_sweep = self.filename_sweep
-                    dataframe.to_csv(self.filename_sweep, index=False)
+                    globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                    update_filename(i)
+                    globals()['dataframe'].to_csv(self.filename_sweep, index=False)
 
             self.sweeper_flag2 == False
 
@@ -3129,72 +3039,30 @@ class Sweeper_write(threading.Thread):
                 columns[2:4] = columns[1:3][:-1]
 
             i = 1
-            dataframe = pd.DataFrame(columns=self.columns)
+            globals()['dataframe'] = pd.DataFrame(columns=self.columns)
             self.filename_sweep = self.filename_sweep[:-4] + str(i) + '.csv'
-            dataframe.to_csv(self.filename_sweep, index=False)
+            globals()['dataframe'].to_csv(self.filename_sweep, index=False)
 
             while self.value1 <= self.max_sweep1 and manual_sweep_flags == [0, 0, 0]:
-                dataframe = [time.process_time() - zero_time]
-                # sweep process 1 here
-                ###################
-                # set 'parameter_to_sweep1' to 'value1'
-                getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](
-                    adress=self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value=self.value1)
-                self.value1 += self.step1
-                time.sleep(self.delay_factor1)
-                ###################
-                dataframe.append(self.value1)
-                dataframe_after = [*dataframe]
+                step(1)
+                dataframe_after = [*globals()['dataframe']]
                 while self.value2 <= self.max_sweep2 and manual_sweep_flags == [0, 0, 0]:
-                    # sweep process 2 here
-                    ###################
-                    # set 'parameter_to_sweep2' to 'value2'
-                    dataframe = [*dataframe_after]
-                    dataframe[0] = time.process_time() - zero_time
-                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](
-                        adress=self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value=self.value2)
-                    self.value2 += self.step2
-                    time.sleep(self.delay_factor2)
-                    ###################
-                    dataframe.append(self.value2)
-                    dataframe_after_after = [*dataframe]
+                    globals()['dataframe'] = [*dataframe_after]
+                    step(2)
+                    dataframe_after_after = [*globals()['dataframe']]
                     while self.value3 <= self.max_sweep3 and manual_sweep_flags == [0, 0, 0]:
                         if self.isinarea(point = (self.value1, self.value2, self.value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
-                            # sweep process 3 here
-                            ###################
-                            # set 'parameter_to_sweep3' to 'value3'
-                            dataframe = [*dataframe_after_after]
-                            dataframe[0] = time.process_time() - zero_time
-                            getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep3)]](
-                                adress=self.device_to_sweep3), 'set_' + str(self.parameter_to_sweep3))(value=self.value3)
-                            self.value3 += self.step3
-                            time.sleep(self.delay_factor3)
-                            ###################
-                            dataframe.append(self.value3)
-                            for parameter in self.parameters_to_read:
-                                index_dot = parameter.find('.')
-                                adress = parameter[:index_dot]
-                                option = parameter[index_dot + 1:]
-                                dataframe.append(getattr(globals()[
-                                                 types_of_devices[list_of_devices.index(str(adress))]](adress=adress), option)())
-    
-                            with open(self.filename_sweep, 'a') as f_object:
-                                try:
-                                    writer_object = writer(f_object)
-                                    writer_object.writerow(dataframe)
-                                    f_object.close()
-                                except KeyboardInterrupt():
-                                    f_object.close()
-                                finally:
-                                    f_object.close()
+                            globals()['dataframe'] = [*dataframe_after_after]
+                            step(3)
+                            append_read_parameters()
+                            tofile()
                         else:
                             self.value3 += self.step3
                     self.value3 = self.min_sweep3
                     i += 1
-                    dataframe = pd.DataFrame(columns=self.columns)
-                    self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
-                    filename_sweep = self.filename_sweep
-                    dataframe.to_csv(self.filename_sweep, index=False)
+                    globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                    update_filename(i)
+                    globals()['dataframe'].to_csv(self.filename_sweep, index=False)
                 self.value2 = self.min_sweep3
             self.sweeper_flag3 == False
 
@@ -3202,451 +3070,165 @@ class Sweeper_write(threading.Thread):
                 data = pd.read_csv(manual_filenames[0]).values.reshape[-1]
                 for value in data:
                     if manual_sweep_flags == [1, 0, 0]:
-                        dataframe = [time.process_time() - zero_time]
-                        # sweep process 1 here
-                        ###################
-                        # set 'parameter_to_sweep1' to 'value1'
-                        getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](adress=self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value=value)
-                        time.sleep(self.delay_factor1)
-                        ###################
-                        dataframe.append(value)
-                        dataframe_after = [*dataframe]
-                    else:
-                        break
-                        while self.value2 <= self.max_sweep2 and manual_sweep_flags == [0, 0, 1]:
-                            # sweep process 2 here
-                            ###################
-                            # set 'parameter_to_sweep2' to 'value2'
-                            dataframe = [*dataframe_after]
-                            dataframe[0] = time.process_time() - zero_time
-                            getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](
-                                adress=self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value=self.value2)
-                            self.value2 += self.step2
-                            time.sleep(self.delay_factor2)
-                            ###################
-                            dataframe.append(self.value2)
-                            dataframe_after_after = [*dataframe]
+                        step(1, value = value)
+                        dataframe_after = [*globals()['dataframe']]
+                        while self.value2 <= self.max_sweep2 and manual_sweep_flags == [1, 0, 0]:
+                            globals()['dataframe'] = [*dataframe_after]
+                            step(2)
+                            dataframe_after_after = [*globals()['dataframe']]
                             while self.value3 <= self.max_sweep3 and manual_sweep_flags == [1, 0, 0]:
-                                # sweep process 3 here
-                                ###################
-                                # set 'parameter_to_sweep3' to 'value3'
-                                dataframe = [*dataframe_after_after]
-                                dataframe[0] = time.process_time() - zero_time
-                                getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep3)]](
-                                    adress=self.device_to_sweep3), 'set_' + str(self.parameter_to_sweep3))(value=self.value3)
-                                self.value3 += self.step3
-                                time.sleep(self.delay_factor3)
-                                ###################
-                                dataframe.append(self.value3)
-                                for parameter in self.parameters_to_read:
-                                    index_dot = parameter.find('.')
-                                    adress = parameter[:index_dot]
-                                    option = parameter[index_dot + 1:]
-                                    dataframe.append(getattr(globals()[
-                                                     types_of_devices[list_of_devices.index(str(adress))]](adress=adress), option)())
-    
-                                with open(self.filename_sweep, 'a') as f_object:
-                                    try:
-                                        writer_object = writer(f_object)
-                                        writer_object.writerow(dataframe)
-                                        f_object.close()
-                                    except KeyboardInterrupt():
-                                        f_object.close()
-                                    finally:
-                                        f_object.close()
+                                globals()['dataframe'] = [*dataframe_after_after]
+                                step(3)
+                                append_read_parameters()
+                                tofile()
                             self.value3 = self.min_sweep3
                             i += 1
-                            dataframe = pd.DataFrame(columns=self.columns)
-                            self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
-                            filename_sweep = self.filename_sweep
-                            dataframe.to_csv(self.filename_sweep, index=False)
-
-            while self.value1 <= self.max_sweep1 and manual_sweep_flags == [0, 1, 0]:
-                dataframe = [time.process_time() - zero_time]
-                # sweep process 1 here
-                ###################
-                # set 'parameter_to_sweep1' to 'value1'
-                getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](
-                    adress=self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value=self.value1)
-                self.value1 += self.step1
-                time.sleep(self.delay_factor1)
-                ###################
-                dataframe.append(self.value1)
-                dataframe_after = [*dataframe]
-                data = pd.read_csvmanual_filenames[1].values.reshape(-1)
-                for value in data:
-                    if manual_sweep_flags == [0, 1, 0]:
-                        # sweep process 2 here
-                        ###################
-                        # set 'parameter_to_sweep2' to 'value2'
-                        dataframe = [*dataframe_after]
-                        dataframe[0] = time.process_time() - zero_time
-                        getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](
-                            adress=self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value=value)
-                        time.sleep(self.delay_factor2)
-                        ###################
-                        dataframe.append(value)
-                        dataframe_after_after = [*dataframe]
+                            globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                            update_filename(i)
+                            globals()['dataframe'].to_csv(self.filename_sweep, index=False) 
                     else:
                         break
+
+            while self.value1 <= self.max_sweep1 and manual_sweep_flags == [0, 1, 0]:
+                step(1)
+                dataframe_after = [*globals()['dataframe']]
+                data = pd.read_csv(manual_filenames[1]).values.reshape(-1)
+                for value in data:
+                    if manual_sweep_flags == [0, 1, 0]:
+                        globals()['dataframe'] = [*dataframe_after]
+                        step(2, value = value)
+                        dataframe_after_after = [*globals()['dataframe']]
                         while self.value3 <= self.max_sweep3 and manual_sweep_flags == [0, 1, 0]:
-                            # sweep process 3 here
-                            ###################
-                            # set 'parameter_to_sweep3' to 'value3'
-                            dataframe = [*dataframe_after_after]
-                            dataframe[0] = time.process_time() - zero_time
-                            getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep3)]](
-                                adress=self.device_to_sweep3), 'set_' + str(self.parameter_to_sweep3))(value=self.value3)
-                            self.value3 += self.step3
-                            time.sleep(self.delay_factor3)
-                            ###################
-                            dataframe.append(self.value3)
-                            for parameter in self.parameters_to_read:
-                                index_dot = parameter.find('.')
-                                adress = parameter[:index_dot]
-                                option = parameter[index_dot + 1:]
-                                dataframe.append(getattr(globals()[
-                                                 types_of_devices[list_of_devices.index(str(adress))]](adress=adress), option)())
-    
-                            with open(self.filename_sweep, 'a') as f_object:
-                                try:
-                                    writer_object = writer(f_object)
-                                    writer_object.writerow(dataframe)
-                                    f_object.close()
-                                except KeyboardInterrupt():
-                                    f_object.close()
-                                finally:
-                                    f_object.close()
+                            globals()['dataframe'] = [*dataframe_after_after]
+                            step(3)
+                            append_read_parameters()
+                            tofile()
                         self.value3 = self.min_sweep3
                         i += 1
-                        dataframe = pd.DataFrame(columns=self.columns)
-                        self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
-                        filename_sweep = self.filename_sweep
-                        dataframe.to_csv(self.filename_sweep, index=False)
+                        globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                        update_filename(i)
+                        globals()['dataframe'].to_csv(self.filename_sweep, index=False)
+                    else:
+                        break
 
             while self.value1 <= self.max_sweep1 and manual_sweep_flags == [0, 0, 1]:
-                dataframe = [time.process_time() - zero_time]
-                # sweep process 1 here
-                ###################
-                # set 'parameter_to_sweep1' to 'value1'
-                getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](
-                    adress=self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value=self.value1)
-                self.value1 += self.step1
-                time.sleep(self.delay_factor1)
-                ###################
-                dataframe.append(self.value1)
-                dataframe_after = [*dataframe]
+                step(1)
+                dataframe_after = [*globals()['dataframe']]
                 while self.value2 <= self.max_sweep2 and manual_sweep_flags == [0, 0, 1]:
-                    # sweep process 2 here
-                    ###################
-                    # set 'parameter_to_sweep2' to 'value2'
-                    dataframe = [*dataframe_after]
-                    dataframe[0] = time.process_time() - zero_time
-                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](
-                        adress=self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value=self.value2)
-                    self.value2 += self.step2
-                    time.sleep(self.delay_factor2)
-                    ###################
-                    dataframe.append(self.value2)
-                    dataframe_after_after = [*dataframe]
-                    data3 = pd.read_csv(manual_filenames[2]).values.reshape(-1)
-                    for value3 in data3:
+                    globals()['dataframe'] = [*dataframe_after]
+                    step(2)
+                    dataframe_after_after = [*globals()['dataframe']]
+                    data = pd.read_csv(manual_filenames[2]).values.reshape(-1)
+                    for value in data:
                         if manual_sweep_flags == [0, 0, 1]:
-                            # sweep process 3 here
-                            ###################
-                            # set 'parameter_to_sweep3' to 'value3'
-                            dataframe = [*dataframe_after_after]
-                            dataframe[0] = time.process_time() - zero_time
-                            getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep3)]](
-                                adress=self.device_to_sweep3), 'set_' + str(self.parameter_to_sweep3))(value=value3)
-                            time.sleep(self.delay_factor3)
-                            ###################
-                            dataframe.append(value3)
-                            for parameter in self.parameters_to_read:
-                                index_dot = parameter.find('.')
-                                adress = parameter[:index_dot]
-                                option = parameter[index_dot + 1:]
-                                dataframe.append(getattr(globals()[
-                                                 types_of_devices[list_of_devices.index(str(adress))]](adress=adress), option)())
-
-                            with open(self.filename_sweep, 'a') as f_object:
-                                try:
-                                    writer_object = writer(f_object)
-                                    writer_object.writerow(dataframe)
-                                    f_object.close()
-                                except KeyboardInterrupt():
-                                    f_object.close()
-                                finally:
-                                    f_object.close()
+                            globals()['dataframe'] = [*dataframe_after_after]
+                            step(3, value = value)
+                            append_read_parameters()
+                            tofile()
                         else:
                             break
-                    i += 1
-                    dataframe = pd.DataFrame(columns=self.columns)
-                    self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
-                    filename_sweep = self.filename_sweep
-                    dataframe.to_csv(self.filename_sweep, index=False)
+                        i += 1
+                        globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                        update_filename(i)
+                        globals()['dataframe'].to_csv(self.filename_sweep, index=False)
                 self.value2 = self.min_sweep3
 
                 if manual_sweep_flags == [1, 1, 0]:
                     data1 = pd.read_csv(manual_filenames[0]).values.reshape(-1)
                     for value1 in data1:
                         if manual_sweep_flags == [1, 1, 0]:
-                            dataframe = [time.process_time() - zero_time]
-                            # sweep process 1 here
-                            ###################
-                            # set 'parameter_to_sweep1' to 'value1'
-                            getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](
-                                adress=self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value=value1)
-                            time.sleep(self.delay_factor1)
-                            ###################
-                            dataframe.append(value1)
-                            dataframe_after = [*dataframe]
-                            data2 = pd.read_csvmanual_filenames[1].values.reshape(-1)
-                        else:
-                            break
+                            step(1, value = value1)
+                            dataframe_after = [*globals()['dataframe']]
+                            data2 = pd.read_csv(manual_filenames[1]).values.reshape(-1)
                             for value2 in data2:
-                                if manual_sweep_flags == [0, 1, 0]:
-                                    # sweep process 2 here
-                                    ###################
-                                    # set 'parameter_to_sweep2' to 'value2'
-                                    dataframe = [*dataframe_after]
-                                    dataframe[0] = time.process_time() - zero_time
-                                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](
-                                        adress=self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value=value2)
-                                    time.sleep(self.delay_factor2)
-                                    ###################
-                                    dataframe.append(value2)
-                                    dataframe_after_after = [*dataframe]
+                                if manual_sweep_flags == [1, 1, 0]:
+                                    globals()['dataframe'] = [*dataframe_after]
+                                    step(2, value = value2)
+                                    dataframe_after_after = [*globals()['dataframe']]
+                                    while self.value3 <= self.max_sweep3 and manual_sweep_flags == [0, 1, 0]:
+                                        globals()['dataframe'] = [*dataframe_after_after]
+                                        step(3)
+                                        append_read_parameters()
+                                        tofile()
+                                    i += 1
+                                    globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                                    update_filename(i)
+                                    globals()['dataframe'].to_csv(self.filename_sweep, index=False)
                                 else:
                                     break
-                                    while self.value3 <= self.max_sweep3 and manual_sweep_flags == [0, 1, 0]:
-                                        # sweep process 3 here
-                                        ###################
-                                        # set 'parameter_to_sweep3' to 'value3'
-                                        dataframe = [*dataframe_after_after]
-                                        dataframe[0] = time.process_time() - zero_time
-                                        getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep3)]](
-                                            adress=self.device_to_sweep3), 'set_' + str(self.parameter_to_sweep3))(value=self.value3)
-                                        self.value3 += self.step3
-                                        time.sleep(self.delay_factor3)
-                                        ###################
-                                        dataframe.append(self.value3)
-                                        for parameter in self.parameters_to_read:
-                                            index_dot = parameter.find('.')
-                                            adress = parameter[:index_dot]
-                                            option = parameter[index_dot + 1:]
-                                            dataframe.append(getattr(globals()[
-                                                             types_of_devices[list_of_devices.index(str(adress))]](adress=adress), option)())
-                
-                                        with open(self.filename_sweep, 'a') as f_object:
-                                            try:
-                                                writer_object = writer(f_object)
-                                                writer_object.writerow(dataframe)
-                                                f_object.close()
-                                            except KeyboardInterrupt():
-                                                f_object.close()
-                                            finally:
-                                                f_object.close()
-                                    i += 1
-                                    dataframe = pd.DataFrame(columns=self.columns)
-                                    self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
-                                    filename_sweep = self.filename_sweep
-                                    dataframe.to_csv(self.filename_sweep, index=False)
+                        else:
+                            break
+                                
 
                 if manual_sweep_flags == [1, 0, 1]:
                     data1 = pd.read_csv(manual_filenames[0]).values.reshape(-1)
                     for value1 in data1:
-                        if manual_sweep_flags == [1, 1, 0]:
-                            dataframe = [time.process_time() - zero_time]
-                            # sweep process 1 here
-                            ###################
-                            # set 'parameter_to_sweep1' to 'value1'
-                            getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](
-                                adress=self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value=value1)
-                            time.sleep(self.delay_factor1)
-                            ###################
-                            dataframe.append(value1)
-                            dataframe_after = [*dataframe]
-                        else:
-                            break
+                        if manual_sweep_flags == [1, 0, 1]:
+                            step(1, value = value1)
                             while self.value2 <= self.max_sweep2 and manual_sweep_flags == [1, 0, 1]:
-                                # sweep process 2 here
-                                ###################
-                                # set 'parameter_to_sweep2' to 'value2'
-                                dataframe = [*dataframe_after]
-                                dataframe[0] = time.process_time() - zero_time
-                                getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](
-                                    adress=self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value=self.value2)
-                                self.value2 += self.step2
-                                time.sleep(self.delay_factor2)
-                                ###################
-                                dataframe.append(self.value2)
-                                dataframe_after_after = [*dataframe]
+                                globals()['dataframe'] = [*dataframe_after]
+                                step(2)
+                                dataframe_after_after = [*globals()['dataframe']]
                                 data3 = pd.read_csv(manual_filenames[2]).values.reshape(-1)
                                 for value3 in data3:
-                                    if manual_sweep_flags == [0, 0, 1]:
-                                        # sweep process 3 here
-                                        ###################
-                                        # set 'parameter_to_sweep3' to 'value3'
-                                        dataframe = [*dataframe_after_after]
-                                        dataframe[0] = time.process_time() - zero_time
-                                        getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep3)]](
-                                            adress=self.device_to_sweep3), 'set_' + str(self.parameter_to_sweep3))(value=value3)
-                                        time.sleep(self.delay_factor3)
-                                        ###################
-                                        dataframe.append(value3)
-                                        for parameter in self.parameters_to_read:
-                                            index_dot = parameter.find('.')
-                                            adress = parameter[:index_dot]
-                                            option = parameter[index_dot + 1:]
-                                            dataframe.append(getattr(globals()[
-                                                             types_of_devices[list_of_devices.index(str(adress))]](adress=adress), option)())
-        
-                                        with open(self.filename_sweep, 'a') as f_object:
-                                            try:
-                                                writer_object = writer(f_object)
-                                                writer_object.writerow(dataframe)
-                                                f_object.close()
-                                            except KeyboardInterrupt():
-                                                f_object.close()
-                                            finally:
-                                                f_object.close()
-                                    else:
-                                        break
+                                    if manual_sweep_flags == [1, 0, 1]:
+                                        globals()['dataframe'] = [*dataframe_after_after]
+                                        step(3, value = value3)
+                                        append_read_parameters()
+                                        tofile()
                                 i += 1
-                                dataframe = pd.DataFrame(columns=self.columns)
-                                self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
-                                filename_sweep = self.filename_sweep
-                                dataframe.to_csv(self.filename_sweep, index=False)
+                                globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                                update_filename(i)
+                                globals()['dataframe'].to_csv(self.filename_sweep, index=False)
 
                 while self.value1 <= self.max_sweep1 and manual_sweep_flags == [0, 1, 1]:
-                    dataframe = [time.process_time() - zero_time]
-                    # sweep process 1 here
-                    ###################
-                    # set 'parameter_to_sweep1' to 'value1'
-                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](
-                        adress=self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value=self.value1)
-                    self.value1 += self.step1
-                    time.sleep(self.delay_factor1)
-                    ###################
-                    dataframe.append(self.value1)
-                    dataframe_after = [*dataframe]
+                    step(1)
+                    dataframe_after = [*globals()['dataframe']]
                     data2 = pd.read_csv(manual_filenames[2]).values.reshape(-1)
                     for value2 in data2:
                         if manual_sweep_flags == [0, 1, 1]:
-                            # sweep process 2 here
-                            ###################
-                            # set 'parameter_to_sweep2' to 'value2'
-                            dataframe = [*dataframe_after]
-                            dataframe[0] = time.process_time() - zero_time
-                            getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](
-                                adress=self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value=value2)
-                            time.sleep(self.delay_factor2)
-                            ###################
-                            dataframe.append(value2)
+                            globals()['dataframe'] = [*dataframe_after]
+                            step(2, value = value2)
                             dataframe_after_after = [*dataframe]
                             data3 = pd.read_csv(
                                 manual_filenames[2]).values.reshape(-1)
-                        else:
-                            break
                             for value3 in data3:
                                 if manual_sweep_flags == [0, 1, 1]:
-                                    # sweep process 3 here
-                                    ###################
-                                    # set 'parameter_to_sweep3' to 'value3'
-                                    dataframe = [*dataframe_after_after]
-                                    dataframe[0] = time.process_time() - \
-                                        zero_time
-                                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep3)]](
-                                        adress=self.device_to_sweep3), 'set_' + str(self.parameter_to_sweep3))(value=value3)
-                                    time.sleep(self.delay_factor3)
-                                    ###################
-                                    dataframe.append(value3)
-                                    for parameter in self.parameters_to_read:
-                                        index_dot = parameter.find('.')
-                                        adress = parameter[:index_dot]
-                                        option = parameter[index_dot + 1:]
-                                        dataframe.append(getattr(globals()[
-                                                         types_of_devices[list_of_devices.index(str(adress))]](adress=adress), option)())
-
-                                    with open(self.filename_sweep, 'a') as f_object:
-                                        try:
-                                            writer_object = writer(f_object)
-                                            writer_object.writerow(dataframe)
-                                            f_object.close()
-                                        except KeyboardInterrupt():
-                                            f_object.close()
-                                        finally:
-                                            f_object.close()
+                                    globals()['dataframe'] = [*dataframe_after_after]
+                                    step(3, value = value3)
+                                    append_read_parameters()
+                                    tofile()
                                 else:
                                     break
                             i += 1
-                            dataframe = pd.DataFrame(columns=self.columns)
-                            self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
-                            filename_sweep = self.filename_sweep
-                            dataframe.to_csv(self.filename_sweep, index=False)
+                            globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                            update_filename(i)
+                            globals()['dataframe'].to_csv(self.filename_sweep, index=False)
+                        else:
+                            break
+                            
 
                 if manual_sweep_flags == [1, 1, 1]:
                     data1 = pd.read_csv(manual_filenames[0]).values.reshape(-1)
                     for value1 in data1:
-                        dataframe = [time.process_time() - zero_time]
-                        # sweep process 1 here
-                        ###################
-                        # set 'parameter_to_sweep1' to 'value1'
-                        getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](
-                            adress=self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value=value1)
-                        time.sleep(self.delay_factor1)
-                        ###################
-                        dataframe.append(value1)
-                        dataframe_after = [*dataframe]
+                        step(1, value = value1)
+                        dataframe_after = [*globals()['dataframe']]
                         data2 = pd.read_csv(
                             manual_filenames[2]).values.reshape(-1)
                         for value2 in data2:
-                            # sweep process 2 here
-                            ###################
-                            # set 'parameter_to_sweep2' to 'value2'
-                            dataframe = [*dataframe_after]
-                            dataframe[0] = time.process_time() - zero_time
-                            getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](
-                                adress=self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value=value2)
-                            time.sleep(self.delay_factor2)
-                            ###################
-                            dataframe.append(value2)
-                            dataframe_after_after = [*dataframe]
-                            data3 = pd.read_csv(
-                                manual_filenames[2]).values.reshape(-1)
+                            globals()['dataframe'] = [*dataframe_after]
+                            step(2, value = value2)
+                            dataframe_after_after = [*globals()['dataframe']]
+                            data3 = pd.read_csv(manual_filenames[2]).values.reshape(-1)
                             for value3 in data3:
-                                # sweep process 3 here
-                                ###################
-                                # set 'parameter_to_sweep3' to 'value3'
-                                dataframe = [*dataframe_after_after]
-                                dataframe[0] = time.process_time() - zero_time
-                                getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep3)]](
-                                    adress=self.device_to_sweep3), 'set_' + str(self.parameter_to_sweep3))(value=value3)
-                                time.sleep(self.delay_factor3)
-                                ###################
-                                dataframe.append(value3)
-                                for parameter in self.parameters_to_read:
-                                    index_dot = parameter.find('.')
-                                    adress = parameter[:index_dot]
-                                    option = parameter[index_dot + 1:]
-                                    dataframe.append(getattr(globals()[
-                                                     types_of_devices[list_of_devices.index(str(adress))]](adress=adress), option)())
-
-                                with open(self.filename_sweep, 'a') as f_object:
-                                    try:
-                                        writer_object = writer(f_object)
-                                        writer_object.writerow(dataframe)
-                                        f_object.close()
-                                    except KeyboardInterrupt():
-                                        f_object.close()
-                                    finally:
-                                        f_object.close()
+                                globals()['dataframe'] = [*dataframe_after_after]
+                                step(value = value3)
+                                append_read_parameters()
+                                tofile()
                             i += 1
-                            dataframe = pd.DataFrame(columns=self.columns)
-                            self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
-                            filename_sweep = self.filename_sweep
-                            dataframe.to_csv(self.filename_sweep, index=False)
+                            globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                            update_filename(i)
+                            globals()['dataframe'].to_csv(self.filename_sweep, index=False)
 
 
 class VerticalNavigationToolbar2Tk(NavigationToolbar2Tk):
