@@ -76,6 +76,10 @@ sweeper_flag1 = False
 sweeper_flag2 = False
 sweeper_flag3 = False
 
+pause_flag = False
+stop_flag = False
+tozero_flag = False
+
 condition = ''
 
 manual_sweep_flags = [0]
@@ -703,7 +707,7 @@ zero_time = time.process_time()
 
 class Universal_frontend(tk.Tk):
 
-    def __init__(self, classes, start, size = '1920x1080', title = 'Lock in test', *args, **kwargs):
+    def __init__(self, classes, start, fargs = None, size = '1920x1080', title = 'Lock in test', *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
 
         tk.Tk.iconbitmap(self)
@@ -718,7 +722,14 @@ class Universal_frontend(tk.Tk):
         self.frames = {}
 
         for F in classes:
-            frame = F(container, self)
+            if fargs == None:
+                frame = F(container, self)
+            else:
+                if hasattr(fargs, '__iter__'):
+                    pass
+                else:
+                    fargs = [fargs]
+                frame = F(container, self, *fargs)
             self.frames[F] = frame
             frame.grid(row=0, column=0, sticky='nsew')
 
@@ -727,7 +738,6 @@ class Universal_frontend(tk.Tk):
     def show_frame(self, cont):
         frame = self.frames[cont]
         frame.tkraise()
-        
 
 
 class StartPage(tk.Frame):
@@ -1338,8 +1348,8 @@ class Sweeper1d(tk.Frame):
         self.entry_filename.insert(0, filename_sweep)
         self.entry_filename.after(1)
 
-    def open_settings(self):
-        self.window_settings = Universal_frontend((Settings,), Settings)
+    def open_settings(self):        
+        self.window_settings = Universal_frontend((Settings,), Settings, fargs = Sweeper1d)
         self.window_settings.mainloop()
 
     def open_graph(self):
@@ -2497,14 +2507,18 @@ class Sweeper3d(tk.Frame):
 
         Sweeper_write()
 
-class Settings(tk.Tk):
+class Settings(tk.Frame):
     
-    def __init__(self, parent, controller):
-        tk.Tk.__inint__(self, parent)
+    def __init__(self, parent, controller, inherit):
+
+        tk.Frame.__init__(self, parent)
+        
+        parent = inherit(parent, controller)
+        
         self.combo_devices = ttk.Combobox(self, value = list_of_devices)
         self.combo_devices.current(0)
         self.combo_devices.bind(
-            "<<ComboboxSelected>>", self.update_combo_set_parameters())
+            "<<ComboboxSelected>>", self.update_combo_set_parameters)
         self.combo_devices.place(relx=0.05, rely=0.15)
         
         self.combo_set_parameters = ttk.Combobox(self, value = [''])
@@ -2513,27 +2527,30 @@ class Settings(tk.Tk):
         
         parameters = list(parent.lstbox_to_read.get(0, tk.END))
         
+        if len(parameters) == 0:
+            parameters = ['']
+        
         self.combo_get_parameters = ttk.Combobox(self, value = parameters)
         self.combo_get_parameters.current(0)
         self.combo_get_parameters.place(relx=0.05, rely=0.25)
         
-        self.entry_new_device = tk.Entry(self)
-        self.entry_new_device.place(relx = 0.1, rely = 0.15)
+        self.entry_new_device = tk.Entry(self, width = 30)
+        self.entry_new_device.place(relx = 0.2, rely = 0.15)
         
-        self.entry_new_set_parameter = tk.Entry(self)
-        self.entry_new_set_parameter.place(relx = 0.1, rely = 0.2)
+        self.entry_new_set_parameter = tk.Entry(self, width = 30)
+        self.entry_new_set_parameter.place(relx = 0.2, rely = 0.2)
         
-        self.entry_new_get_parameter = tk.Entry(self)
-        self.entry_new_get_parameter.place(relx = 0.1, rely = 0.25)
+        self.entry_new_get_parameter = tk.Entry(self, width = 30)
+        self.entry_new_get_parameter.place(relx = 0.2, rely = 0.25)
         
-        button_change_name_device = tk.Button(self, text = 'Change', font = LARGE_FONT, command = lambda: self.update_names_device(parent = parent))
-        button_change_name_device.place(relx = 0.45, rely = 0.15)
+        button_change_name_device = tk.Button(self, text = 'Change device name', command = lambda: self.update_names_device(parent))
+        button_change_name_device.place(relx = 0.35, rely = 0.14)
         
-        button_change_name_set_parameters = tk.Button(self, text = 'Change name', font = LARGE_FONT, command = lambda: self.update_names_set_parameters(parent = parent))
-        button_change_name_set_parameters.place(relx = 0.45, rely = 0.2)
+        button_change_name_set_parameters = tk.Button(self, text = 'Change set name', command = lambda: self.update_names_set_parameters(parent))
+        button_change_name_set_parameters.place(relx = 0.35, rely = 0.19)
         
-        button_change_name_get_parameters = tk.Button(self, text = 'Change name', font = LARGE_FONT, command = lambda: self.update_names_get_parameters(parent = parent))
-        button_change_name_get_parameters.place(relx = 0.45, rely = 0.25)
+        button_change_name_get_parameters = tk.Button(self, text = 'Change get name', command = lambda: self.update_names_get_parameters(parent))
+        button_change_name_get_parameters.place(relx = 0.35, rely = 0.24)
         
     def update_combo_set_parameters(self, event, interval = 1000):
         device_class = types_of_devices[self.combo_devices.current()]
