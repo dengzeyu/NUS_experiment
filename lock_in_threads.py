@@ -21,6 +21,7 @@ import random
 matplotlib.use("TkAgg")
 plt.rcParams['animation.html'] = 'jshtml'
 LARGE_FONT = ('Verdana', 12)
+SUPER_LARGE = ('Verdana', 16)
 style.use('ggplot')
 
 # Check if everything connected properly
@@ -75,6 +76,8 @@ filename_sweep = r'C:\NUS\Transport lab\Test\data_files\sweep' + datetime.today(
 sweeper_flag1 = False
 sweeper_flag2 = False
 sweeper_flag3 = False
+
+settings_flag = False
 
 pause_flag = False
 stop_flag = False
@@ -530,6 +533,8 @@ def devices_list():
 
     return list_of_devices, types_of_devices
 
+if len(list_of_devices) == 0:
+    list_of_devices = ['']
 
 names_of_devices, types_of_devices = devices_list()
 
@@ -707,7 +712,7 @@ zero_time = time.process_time()
 
 class Universal_frontend(tk.Tk):
 
-    def __init__(self, classes, start, fargs = None, size = '1920x1080', title = 'Lock in test', *args, **kwargs):
+    def __init__(self, classes, start, size = '1920x1080', title = 'Lock in test', *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
 
         tk.Tk.iconbitmap(self)
@@ -722,46 +727,60 @@ class Universal_frontend(tk.Tk):
         self.frames = {}
 
         for F in classes:
-            if fargs == None:
-                frame = F(container, self)
-            else:
-                if hasattr(fargs, '__iter__'):
-                    pass
-                else:
-                    fargs = [fargs]
-                frame = F(container, self, *fargs)
+            frame = F(container, self)
             self.frames[F] = frame
             frame.grid(row=0, column=0, sticky='nsew')
 
         self.show_frame(start)
 
     def show_frame(self, cont):
+        global settings_flag
         frame = self.frames[cont]
         frame.tkraise()
-
+        if settings_flag == True:
+            globals()['Sweeper_object'] = frame
+            settings_flag = False
 
 class StartPage(tk.Frame):
 
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
+        self.controller = controller
         label = tk.Label(self, text='Start Page', font=LARGE_FONT)
         label.pack(pady=10, padx=10)
 
-        lock_in_settings_button = ttk.Button(
+        lock_in_settings_button = tk.Button(
             self, text="Lock in settings", command=lambda: controller.show_frame(Lock_in_settings))
         lock_in_settings_button.place(relx=0.1, rely=0.1)
 
-        sweeper1d_button = ttk.Button(
-            self, text='1D - sweeper', command=lambda: controller.show_frame(Sweeper1d))
+        sweeper1d_button = tk.Button(
+            self, text='1D - sweeper', command=lambda: self.sweeper1d_show())
         sweeper1d_button.place(relx=0.1, rely=0.4)
 
-        sweeper2d_button = ttk.Button(
-            self, text='2D - sweeper', command=lambda: controller.show_frame(Sweeper2d))
+        sweeper2d_button = tk.Button(
+            self, text='2D - sweeper', command=lambda: self.sweeper2d_show())
         sweeper2d_button.place(relx=0.2, rely=0.4)
 
-        sweeper3d_button = ttk.Button(
-            self, text='3D - sweeper', command=lambda: controller.show_frame(Sweeper3d))
+        sweeper3d_button = tk.Button(
+            self, text='3D - sweeper', command=lambda: self.sweeper3d_show())
         sweeper3d_button.place(relx=0.3, rely=0.4)
+    
+    def sweeper1d_show(self):
+        global settings_flag
+        settings_flag = True
+        self.controller.show_frame(Sweeper1d)
+        
+    def sweeper2d_show(self):
+        global settings_flag
+        settings_flag = True
+        self.controller.show_frame(Sweeper2d)
+        
+    def sweeper3d_show(self):
+        global settings_flag
+        settings_flag = True
+        self.controller.show_frame(Sweeper3d)
+        
+    
 
 
 class Lock_in_settings(tk.Frame):
@@ -856,7 +875,7 @@ class Lock_in_settings(tk.Frame):
         entry_aux4_voltage = tk.Entry(self, textvariable=self.aux4_initial)
         entry_aux4_voltage.place(relx=0.02, rely=0.680)
 
-        button_aux_voltage = ttk.Button(self, text='Set AUX voltage',
+        button_aux_voltage = tk.Button(self, text='Set AUX voltage',
                                         command=self.aux_button_clicked)
         button_aux_voltage.place(relx=0.15, rely=0.675)
 
@@ -950,7 +969,7 @@ class Lock_in_settings(tk.Frame):
         self.label_value_phase = tk.Label(self, text=(self.value_phase.get()))
         self.label_value_phase.place(relx=0.8, rely=0.435)
 
-        button_reference = ttk.Button(self, text='Set reference parameters',
+        button_reference = tk.Button(self, text='Set reference parameters',
                                       command=self.reference_button_clicked)
         button_reference.place(relx=0.8, rely=0.485)
 
@@ -970,7 +989,7 @@ class Lock_in_settings(tk.Frame):
                 reslist.append(entrada)
             for val in reslist:
                 print(val)
-        button_listbox = ttk.Button(self, text = "Collect data", command = select)
+        button_listbox = tk.Button(self, text = "Collect data", command = select)
         button_listbox.place(relx = 0.615, rely = 0.665)
         '''
         thread_update_sensitivity = threading.Thread(
@@ -1012,7 +1031,7 @@ class Lock_in_settings(tk.Frame):
         thread_update_ch1.join()
         thread_update_ch2.join()
 
-        button_back_home = ttk.Button(self, text='Back to Home',
+        button_back_home = tk.Button(self, text='Back to Home',
                                       command=lambda: controller.show_frame(StartPage))
         button_back_home.place(relx=0.85, rely=0.85)
 
@@ -1155,17 +1174,18 @@ class Lock_in_settings(tk.Frame):
         self.label_value_ch2['text'] = '\n' + str(value)
         self.label_value_ch2.after(interval, self.update_value_ch2)
 
-
 class Sweeper1d(tk.Frame):
 
-    def __init__(self, parent, controller):
+    def __init__(self, parent, controller):       
 
         tk.Frame.__init__(self, parent)
+        
+        print('Sweeper_self = ', self, 'type = ', type(self))
 
         label = tk.Label(self, text='1dSweeper', font=LARGE_FONT)
         label.pack(pady=10, padx=10)
 
-        button_home = ttk.Button(self, text='Back to Home',
+        button_home = tk.Button(self, text='Back to Home',
                                  command=lambda: controller.show_frame(StartPage))
         button_home.pack()
 
@@ -1186,28 +1206,33 @@ class Sweeper1d(tk.Frame):
         self.combo_to_sweep1.place(relx=0.15, rely=0.16)
 
         self.devices = tk.StringVar()
+        parameters_to_read = ['a']
         self.devices.set(value=parameters_to_read)
         self.lstbox_to_read = tk.Listbox(self, listvariable = self.devices,
                                          selectmode='multiple', width=20,
                                          height=len(parameters_to_read) * 1)
         self.lstbox_to_read.place(relx=0.3, rely=0.16)
         
+        print('Sweeper get options:', list(self.lstbox_to_read.get(0, tk.END)))
+        
         self.dict_lstbox = {}
         
         for parameter in parameters_to_read:
             self.dict_lstbox[parameter] = parameter
+            
+        lstbox_height = len(parameters_to_read) / 47
         
-        button_update_sweep = tk.Button(self, text = 'Update_sweep', command = lambda: self.update_sweep_configuration())
-        button_update_sweep.place(relx = 0.3, rely = 0.21 + len(parameters_to_read)/1080)
+        button_update_sweep = tk.Button(self, text = 'Update sweep', command = lambda: self.update_sweep_configuration())
+        button_update_sweep.place(relx = 0.3, rely = 0.21 + lstbox_height)
 
-        button_pause = tk.Button(self, text = '⏸️', command = lambda: self.pause)
-        button_pause.place(relx = 0.35, rely = 0.25 + len(parameters_to_read)/1080)
+        button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause)
+        button_pause.place(relx = 0.3, rely = 0.25 +lstbox_height)
         
-        button_stop = tk.Button(self, text = '⏹️', command = lambda: self.stop)
-        button_stop.place(relx = 0.35, rely = 0.3 + len(parameters_to_read)/1080)
+        button_stop = tk.Button(self, text = '⏹️', font = LARGE_FONT, command = lambda: self.stop)
+        button_stop.place(relx = 0.3375, rely = 0.25 + lstbox_height)
         
-        button_tozero = tk.Button(self, text = 'To zero', command = lambda: self.tozero)
-        button_tozero.place(relx = 0.4, rely = 0.25 + len(parameters_to_read)/1080)
+        button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero)
+        button_tozero.place(relx = 0.3, rely = 0.3 + lstbox_height)
 
         label_options = tk.Label(self, text = 'Options:', font = LARGE_FONT)
         label_options.place(relx = 0.05, rely = 0.2)
@@ -1259,13 +1284,13 @@ class Sweeper1d(tk.Frame):
                                           offvalue=0, command=lambda: self.save_manual_status())
         checkbox_manual.place(relx=0.12, rely=0.52)
 
-        button_new_manual = ttk.Button(self, text = 'New', command=lambda: self.open_blank(
+        button_new_manual = tk.Button(self, text = '🖊', font = LARGE_FONT, command=lambda: self.open_blank(
             filename=self.manual_filenames[0]))
-        button_new_manual.place(relx=0.17, rely=0.52)
+        button_new_manual.place(relx=0.12, rely=0.56)
 
-        button_explore_manual = ttk.Button(
-            self, text = '🔎', command=lambda: self.explore_files())
-        button_explore_manual.place(relx=0.17, rely=0.56)
+        button_explore_manual = tk.Button(
+            self, text = '🔎', font = LARGE_FONT, command=lambda: self.explore_files())
+        button_explore_manual.place(relx=0.15, rely=0.56)
 
         self.filename_textvariable = tk.StringVar(self, value = filename_sweep)
         width = int(len(self.filename_textvariable.get()) * 0.95)
@@ -1273,20 +1298,20 @@ class Sweeper1d(tk.Frame):
                                        width = width)
         self.entry_filename.place(relx = 0.97 - width / 100, rely = 0.9)
 
-        button_settings = tk.Button(text = '⚙️', font = LARGE_FONT, command = lambda: self.open_settings())
+        button_settings = tk.Button(self, text = '⚙️', font = SUPER_LARGE, command = lambda: self.open_settings())
         button_settings.place(relx = 0.85, rely = 0.15)
 
-        button_filename = ttk.Button(
+        button_filename = tk.Button(
             self, text = 'Browse...', command=lambda: self.set_filename_sweep())
         button_filename.place(relx=0.85, rely=0.9)
 
-        button_start_sweeping = ttk.Button(
+        button_start_sweeping = tk.Button(
             self, text="Start sweeping", command=lambda: self.start_sweeping())
         button_start_sweeping.place(relx=0.7, rely=0.7)
 
-        graph_button = ttk.Button(
-            self, text='📈', command=lambda: self.open_graph())
-        graph_button.place(relx=0.7, rely=0.8)
+        graph_button = tk.Button(
+            self, text='📊', font = SUPER_LARGE, command=lambda: self.open_graph())
+        graph_button.place(relx=0.7, rely=0.76)
 
     def update_sweep_parameters(self, event, interval=1000):
         if self.combo_to_sweep1.current() == 0:
@@ -1360,7 +1385,7 @@ class Sweeper1d(tk.Frame):
         self.entry_filename.after(1)
 
     def open_settings(self):        
-        self.window_settings = Universal_frontend((Settings,), Settings, fargs = Sweeper1d)
+        self.window_settings = Universal_frontend((Settings,), Settings)
         self.window_settings.mainloop()
 
     def open_graph(self):
@@ -1476,7 +1501,7 @@ class Sweeper2d(tk.Frame):
         label = tk.Label(self, text='2dSweeper', font=LARGE_FONT)
         label.pack(pady=10, padx=10)
 
-        button_home = ttk.Button(self, text='Back to Home',
+        button_home = tk.Button(self, text='Back to Home',
                                  command=lambda: controller.show_frame(StartPage))
         button_home.pack()
 
@@ -1524,24 +1549,26 @@ class Sweeper2d(tk.Frame):
         self.lstbox_to_read = tk.Listbox(self, listvariable=devices,
                                          selectmode='multiple', width=20,
                                          height=len(parameters_to_read) * 1)
-        self.lstbox_to_read.place(relx=0.45, rely=0.21)
+        self.lstbox_to_read.place(relx=0.45, rely=0.17)
         
         self.dict_lstbox = {}
         
         for parameter in parameters_to_read:
             self.dict_lstbox[parameter] = parameter
+            
+        lstbox_height = len(parameters_to_read) / 47
         
         button_update_sweep = tk.Button(self, text = 'Update sweep', command = lambda: self.update_sweep_configuration())
-        button_update_sweep.place(relx = 0.45, rely = 0.25 +  len(parameters_to_read) / 1080)
+        button_update_sweep.place(relx = 0.45, rely = 0.21 +  lstbox_height)
 
-        button_pause = tk.Button(self, text = '⏸️', command = lambda: self.pause)
-        button_pause.place(relx = 0.5, rely = 0.25 + len(parameters_to_read)/1080)
+        button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause)
+        button_pause.place(relx = 0.45, rely = 0.25 + lstbox_height)
         
-        button_stop = tk.Button(self, text = '⏹️', command = lambda: self.stop)
-        button_stop.place(relx = 0.5, rely = 0.3 + len(parameters_to_read)/1080)
+        button_stop = tk.Button(self, text = '⏹️', font = LARGE_FONT, command = lambda: self.stop)
+        button_stop.place(relx = 0.4875, rely = 0.25 + lstbox_height)
         
-        button_tozero = tk.Button(self, text = 'To zero', command = lambda: self.tozero)
-        button_tozero.place(relx = 0.55, rely = 0.25 + len(parameters_to_read)/1080)
+        button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero)
+        button_tozero.place(relx = 0.45, rely = 0.3 + lstbox_height)
 
         label_options = tk.Label(self, text = 'Options:', font=LARGE_FONT)
         label_options.place(relx = 0.05, rely = 0.25)
@@ -1577,10 +1604,10 @@ class Sweeper2d(tk.Frame):
         self.entry_delay_factor1 = tk.Entry(self)
         self.entry_delay_factor1.place(relx=0.12, rely=0.51)
 
-        label_min2 = tk.Label(self, text='MIN', font=LARGE_FONT)
+        label_min2 = tk.Label(self, text='From', font=LARGE_FONT)
         label_min2.place(relx=0.27, rely=0.29)
 
-        label_max2 = tk.Label(self, text='MAX', font=LARGE_FONT)
+        label_max2 = tk.Label(self, text='To', font=LARGE_FONT)
         label_max2.place(relx=0.27, rely=0.33)
 
         label_step2 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
@@ -1623,26 +1650,26 @@ class Sweeper2d(tk.Frame):
                                            offvalue=0, command=lambda: self.save_manual_status(i=1))
         checkbox_manual1.place(relx=0.12, rely=0.57)
 
-        button_new_manual1 = ttk.Button(self, text='New', command=lambda: self.open_blank(
+        button_new_manual1 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(
             filename=self.manual_filenames[0], i=1))
-        button_new_manual1.place(relx=0.17, rely=0.57)
+        button_new_manual1.place(relx=0.12, rely=0.6)
 
-        button_explore_manual1 = ttk.Button(
-            self, text='🔎', command=lambda: self.explore_files(i=0))
-        button_explore_manual1.place(relx=0.17, rely=0.61)
+        button_explore_manual1 = tk.Button(
+            self, text='🔎', font = LARGE_FONT, command=lambda: self.explore_files(i=0))
+        button_explore_manual1.place(relx=0.15, rely=0.6)
 
         checkbox_manual2 = ttk.Checkbutton(self, text='Maunal sweep select',
                                            variable=self.status_manual2, onvalue=1,
                                            offvalue=0, command=lambda: self.save_manual_status(i=2))
         checkbox_manual2.place(relx=0.27, rely=0.57)
 
-        button_new_manual2 = ttk.Button(self, text='New', command=lambda: self.open_blank(
+        button_new_manual2 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(
             filename=self.manual_filenames[1], i=0))
-        button_new_manual2.place(relx=0.32, rely=0.57)
+        button_new_manual2.place(relx=0.27, rely=0.6)
 
-        button_explore_manual2 = ttk.Button(
-            self, text='🔎', command=lambda: self.explore_files(i=1))
-        button_explore_manual2.place(relx=0.32, rely=0.61)
+        button_explore_manual2 = tk.Button(
+            self, text='🔎', font = LARGE_FONT, command=lambda: self.explore_files(i=1))
+        button_explore_manual2.place(relx=0.3, rely=0.6)
         
         label_condition = tk.Label(self, text = 'Constraints:', font = LARGE_FONT)
         label_condition.place(relx = 0.12, rely = 0.66)
@@ -1656,19 +1683,19 @@ class Sweeper2d(tk.Frame):
                                        width = width)
         self.entry_filename.place(relx = 0.97 - width / 100, rely = 0.9)
 
-        button_settings = tk.Button(text = '⚙️', font = LARGE_FONT, command = lambda: self.open_settings())
+        button_settings = tk.Button(self, text = '⚙️', font = SUPER_LARGE, command = lambda: self.open_settings())
         button_settings.place(relx = 0.85, rely = 0.15)
 
-        button_filename = ttk.Button(
+        button_filename = tk.Button(
             self, text = 'Browse...', command=lambda: self.set_filename_sweep())
         button_filename.place(relx=0.85, rely=0.9)
 
-        button_start_sweeping = ttk.Button(
+        button_start_sweeping = tk.Button(
             self, text="Start sweeping", command=lambda: self.start_sweeping())
         button_start_sweeping.place(relx=0.7, rely=0.7)
 
-        graph_button = ttk.Button(
-            self, text='📈', command=lambda: self.open_graph())
+        graph_button = tk.Button(
+            self, text='📊', font = SUPER_LARGE, command=lambda: self.open_graph())
         graph_button.place(relx=0.7, rely=0.8)
         
     def update_master2_combo(self, event, interval = 1000):
@@ -1785,7 +1812,7 @@ class Sweeper2d(tk.Frame):
         os.startfile(filename)
 
     def open_settings(self):        
-        self.window_settings = Universal_frontend((Settings,), Settings, fargs = Sweeper2d)
+        self.window_settings = Universal_frontend((Settings,), Settings)
         self.window_settings.mainloop()
 
     def explore_files(self, i):
@@ -1954,7 +1981,7 @@ class Sweeper3d(tk.Frame):
         label = tk.Label(self, text='3dSweeper', font=LARGE_FONT)
         label.pack(pady=10, padx=10)
 
-        button_home = ttk.Button(self, text='Back to Home',
+        button_home = tk.Button(self, text='Back to Home',
                                  command=lambda: controller.show_frame(StartPage))
         button_home.pack()
 
@@ -1983,19 +2010,21 @@ class Sweeper3d(tk.Frame):
         self.combo_master3.place(relx = 0.45, rely = 0.17)
         
         label_devices = tk.Label(self, text = 'Devices:', font=LARGE_FONT)
-        label_devices.place(relx = 0.05, rely = 0.17)
+        label_devices.place(relx = 0.05, rely = 0.21)
+        
+        lstbox_height = len(parameters_to_read) / 47
         
         button_update_sweep = tk.Button(self, text = 'Update sweep', command = lambda: self.update_sweep_configuration)
-        button_update_sweep.place(relx = 0.6, rely = 0.25 + len(parameters_to_read)/1080)
+        button_update_sweep.place(relx = 0.6, rely = 0.21 + lstbox_height)
         
-        button_pause = tk.Button(self, text = '⏸️', command = lambda: self.pause)
-        button_pause.place(relx = 0.7, rely = 0.25 + len(parameters_to_read)/1080)
+        button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause)
+        button_pause.place(relx = 0.6, rely = 0.25 + lstbox_height)
         
-        button_stop = tk.Button(self, text = '⏹️', command = lambda: self.stop)
-        button_stop.place(relx = 0.7, rely = 0.3 + len(parameters_to_read)/1080)
+        button_stop = tk.Button(self, text = '⏹️', font = LARGE_FONT, command = lambda: self.stop)
+        button_stop.place(relx = 0.6335, rely = 0.25 + lstbox_height)
         
-        button_tozero = tk.Button(self, text = 'To zero', command = lambda: self.tozero)
-        button_tozero.place(relx = 0.75, rely = 0.25 + len(parameters_to_read)/1080)
+        button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero)
+        button_tozero.place(relx = 0.6, rely = 0.3 + lstbox_height)
 
         self.combo_to_sweep1 = ttk.Combobox(self, value=list_of_devices)
         self.combo_to_sweep1.current(0)
@@ -2020,7 +2049,7 @@ class Sweeper3d(tk.Frame):
         self.lstbox_to_read = tk.Listbox(self, listvariable=self.devices,
                                          selectmode='multiple', width=20,
                                          height=len(parameters_to_read) * 1)
-        self.lstbox_to_read.place(relx=0.6, rely=0.21)
+        self.lstbox_to_read.place(relx=0.6, rely=0.17)
         
         self.dict_lstbox = {}
         
@@ -2089,10 +2118,10 @@ class Sweeper3d(tk.Frame):
         self.entry_delay_factor2 = tk.Entry(self)
         self.entry_delay_factor2.place(relx=0.27, rely=0.51)
 
-        label_min3 = tk.Label(self, text='MIN', font=LARGE_FONT)
+        label_min3 = tk.Label(self, text='From', font=LARGE_FONT)
         label_min3.place(relx=0.42, rely=0.29)
 
-        label_max3 = tk.Label(self, text='MAX', font=LARGE_FONT)
+        label_max3 = tk.Label(self, text='To', font=LARGE_FONT)
         label_max3.place(relx=0.42, rely=0.33)
 
         label_step3 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
@@ -2135,39 +2164,39 @@ class Sweeper3d(tk.Frame):
                                            offvalue=0, command=lambda: self.save_manual_status(i=1))
         checkbox_manual1.place(relx=0.12, rely=0.57)
 
-        button_new_manual1 = ttk.Button(self, text='U0001F4DD', command=lambda: self.open_blank(
+        button_new_manual1 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(
             filename=self.manual_filenames[0], i=0))
-        button_new_manual1.place(relx=0.17, rely=0.57)
+        button_new_manual1.place(relx=0.12, rely=0.61)
 
-        button_explore_manual1 = ttk.Button(
-            self, text='🔎', command=lambda: self.explore_files(i=0))
-        button_explore_manual1.place(relx=0.17, rely=0.61)
+        button_explore_manual1 = tk.Button(
+            self, text='🔎', font = LARGE_FONT, command=lambda: self.explore_files(i=0))
+        button_explore_manual1.place(relx=0.15, rely=0.61)
 
         checkbox_manual2 = ttk.Checkbutton(self, text='Maunal sweep select',
                                            variable=self.status_manual2, onvalue=1,
                                            offvalue=0, command=lambda: self.save_manual_status(i=2))
         checkbox_manual2.place(relx=0.27, rely=0.57)
 
-        button_new_manual2 = ttk.Button(self, text='New', command=lambda: self.open_blank(
+        button_new_manual2 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(
             filename=self.manual_filenames[1], i=1))
-        button_new_manual2.place(relx=0.32, rely=0.57)
+        button_new_manual2.place(relx=0.27, rely=0.61)
 
-        button_explore_manual2 = ttk.Button(
-            self, text='🔎', command=lambda: self.explore_files(i=1))
-        button_explore_manual2.place(relx=0.32, rely=0.61)
+        button_explore_manual2 = tk.Button(
+            self, text='🔎', font = LARGE_FONT, command=lambda: self.explore_files(i=1))
+        button_explore_manual2.place(relx=0.3, rely=0.61)
 
         checkbox_manual3 = ttk.Checkbutton(self, text='Maunal sweep select',
                                            variable=self.status_manual3, onvalue=1,
                                            offvalue=0, command=lambda: self.save_manual_status(i=3))
         checkbox_manual3.place(relx=0.42, rely=0.57)
 
-        button_new_manual3 = ttk.Button(self, text='New', command=lambda: self.open_blank(
+        button_new_manual3 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(
             filename=self.manual_filenames[2], i=2))
-        button_new_manual3.place(relx=0.47, rely=0.57)
+        button_new_manual3.place(relx=0.42, rely=0.61)
 
-        button_explore_manual3 = ttk.Button(
-            self, text='🔎', command=lambda: self.explore_files(i=2))
-        button_explore_manual3.place(relx=0.47, rely=0.61)
+        button_explore_manual3 = tk.Button(
+            self, text='🔎', font = LARGE_FONT, command=lambda: self.explore_files(i=2))
+        button_explore_manual3.place(relx=0.45, rely=0.61)
         
         label_condition = tk.Label(self, text = 'Constraints:', font = LARGE_FONT)
         label_condition.place(relx = 0.12, rely = 0.66)
@@ -2181,20 +2210,20 @@ class Sweeper3d(tk.Frame):
                                        width = width)
         self.entry_filename.place(relx = 0.97 - width / 100, rely = 0.9)
 
-        button_settings = tk.Button(text = '⚙️', font = LARGE_FONT, command = lambda: self.open_settings())
+        button_settings = tk.Button(self, text = '⚙️', font = SUPER_LARGE, command = lambda: self.open_settings())
         button_settings.place(relx = 0.85, rely = 0.15)
 
-        button_filename = ttk.Button(
+        button_filename = tk.Button(
             self, text = 'Browse...', command=lambda: self.set_filename_sweep())
         button_filename.place(relx=0.85, rely=0.9)
 
-        button_start_sweeping = ttk.Button(
+        button_start_sweeping = tk.Button(
             self, text="Start sweeping", command=lambda: self.start_sweeping())
         button_start_sweeping.place(relx=0.75, rely=0.7)
 
-        graph_button = ttk.Button(
-            self, text='📈', command=lambda: self.open_graph())
-        graph_button.place(relx=0.7, rely=0.8)
+        graph_button = tk.Button(
+            self, text='📊', font = SUPER_LARGE, command=lambda: self.open_graph())
+        graph_button.place(relx=0.75, rely=0.8)
 
     def update_master23_combo(self, event, interval = 1000):
         if self.combo_master1['value'][self.combo_master1.current()] == '':
@@ -2393,7 +2422,7 @@ class Sweeper3d(tk.Frame):
         os.startfile(filename)
         
     def open_settings(self):        
-        self.window_settings = Universal_frontend((Settings,), Settings, fargs = Sweeper3d)
+        self.window_settings = Universal_frontend((Settings,), Settings)
         self.window_settings.mainloop()
 
     def explore_files(self, i):
@@ -2626,12 +2655,16 @@ class Sweeper3d(tk.Frame):
 
 class Settings(tk.Frame):
     
-    def __init__(self, parent, controller, inherit):
+    def __init__(self, parent, controller):
 
         tk.Frame.__init__(self, parent)
         
-        parent = inherit(parent, controller)
+        print('Settings_self = ', self)
         
+        parent = globals()['Sweeper_object']
+        
+        print('Parent = ', parent, 'type = ', type(parent))
+            
         self.combo_devices = ttk.Combobox(self, value = list_of_devices)
         self.combo_devices.current(0)
         self.combo_devices.bind(
@@ -2643,6 +2676,8 @@ class Settings(tk.Frame):
         self.combo_set_parameters.place(relx=0.05, rely=0.2)
         
         parameters = list(parent.lstbox_to_read.get(0, tk.END))
+        
+        print('Settings get options:', parameters)
         
         if len(parameters) == 0:
             parameters = ['']
@@ -3744,9 +3779,9 @@ interval = 100
 
 
 def main():
-    write_config_parameters()
-    write_config_channels()
-    app = Universal_frontend(classes=(StartPage, Lock_in_settings, Sweeper1d, Sweeper2d, Sweeper3d),
+    #write_config_parameters()
+    #write_config_channels()
+    app = Universal_frontend(classes=(StartPage, Sweeper1d, Sweeper2d, Sweeper3d),
                              start=StartPage)
     app.mainloop()
     while True:
