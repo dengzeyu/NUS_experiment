@@ -61,16 +61,16 @@ device_to_sweep3 = 'Time'
 parameter_to_sweep1 = ''
 parameter_to_sweep2 = ''
 parameter_to_sweep3 = ''
-min_sweep1 = 0
-max_sweep1 = 1
+from_sweep1 = 0
+to_sweep1 = 1
 ratio_sweep1 = 0.1
 delay_factor1 = 0.1
-min_sweep2 = 0
-max_sweep2 = 1
+from_sweep2 = 0
+to_sweep2 = 1
 ratio_sweep2 = 0.1
 delay_factor2 = 0.1
-min_sweep3 = 0
-max_sweep3 = 1
+from_sweep3 = 0
+to_sweep3 = 1
 ratio_sweep3 = 0.1
 delay_factor3 = 0.1
 filename_sweep = cur_dir + '\data_files\sweep' + datetime.today().strftime(
@@ -92,6 +92,9 @@ manual_filenames = [cur_dir + '\data_files\manual' + datetime.today().strftime(
     '%H_%M_%d_%m_%Y') + '.csv']
 
 master_lock = False
+
+back_and_forth_slave = False
+back_and_forth_master = False
 
 columns = []
 
@@ -329,6 +332,8 @@ class lock_in():
         self.sr830.write(line)
 
     def set_frequency(self, value=30.0):
+        if value < 1e-3:
+            value = 1e-3
         line = 'FREQ' + str(value)
         self.sr830.write(line)
 
@@ -337,6 +342,8 @@ class lock_in():
         self.sr830.write(line)
 
     def set_amplitude(self, value=0.5):
+        if value < 4e-3:
+            value = 4e-3
         line = 'SLVL' + str(value)
         self.sr830.write(line)
 
@@ -549,11 +556,13 @@ except:
 with open(cur_dir + '\\config\\adress_dictionary.txt', 'r') as file:
     adress_dict = file.read()
 adress_dict = json.loads(adress_dict)
-        
-for type_, ind_ in enumerate(types_of_devices):
+    
+for ind_, type_ in enumerate(types_of_devices):
     if type_ == 'Not a class':
+        print(1)
         if list_of_devices[ind_] in list(adress_dict.keys()):
-            types_of_devices[ind_] = list(adress_dict[list_of_devices[ind_]])[0]
+            print(2)
+            types_of_devices[ind_] = adress_dict[list_of_devices[ind_]]
         
 
 def new_parameters_to_read(types_of_devices = types_of_devices):
@@ -1240,14 +1249,14 @@ class Sweeper1d(tk.Frame):
         button_update_sweep = tk.Button(self, text = 'Update sweep', command = lambda: self.update_sweep_configuration())
         button_update_sweep.place(relx = 0.3, rely = 0.21 + lstbox_height)
 
-        button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause)
-        button_pause.place(relx = 0.3, rely = 0.25 +lstbox_height)
+        self.button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause())
+        self.button_pause.place(relx = 0.3, rely = 0.25 +lstbox_height)
         
-        button_stop = tk.Button(self, text = '⏹️', font = LARGE_FONT, command = lambda: self.stop)
-        button_stop.place(relx = 0.3375, rely = 0.25 + lstbox_height)
+        self.button_stop = tk.Button(self, text = '⏹️', font = LARGE_FONT, command = lambda: self.stop())
+        self.button_stop.place(relx = 0.3375, rely = 0.25 + lstbox_height)
         
-        button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero)
-        button_tozero.place(relx = 0.3, rely = 0.3 + lstbox_height)
+        self.button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero())
+        self.button_tozero.place(relx = 0.3, rely = 0.3 + lstbox_height)
 
         label_options = tk.Label(self, text = 'Options:', font = LARGE_FONT)
         label_options.place(relx = 0.05, rely = 0.2)
@@ -1343,18 +1352,18 @@ class Sweeper1d(tk.Frame):
                 self.sweep_options1.after(interval)
 
     def update_sweep_configurarion(self):
-        global min_sweep1
-        global max_sweep1
+        global from_sweep1
+        global to_sweep1
         global ratio_sweep1
         global delay_factor1
         
         try:
-            min_sweep1 = float(self.entry_min.get())
+            from_sweep1 = float(self.entry_min.get())
         except ValueError:
             pass
         
         try:
-            max_sweep1 = float(self.entry_max.get())
+            to_sweep1 = float(self.entry_max.get())
         except ValueError:
             pass
         
@@ -1368,7 +1377,7 @@ class Sweeper1d(tk.Frame):
         except ValueError:
             pass
         
-        if min_sweep1 > max_sweep1 and ratio_sweep1 > 0:
+        if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
             ratio_sweep1 = -ratio_sweep1
     
     def save_manual_status(self):
@@ -1422,14 +1431,19 @@ class Sweeper1d(tk.Frame):
     def pause(self):
         global pause_flag
         
+        def update_button_text():
+            if self.button_pause['text'] == '⏸️':
+                self.button_pause['text'] = '▶️'
+            if self.button_pause['text'] == '▶️':
+                self.button_pause['text'] = '⏸️'
+        
         pause_flag = not(pause_flag)
         
-        if self.button_pause['text'] == '⏸️':
-            self.button_pase['text'] = '▶️'
-        if self.button_pause['text'] == '▶️':
-            self.button_pause['text'] = '⏸️'
-            
-        self.button_pause.after(1000)
+        self.button_pause.after(100, update_button_text())
+                
+        tk.Frame(self).update_idletasks()
+        tk.Frame(self).update()
+        
         
     def stop(self):
         
@@ -1449,8 +1463,8 @@ class Sweeper1d(tk.Frame):
         global types_of_devices
         global device_to_sweep1
         global parameter_to_sweep1
-        global min_sweep1
-        global max_sweep1
+        global from_sweep1
+        global to_sweep1
         global ratio_sweep1
         global delay_factor1
         global parameters_to_read
@@ -1480,7 +1494,7 @@ class Sweeper1d(tk.Frame):
             columns = ['Time']
         else:
             device_to_sweep1 = list_of_devices[self.combo_to_sweep1.current()]
-            parameters = getattr(types_of_devices[list_of_devices.index(device_to_sweep1)], 'set_options')
+            parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](), 'set_options')
             parameter_to_sweep1 = parameters[self.sweep_options1.current()]
             columns = ['Time', device_to_sweep1 + '.' + parameter_to_sweep1]
         for option in parameters_to_read:
@@ -1488,12 +1502,12 @@ class Sweeper1d(tk.Frame):
 
         # fixing sweeper parmeters
         if self.entry_min.get() != '':
-            min_sweep1 = self.entry_min.get()
+            from_sweep1 = self.entry_min.get()
         if self.entry_max.get() != '':
-            max_sweep1 = self.entry_max.get()
+            to_sweep1 = self.entry_max.get()
         if self.entry_ratio.get() != '':
             ratio_sweep1 = self.entry_ratio.get()
-        if min_sweep1 < max_sweep1 and ratio_sweep1 > 0:
+        if from_sweep1 < to_sweep1 and ratio_sweep1 > 0:
             ratio_sweep1 = - ratio_sweep1
         if self.entry_delay_factor.get() != '':
             delay_factor1 = self.entry_delay_factor.get()
@@ -1558,7 +1572,19 @@ class Sweeper2d(tk.Frame):
         self.combo_to_sweep2.bind(
             "<<ComboboxSelected>>", self.update_sweep_parameters2)
         self.combo_to_sweep2.place(relx=0.3, rely=0.21)
-
+        
+        self.status_back_and_forth_slave = tk.IntVar(value = 0)
+        
+        back_and_forth_slave = False
+    
+        self.checkbox_back_and_forth_slave = ttk.Checkbutton(self,
+                                           variable=self.status_back_and_forth_slave, onvalue=1,
+                                           offvalue=0, command=lambda: self.save_back_and_forth_slave_status())
+        self.checkbox_back_and_forth_slave.place(relx=0.38, rely=0.61)
+        
+        label_back_and_forth_slave = tk.Label(self, text = '🔁', font = SUPER_LARGE)
+        label_back_and_forth_slave.place(relx = 0.3935, rely = 0.6)
+    
         devices = tk.StringVar()
         devices.set(value=parameters_to_read)
         self.lstbox_to_read = tk.Listbox(self, listvariable=devices,
@@ -1576,14 +1602,14 @@ class Sweeper2d(tk.Frame):
         button_update_sweep = tk.Button(self, text = 'Update sweep', command = lambda: self.update_sweep_configuration())
         button_update_sweep.place(relx = 0.45, rely = 0.21 +  lstbox_height)
 
-        button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause)
-        button_pause.place(relx = 0.45, rely = 0.25 + lstbox_height)
+        self.button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause())
+        self.button_pause.place(relx = 0.45, rely = 0.25 + lstbox_height)
         
-        button_stop = tk.Button(self, text = '⏹️', font = LARGE_FONT, command = lambda: self.stop)
-        button_stop.place(relx = 0.4875, rely = 0.25 + lstbox_height)
+        self.button_stop = tk.Button(self, text = '⏹️', font = LARGE_FONT, command = lambda: self.stop())
+        self.button_stop.place(relx = 0.4875, rely = 0.25 + lstbox_height)
         
-        button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero)
-        button_tozero.place(relx = 0.45, rely = 0.3 + lstbox_height)
+        self.button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero())
+        self.button_tozero.place(relx = 0.45, rely = 0.3 + lstbox_height)
 
         label_options = tk.Label(self, text = 'Options:', font=LARGE_FONT)
         label_options.place(relx = 0.05, rely = 0.25)
@@ -1760,22 +1786,22 @@ class Sweeper2d(tk.Frame):
             self.sweep_options2.after(interval)
 
     def update_sweep_configurarion(self):
-        global min_sweep1
-        global max_sweep1
+        global from_sweep1
+        global to_sweep1
         global ratio_sweep1
         global delay_factor1
-        global min_sweep2
-        global max_sweep2
+        global from_sweep2
+        global to_sweep2
         global ratio_sweep2
         global delay_factor2
         
         try:
-            min_sweep1 = float(self.entry_min1.get())
+            from_sweep1 = float(self.entry_min1.get())
         except ValueError:
             pass
         
         try:
-            max_sweep1 = float(self.entry_max1.get())
+            to_sweep1 = float(self.entry_max1.get())
         except ValueError:
             pass
         
@@ -1790,12 +1816,12 @@ class Sweeper2d(tk.Frame):
             pass
         
         try:
-            min_sweep2 = float(self.entry_min2.get())
+            from_sweep2 = float(self.entry_min2.get())
         except ValueError:
             pass
         
         try:
-            max_sweep2 = float(self.entry_max2.get())
+            to_sweep2 = float(self.entry_max2.get())
         except ValueError:
             pass
         
@@ -1809,10 +1835,10 @@ class Sweeper2d(tk.Frame):
         except ValueError:
             pass
         
-        if min_sweep1 > max_sweep1 and ratio_sweep1 > 0:
+        if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
             ratio_sweep1 = -ratio_sweep1
             
-        if min_sweep2 > max_sweep2 and ratio_sweep2 > 0:
+        if from_sweep2 > to_sweep2 and ratio_sweep2 > 0:
             ratio_sweep2 = -ratio_sweep2
 
     def save_manual_status(self, i):
@@ -1820,6 +1846,14 @@ class Sweeper2d(tk.Frame):
             self.manual_sweep_flags[i -
                                     1] = getattr(self, 'status_manual' + str(i)).get()
 
+    def save_back_and_forth_slave_status(self):
+        global back_and_forth_slave
+        
+        if self.status_back_and_forth_slave == 0:
+            back_and_forth_slave = False
+        else:
+            back_and_forth_slave = True
+    
     def open_blank(self, filename, i):
         df = pd.DataFrame(columns=['steps'])
         df.to_csv(filename, index=False)
@@ -1870,7 +1904,7 @@ class Sweeper2d(tk.Frame):
         pause_flag = not(pause_flag)
         
         if self.button_pause['text'] == '⏸️':
-            self.button_pase['text'] = '▶️'
+            self.button_pause['text'] = '▶️'
         if self.button_pause['text'] == '▶️':
             self.button_pause['text'] = '⏸️'
             
@@ -1896,12 +1930,12 @@ class Sweeper2d(tk.Frame):
         global device_to_sweep2
         global parameter_to_sweep1
         global parameter_to_sweep2
-        global min_sweep1
-        global max_sweep1
+        global from_sweep1
+        global to_sweep1
         global ratio_sweep1
         global delay_factor1
-        global min_sweep2
-        global max_sweep2
+        global from_sweep2
+        global to_sweep2
         global ratio_sweep2
         global delay_factor2
         global parameters_to_read
@@ -1930,11 +1964,11 @@ class Sweeper2d(tk.Frame):
 
         # creating columns
         device_to_sweep1 = list_of_devices[self.combo_to_sweep1.current()]
-        parameters = getattr(types_of_devices[list_of_devices.index(device_to_sweep1)], 'set_options')
+        parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](), 'set_options')
         parameter_to_sweep1 = parameters[self.sweep_options1.current()]
         
         device_to_sweep2 = list_of_devices[self.combo_to_sweep2.current()]
-        parameters = getattr(types_of_devices[list_of_devices.index(device_to_sweep2)], 'set_options')
+        parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](), 'set_options')
         parameter_to_sweep2 = parameters[self.sweep_options2.current()]
         
         if self.combo_master1['value'][self.combo_master1.current()] == 'Slave' and self.combo_master2['value'][self.combo_maste2.current()] == 'Master':
@@ -1959,22 +1993,22 @@ class Sweeper2d(tk.Frame):
 
         # fixing sweeper parmeters
         if self.entry_min1.get() != '':
-            min_sweep1 = self.entry_min1.get()
+            from_sweep1 = self.entry_min1.get()
         if self.entry_max1.get() != '':
-            max_sweep1 = self.entry_max1.get()
+            to_sweep1 = self.entry_max1.get()
         if self.entry_ratio1.get() != '':
             ratio_sweep1 = self.entry_ratio1.get()
-        if min_sweep1 > max_sweep1 and ratio_sweep1 > 0:
+        if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
             ratio_sweep1 = -ratio_sweep1
         if self.entry_delay_factor1.get() != '':
             delay_factor1 = self.entry_delay_factor1.get()
         if self.entry_min2.get() != '':
-            min_sweep2 = self.entry_min2.get()
+            from_sweep2 = self.entry_min2.get()
         if self.entry_max2.get() != '':
-            max_sweep2 = self.entry_max2.get()
+            to_sweep2 = self.entry_max2.get()
         if self.entry_ratio2.get() != '':
             ratio_sweep2 = self.entry_ratio2.get()
-        if min_sweep2 > max_sweep1 and ratio_sweep2 > 0:
+        if from_sweep2 > to_sweep1 and ratio_sweep2 > 0:
             ratio_sweep2 = -ratio_sweep2
         if self.entry_delay_factor2.get() != '':
             delay_factor2 = self.entry_delay_factor2.get()
@@ -2032,14 +2066,14 @@ class Sweeper3d(tk.Frame):
         button_update_sweep = tk.Button(self, text = 'Update sweep', command = lambda: self.update_sweep_configuration)
         button_update_sweep.place(relx = 0.6, rely = 0.21 + lstbox_height)
         
-        button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause)
-        button_pause.place(relx = 0.6, rely = 0.25 + lstbox_height)
+        self.button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause())
+        self.button_pause.place(relx = 0.6, rely = 0.25 + lstbox_height)
         
-        button_stop = tk.Button(self, text = '⏹️', font = LARGE_FONT, command = lambda: self.stop)
-        button_stop.place(relx = 0.6335, rely = 0.25 + lstbox_height)
+        self.button_stop = tk.Button(self, text = '⏹️', font = LARGE_FONT, command = lambda: self.stop())
+        self.button_stop.place(relx = 0.6335, rely = 0.25 + lstbox_height)
         
-        button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero)
-        button_tozero.place(relx = 0.6, rely = 0.3 + lstbox_height)
+        self.button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero())
+        self.button_tozero.place(relx = 0.6, rely = 0.3 + lstbox_height)
 
         self.combo_to_sweep1 = ttk.Combobox(self, value=list_of_devices)
         self.combo_to_sweep1.current(0)
@@ -2052,12 +2086,34 @@ class Sweeper3d(tk.Frame):
         self.combo_to_sweep2.bind(
             "<<ComboboxSelected>>", self.update_sweep_parameters2)
         self.combo_to_sweep2.place(relx=0.3, rely=0.21)
+        
+        self.status_back_and_forth_master = tk.IntVar(value = 0)
+    
+        self.checkbox_back_and_forth_master = ttk.Checkbutton(self,
+                                           variable=self.status_back_and_forth_master, onvalue=1,
+                                           offvalue=0, command=lambda: self.save_back_and_forth_master_status())
+        self.checkbox_back_and_forth_master.place(relx=0.35, rely=0.62)
+        
+        label_back_and_forth_master = tk.Label(self, text = '🔁', font = SUPER_LARGE)
+        label_back_and_forth_master.place(relx = 0.3635, rely = 0.61)
 
         self.combo_to_sweep3 = ttk.Combobox(self, value=list_of_devices)
         self.combo_to_sweep3.current(0)
         self.combo_to_sweep3.bind(
             "<<ComboboxSelected>>", self.update_sweep_parameters3)
         self.combo_to_sweep3.place(relx=0.45, rely=0.21)
+        
+        self.status_back_and_forth_slave = tk.IntVar(value = 0)
+    
+        back_and_forth_slave = False
+    
+        self.checkbox_back_and_forth_slave = ttk.Checkbutton(self,
+                                           variable=self.status_back_and_forth_slave, onvalue=1,
+                                           offvalue=0, command=lambda: self.save_back_and_forth_slave_status())
+        self.checkbox_back_and_forth_slave.place(relx=0.5, rely=0.62)
+        
+        label_back_and_forth_slave = tk.Label(self, text = '🔁', font = SUPER_LARGE)
+        label_back_and_forth_slave.place(relx = 0.5135, rely = 0.61)
 
         self.devices = tk.StringVar()
         self.devices.set(value=parameters_to_read)
@@ -2343,26 +2399,26 @@ class Sweeper3d(tk.Frame):
             self.sweep_options3.after(interval)
             
     def update_sweep_configurarion(self):
-        global min_sweep1
-        global max_sweep1
+        global from_sweep1
+        global to_sweep1
         global ratio_sweep1
         global delay_factor1
-        global min_sweep2
-        global max_sweep2
+        global from_sweep2
+        global to_sweep2
         global ratio_sweep2
         global delay_factor2
-        global min_sweep3
-        global max_sweep3
+        global from_sweep3
+        global to_sweep3
         global ratio_sweep3
         global delay_factor3
         
         try:
-            min_sweep1 = float(self.entry_min1.get())
+            from_sweep1 = float(self.entry_min1.get())
         except ValueError:
             pass
         
         try:
-            max_sweep1 = float(self.entry_max1.get())
+            to_sweep1 = float(self.entry_max1.get())
         except ValueError:
             pass
         
@@ -2377,12 +2433,12 @@ class Sweeper3d(tk.Frame):
             pass
         
         try:
-            min_sweep2 = float(self.entry_min2.get())
+            from_sweep2 = float(self.entry_min2.get())
         except ValueError:
             pass
         
         try:
-            max_sweep2 = float(self.entry_max2.get())
+            to_sweep2 = float(self.entry_max2.get())
         except ValueError:
             pass
         
@@ -2397,12 +2453,12 @@ class Sweeper3d(tk.Frame):
             pass
         
         try:
-            min_sweep3 = float(self.entry_min3.get())
+            from_sweep3 = float(self.entry_min3.get())
         except ValueError:
             pass
         
         try:
-            max_sweep3 = float(self.entry_max3.get())
+            to_sweep3 = float(self.entry_max3.get())
         except ValueError:
             pass
         
@@ -2416,13 +2472,13 @@ class Sweeper3d(tk.Frame):
         except ValueError:
             pass
         
-        if min_sweep1 > max_sweep1 and ratio_sweep1 > 0:
+        if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
             ratio_sweep1 = -ratio_sweep1
             
-        if min_sweep2 > max_sweep2 and ratio_sweep2 > 0:
+        if from_sweep2 > to_sweep2 and ratio_sweep2 > 0:
             ratio_sweep2 = -ratio_sweep2
             
-        if min_sweep3 > max_sweep3 and ratio_sweep3 > 0:
+        if from_sweep3 > to_sweep3 and ratio_sweep3 > 0:
             ratio_sweep3 = -ratio_sweep3
 
     def save_manual_status(self, i):
@@ -2430,6 +2486,22 @@ class Sweeper3d(tk.Frame):
             self.manual_sweep_flags[i -
                                     1] = getattr(self, 'status_manual' + str(i)).get()
 
+    def save_back_and_forth_master_status(self):
+        global back_and_forth_master
+        
+        if self.status_back_and_forth_master == 0:
+            back_and_forth_master = False
+        else:
+            back_and_forth_master = True
+            
+    def save_back_and_forth_slave_status(self):
+        global back_and_forth_slave
+        
+        if self.status_back_and_forth_slave == 0:
+            back_and_forth_slave = False
+        else:
+            back_and_forth_slave = True
+    
     def open_blank(self, filename, i):
         df = pd.DataFrame(columns=['steps'])
         df.to_csv(filename, index=False)
@@ -2480,7 +2552,7 @@ class Sweeper3d(tk.Frame):
         pause_flag = not(pause_flag)
         
         if self.button_pause['text'] == '⏸️':
-            self.button_pase['text'] = '▶️'
+            self.button_pause['text'] = '▶️'
         if self.button_pause['text'] == '▶️':
             self.button_pause['text'] = '⏸️'
             
@@ -2508,16 +2580,16 @@ class Sweeper3d(tk.Frame):
         global parameter_to_sweep1
         global parameter_to_sweep2
         global parameter_to_sweep3
-        global min_sweep1
-        global max_sweep1
+        global from_sweep1
+        global to_sweep1
         global ratio_sweep1
         global delay_factor1
-        global min_sweep2
-        global max_sweep2
+        global from_sweep2
+        global to_sweep2
         global ratio_sweep2
         global delay_factor2
-        global min_sweep3
-        global max_sweep3
+        global from_sweep3
+        global to_sweep3
         global ratio_sweep3
         global delay_factor3
         global parameters_to_read
@@ -2546,15 +2618,15 @@ class Sweeper3d(tk.Frame):
 
         # creating columns
         device_to_sweep1 = list_of_devices[self.combo_to_sweep1.current()]
-        parameters = getattr(types_of_devices[list_of_devices.index(device_to_sweep1)], 'set_options')
+        parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](), 'set_options')
         parameter_to_sweep1 = parameters[self.sweep_options1.current()]
         
         device_to_sweep2 = list_of_devices[self.combo_to_sweep2.current()]
-        parameters = getattr(types_of_devices[list_of_devices.index(device_to_sweep2)], 'set_options')
+        parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](), 'set_options')
         parameter_to_sweep2 = parameters[self.sweep_options2.current()]
         
         device_to_sweep3 = list_of_devices[self.combo_to_sweep3.current()]
-        parameters = getattr(types_of_devices[list_of_devices.index(device_to_sweep3)], 'set_options')
+        parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep3)]](), 'set_options')
         parameter_to_sweep3 = parameters[self.sweep_options3.current()]
         
         if self.combo_master1['value'][self.combo_master1.current()] == 'Slave-slave' and self.combo_master2['value'][self.combo_master2.current()] == 'Slave' and self.combo_master3['value'][self.combo_master3.current()] == 'Master':
@@ -2630,32 +2702,32 @@ class Sweeper3d(tk.Frame):
 
         # fixing sweeper parmeters
         if self.entry_min1.get() != '':
-            min_sweep1 = self.entry_min1.get()
+            from_sweep1 = self.entry_min1.get()
         if self.entry_max1.get() != '':
-            max_sweep1 = self.entry_max1.get()
+            to_sweep1 = self.entry_max1.get()
         if self.entry_ratio1.get() != '':
             ratio_sweep1 = self.entry_ratio1.get()
-        if min_sweep1 > max_sweep1 and ratio_sweep1 > 0:
+        if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
             ratio_sweep1 = -ratio_sweep1
         if self.entry_delay_factor1.get() != '':
             delay_factor1 = self.entry_delay_factor1.get()
         if self.entry_min2.get() != '':
-            min_sweep2 = self.entry_min2.get()
+            from_sweep2 = self.entry_min2.get()
         if self.entry_max2.get() != '':
-            max_sweep2 = self.entry_max2.get()
+            to_sweep2 = self.entry_max2.get()
         if self.entry_ratio2.get() != '':
             ratio_sweep2 = self.entry_ratio2.get()
-        if min_sweep2 > max_sweep2 and ratio_sweep2 > 0:
+        if from_sweep2 > to_sweep2 and ratio_sweep2 > 0:
             ratio_sweep2 = -ratio_sweep2
         if self.entry_delay_factor2.get() != '':
             delay_factor2 = self.entry_delay_factor2.get()
         if self.entry_min3.get() != '':
-            min_sweep3 = self.entry_min3.get()
+            from_sweep3 = self.entry_min3.get()
         if self.entry_max3.get() != '':
-            max_sweep3 = self.entry_max3.get()
+            to_sweep3 = self.entry_max3.get()
         if self.entry_ratio3.get() != '':
             ratio_sweep3 = self.entry_ratio3.get()
-        if min_sweep3 > max_sweep3 and ratio_sweep3 > 0:
+        if from_sweep3 > to_sweep3 and ratio_sweep3 > 0:
             ratio_sweep3 = -ratio_sweep3
         if self.entry_delay_factor3.get() != '':
             delay_factor3 = self.entry_delay_factor3.get()
@@ -2676,6 +2748,9 @@ class Settings(tk.Frame):
         
         parent = globals()['Sweeper_object']
         
+        label_adress = tk.Label(self, text = 'Set device type:')
+        label_adress.place(relx = 0.05, rely = 0.05)
+        
         self.combo_adresses = ttk.Combobox(self, value = list_of_devices)
         self.combo_adresses.current(0)
         self.combo_adresses.place(relx = 0.05, rely = 0.1)
@@ -2688,16 +2763,18 @@ class Settings(tk.Frame):
         self.combo_types.bind("<<ComboboxSelected>>", self.set_type_to_adress)
         self.combo_types.place(relx = 0.2, rely = 0.1)
         
+        label_names = tk.Label(self, text = 'Change names:')
+        label_names.place(relx = 0.05, rely = 0.15)
             
         self.combo_devices = ttk.Combobox(self, value = list_of_devices)
         self.combo_devices.current(0)
         self.combo_devices.bind(
             "<<ComboboxSelected>>", self.update_combo_set_parameters)
-        self.combo_devices.place(relx=0.05, rely=0.15)
+        self.combo_devices.place(relx=0.05, rely=0.2)
         
         self.combo_set_parameters = ttk.Combobox(self, value = [''])
         self.combo_set_parameters.current(0)
-        self.combo_set_parameters.place(relx=0.05, rely=0.2)
+        self.combo_set_parameters.place(relx=0.05, rely=0.25)
         
         parameters = list(parent.lstbox_to_read.get(0, tk.END))
         
@@ -2706,25 +2783,25 @@ class Settings(tk.Frame):
         
         self.combo_get_parameters = ttk.Combobox(self, value = parameters)
         self.combo_get_parameters.current(0)
-        self.combo_get_parameters.place(relx=0.05, rely=0.25)
+        self.combo_get_parameters.place(relx=0.05, rely=0.3)
         
         self.entry_new_device = tk.Entry(self, width = 30)
-        self.entry_new_device.place(relx = 0.2, rely = 0.15)
+        self.entry_new_device.place(relx = 0.2, rely = 0.2)
         
         self.entry_new_set_parameter = tk.Entry(self, width = 30)
-        self.entry_new_set_parameter.place(relx = 0.2, rely = 0.2)
+        self.entry_new_set_parameter.place(relx = 0.2, rely = 0.25)
         
         self.entry_new_get_parameter = tk.Entry(self, width = 30)
-        self.entry_new_get_parameter.place(relx = 0.2, rely = 0.25)
+        self.entry_new_get_parameter.place(relx = 0.2, rely = 0.3)
         
-        button_change_name_device = tk.Button(self, text = 'Change device name', command = lambda: self.update_names_device(parent))
-        button_change_name_device.place(relx = 0.35, rely = 0.14)
+        button_change_name_device = tk.Button(self, text = 'Change device name', command = lambda: self.update_names_devices(parent))
+        button_change_name_device.place(relx = 0.35, rely = 0.19)
         
         button_change_name_set_parameters = tk.Button(self, text = 'Change set name', command = lambda: self.update_names_set_parameters(parent))
-        button_change_name_set_parameters.place(relx = 0.35, rely = 0.19)
+        button_change_name_set_parameters.place(relx = 0.35, rely = 0.24)
         
         button_change_name_get_parameters = tk.Button(self, text = 'Change get name', command = lambda: self.update_names_get_parameters(parent))
-        button_change_name_get_parameters.place(relx = 0.35, rely = 0.24)
+        button_change_name_get_parameters.place(relx = 0.35, rely = 0.29)
         
     def set_type_to_adress(self, interval = 1000):
         global adress_dict
@@ -2746,7 +2823,7 @@ class Settings(tk.Frame):
     def update_combo_set_parameters(self, event, interval = 1000):
         device_class = types_of_devices[self.combo_devices.current()]
         if device_class != 'Not a class':
-            self.combo_set_parameters['values'] = getattr(globals()[device_class], 'set_options')()
+            self.combo_set_parameters['values'] = getattr(globals()[device_class](), 'set_options')
             self.combo_set_parameters.after(interval)
         else:
             self.combo_set_parameters['values'] = ['']
@@ -2820,23 +2897,23 @@ class Sweeper_write(threading.Thread):
         self.parameter_to_sweep1 = parameter_to_sweep1
         self.parameter_to_sweep2 = parameter_to_sweep2
         self.parameter_to_sweep3 = parameter_to_sweep3
-        self.min_sweep1 = float(min_sweep1)
-        self.max_sweep1 = float(max_sweep1)
+        self.from_sweep1 = float(from_sweep1)
+        self.to_sweep1 = float(to_sweep1)
         self.ratio_sweep1 = float(ratio_sweep1)
         self.delay_factor1 = float(delay_factor1)
-        self.min_sweep2 = float(min_sweep2)
-        self.max_sweep2 = float(max_sweep2)
+        self.from_sweep2 = float(from_sweep2)
+        self.to_sweep2 = float(to_sweep2)
         self.ratio_sweep2 = float(ratio_sweep2)
         self.delay_factor2 = float(delay_factor2)
-        self.min_sweep3 = float(min_sweep3)
-        self.max_sweep3 = float(max_sweep3)
+        self.from_sweep3 = float(from_sweep3)
+        self.to_sweep3 = float(to_sweep3)
         self.ratio_sweep3 = float(ratio_sweep3)
         self.delay_factor3 = float(delay_factor3)
         self.parameters_to_read = parameters_to_read
         self.filename_sweep = filename_sweep
-        self.value1 = float(min_sweep1)
-        self.value2 = float(min_sweep2)
-        self.value3 = float(min_sweep3)
+        self.value1 = float(from_sweep1)
+        self.value2 = float(from_sweep2)
+        self.value3 = float(from_sweep3)
         self.columns = columns
         self.sweeper_flag1 = sweeper_flag1
         self.sweeper_flag2 = sweeper_flag2
@@ -2845,22 +2922,22 @@ class Sweeper_write(threading.Thread):
         self.step1 = float(delay_factor1) * float(ratio_sweep1)
         self.step2 = float(delay_factor2) * float(ratio_sweep2)
         self.step3 = float(delay_factor3) * float(ratio_sweep3)
-        self.time1 = (float(min_sweep1) - float(max_sweep1)) / float(ratio_sweep1)
-        self.time2 = (float(min_sweep2) - float(max_sweep2)) / float(ratio_sweep2)
-        self.time3 = (float(min_sweep3) - float(max_sweep3)) / float(ratio_sweep3)
+        self.time1 = (float(from_sweep1) - float(to_sweep1)) / float(ratio_sweep1)
+        self.time2 = (float(from_sweep2) - float(to_sweep2)) / float(ratio_sweep2)
+        self.time3 = (float(from_sweep3) - float(to_sweep3)) / float(ratio_sweep3)
         
         try:
-            self.nstep1 = (float(max_sweep1) - float(min_sweep1)) / self.ratio_sweep1 / self.delay_factor1
+            self.nstep1 = (float(to_sweep1) - float(from_sweep1)) / self.ratio_sweep1 / self.delay_factor1
             self.nstep1 = int(self.nstep1)
         except ValueError:
             self.nstep1 = 1
         try:
-            self.nstep2 = (float(max_sweep2) - float(min_sweep2)) / self.ratio_sweep2 / self.delay_factor2
+            self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
             self.nstep2 = int(self.nstep2)
         except ValueError:
             self.nstep2 = 1
         try:
-            self.nstep3 = (float(max_sweep3) - float(min_sweep3)) / self.ratio_sweep3 / self.delay_factor3
+            self.nstep3 = (float(to_sweep3) - float(from_sweep3)) / self.ratio_sweep3 / self.delay_factor3
             self.nstep3 = int(self.nstep3)
         except ValueError:
             self.nstep3 = 1
@@ -2877,8 +2954,8 @@ class Sweeper_write(threading.Thread):
         if self.condition != '':
             #creating grid space for sweep parameters
             if self.sweeper_flag2 == True:
-                ax1 = np.linspace(self.min_sweep1, self.max_sweep1, self.nstep1)
-                ax2 = np.linspace(self.min_sweep2, self.max_sweep2, self.nstep2)
+                ax1 = np.linspace(self.from_sweep1, self.to_sweep1, self.nstep1)
+                ax2 = np.linspace(self.from_sweep2, self.to_sweep2, self.nstep2)
                 AX1, AX2 = np.meshgrid(ax1, ax2)
                 space = AX1.tolist().copy()
                 for i in range(AX1.shape[0]):
@@ -2906,9 +2983,9 @@ class Sweeper_write(threading.Thread):
                     self.grid_space.append([x[i], y[i]])
                         
             if self.sweeper_flag3 == True: 
-                ax1 = np.linspace(self.min_sweep1, self.max_sweep1, self.nstep1)
-                ax2 = np.linspace(self.min_sweep2, self.max_sweep2, self.nstep2)
-                ax3 = np.linspace(self.min_sweep3, self.max_sweep3, self.nstep3)
+                ax1 = np.linspace(self.from_sweep1, self.to_sweep1, self.nstep1)
+                ax2 = np.linspace(self.from_sweep2, self.to_sweep2, self.nstep2)
+                ax3 = np.linspace(self.from_sweep3, self.to_sweep3, self.nstep3)
                 AX1, AX2, AX3 = np.meshgrid(ax1, ax2, ax3)
                 space = AX1.tolist().copy()
                 for i in range(AX1.shape[0]):
@@ -3116,20 +3193,20 @@ class Sweeper_write(threading.Thread):
             setattr(self, 'device_to_sweep' + b, globals()['device_to_sweep' + a])
             setattr(self, 'parameter_to_sweep' + a, globals()['parameter_to_sweep' + b])
             setattr(self, 'parameter_to_sweep' + b, globals()['parameter_to_sweep' + a])
-            setattr(self, 'min_sweep' + a, float(globals()['min_sweep' + b]))
-            setattr(self, 'max_sweep' + a, float(globals()['max_sweep' + b]))
+            setattr(self, 'from_sweep' + a, float(globals()['from_sweep' + b]))
+            setattr(self, 'to_sweep' + a, float(globals()['to_sweep' + b]))
             setattr(self, 'ratio_sweep' + a, float(globals()['ratio_sweep' + b]))
             setattr(self, 'delay_factor' + a, float(globals()['delay_factor' + b]))
-            setattr(self, 'min_sweep' + b, float(globals()['min_sweep' + a]))
-            setattr(self, 'max_sweep' + b, float(globals()['max_sweep' + a]))
+            setattr(self, 'from_sweep' + b, float(globals()['from_sweep' + a]))
+            setattr(self, 'to_sweep' + b, float(globals()['to_sweep' + a]))
             setattr(self, 'ratio_sweep' + b, float(globals()['ratio_sweep' + a]))
             setattr(self, 'delay_factor' + b, float(globals()['delay_factor' + a]))
             setattr(self, 'step' + a, float(globals()['delay_factor' + b]) * float(globals()['ratio_sweep' + b]))
             setattr(self, 'step' + b, float(globals()['delay_factor' + a]) * float(globals()['ratio_sweep' + a]))
-            setattr(self, 'value' + a, float(globals()['min_sweep' + b]))
-            setattr(self, 'value' + b, float(globals()['min_sweep' + a]))
-            setattr(self, 'time' + a, (float(globals()['min_sweep' + b]) - float(globals()['max_sweep' + b])) / float(globals()['ratio_sweep' + b]))
-            setattr(self, 'time' + b, (float(globals()['min_sweep' + a]) - float(globals()['max_sweep' + a])) / float(globals()['ratio_sweep' + a]))
+            setattr(self, 'value' + a, float(globals()['from_sweep' + b]))
+            setattr(self, 'value' + b, float(globals()['from_sweep' + a]))
+            setattr(self, 'time' + a, (float(globals()['from_sweep' + b]) - float(globals()['to_sweep' + b])) / float(globals()['ratio_sweep' + b]))
+            setattr(self, 'time' + b, (float(globals()['from_sweep' + a]) - float(globals()['to_sweep' + a])) / float(globals()['ratio_sweep' + a]))
 
     def isinarea(self, point, grid_area, dgrid_area, sweep_dimension = 2):
         #if point is in grid_area return True. grid size defined by dgrid_area which is tuple
@@ -3167,6 +3244,8 @@ class Sweeper_write(threading.Thread):
         global pause_flag
         global stop_flag
         global tozero_flag
+        global back_and_forth_slave
+        global back_and_forth_master
         
         def append_read_parameters():
             #appends dataframe with parameters to read
@@ -3202,17 +3281,36 @@ class Sweeper_write(threading.Thread):
             global stop_flag
             
             axis = str(axis)
-            result = getattr(self, 'value' + axis) < getattr(self, 'max_swep' + axis)
+            result = getattr(self, 'value' + axis) < float(globals()['to_sweep' + axis])
             
             if stop_flag == True:
                 return False
             
-            if getattr(self, 'ratio_sweep' + axis) > 0:
+            if float(globals()['ratio_sweep' + axis]) > 0:
                 return result
             else:
                 return not result
         
         def step(axis = 1, value = None):
+            
+            def try_tozero():
+                
+                def try_go(axis, value):
+                    axis = str(axis)
+                    value = float(value)
+                    getattr(globals()[types_of_devices[list_of_devices.index(getattr(self, 'device_to_sweep' + axis))]](
+                        adress=getattr(self, 'device_to_sweep' + axis)), 'set_' + str(getattr(self, 'parameter_to_sweep' + axis)))(value=value)
+                
+                try_go(1, 0)
+                try:
+                    try_go(2, 0)
+                    try:
+                        try_go(3, 0)
+                    except:
+                        pass
+                except:
+                    pass
+            
             #performs a step along sweep axis
             
             global zero_time
@@ -3251,22 +3349,37 @@ class Sweeper_write(threading.Thread):
                     ###################
                     return 
                 else:
-                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep1)]](
-                        adress=self.device_to_sweep1), 'set_' + str(self.parameter_to_sweep1))(value=0)
-                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep2)]](
-                        adress=self.device_to_sweep2), 'set_' + str(self.parameter_to_sweep2))(value=0)
-                    getattr(globals()[types_of_devices[list_of_devices.index(self.device_to_sweep3)]](
-                        adress=self.device_to_sweep3), 'set_' + str(self.parameter_to_sweep3))(value=0)
+                    try_tozero()
+                    
                     stop_flag = True
+                    
             else:
                 time.sleep(1)
-                self.step(axis, value)
+                print('pause')
+                step(axis, value)
         
         def update_filename(i):
             global filename_sweep
             self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
             filename_sweep = self.filename_sweep
             return
+        
+        def back_and_forth_transposition(axis):
+            axis = str(axis)
+            dub = getattr(self, 'to_sweep' + axis)
+            setattr(self, 'to_sweep' + axis, getattr(self, 'from_sweep' + axis))
+            setattr(self, 'from_sweep' + axis, dub)
+            globals()['ratio_sweep' + axis] = - float(globals()['ratio_sweep' + axis])
+            
+        def determine_step(i, data, axis):
+            axis = str(axis)
+            try:
+                setattr(self, 'step' + axis, abs(data[i+1] - data[i-1]) / 4)
+            except IndexError:
+                try:
+                    setattr(self, 'step' + axis, abs(data[i] - data[i-1]) / 2)
+                except IndexError:
+                    setattr(self, 'step' + axis, abs(data[i] - data[i+1]) / 2)
         
         if self.sweeper_flag1 == True:
             globals()['dataframe'] = pd.DataFrame(columns=self.columns)
@@ -3314,7 +3427,20 @@ class Sweeper_write(threading.Thread):
                         tofile()
                     else:
                         self.value2 += self.step2
-                self.value2 = self.min_sweep2
+                    
+                if back_and_forth_slave == True:
+                    back_and_forth_transposition(2)
+                    while condition(2) and manual_sweep_flags == [0, 0]:
+                        if self.isinarea(point = [self.value1, self.value2], grid_area = self.grid_space, dgrid_area = [self.step1 / 2, self.step2 / 2]):
+                            globals()['dataframe'] = [*dataframe_after]
+                            step(2)
+                            append_read_parameters()
+                            tofile()
+                        else:
+                            self.value2 += self.step2
+                    back_and_forth_transposition(2)
+                    
+                self.value2 = self.from_sweep2
                 i += 1
                 globals()['dataframe'] = pd.DataFrame(columns=self.columns)
                 update_filename(i)
@@ -3322,16 +3448,33 @@ class Sweeper_write(threading.Thread):
 
             if manual_sweep_flags == [1, 0]:
                 data = pd.read_csv(manual_filenames[0]).values.reshape(-1)
-                for value in data:
+                for i, value in enumerate(data):
                     if manual_sweep_flags == [1, 0]:
+                        determine_step(i, data, 1)
                         step(1, value = value)
                         dataframe_after = [*globals()['dataframe']]
                         while condition(2) and manual_sweep_flags == [1, 0]:
-                            globals()['dataframe'] = [*dataframe_after]
-                            step(2)
-                            append_read_parameters()
-                            tofile()
-                        self.value2 = self.min_sweep2
+                            if self.isinarea(point = [value, self.value2], grid_area = self.grid_space, dgrid_area = [self.step1 / 2, self.step2 / 2]):
+                                globals()['dataframe'] = [*dataframe_after]
+                                step(2)
+                                append_read_parameters()
+                                tofile()
+                            else:
+                                self.value2 += self.step2
+                            
+                        if back_and_forth_slave == True:
+                            back_and_forth_transposition(2)
+                            while condition(2) and manual_sweep_flags == [1, 0]:
+                                if self.isinarea(point = [value, self.value2], grid_area = self.grid_space, dgrid_area = [self.step1 / 2, self.step2 / 2]):
+                                    globals()['dataframe'] = [*dataframe_after]
+                                    step(2)
+                                    append_read_parameters()
+                                    tofile()
+                                else:
+                                    self.value2 += self.step2
+                            back_and_forth_transposition(2)
+                            
+                        self.value2 = self.from_sweep2
                         i += 1
                         globals()['dataframe'] = pd.DataFrame(columns=self.columns)
                         update_filename(i)
@@ -3343,31 +3486,58 @@ class Sweeper_write(threading.Thread):
                 step(1)
                 dataframe_after = [*globals()['dataframe']]
                 data = pd.read_csv(manual_filenames[1]).values.reshape(-1)
-                for value in data:
+                for i, value in enumerate(data):
                     if manual_sweep_flags == [0, 1]:
-                        globals()['dataframe'] = [*dataframe_after]
-                        step(2, value = value)
-                        append_read_parameters()
-                        tofile()
-                        i += 1
-                        globals()['dataframe'] = pd.DataFrame(columns=self.columns)
-                        update_filename(i)
-                        globals()['dataframe'].to_csv(self.filename_sweep, index=False)
+                        determine_step(i, data, 2)
+                        if self.isinarea(point = [self.value1, value], grid_area = self.grid_space, dgrid_area = [self.step1 / 2, self.step2 / 2]):
+                            globals()['dataframe'] = [*dataframe_after]
+                            step(2, value = value)
+                            append_read_parameters()
+                            tofile()  
                     else:
                         break
+                    
+                if back_and_forth_slave == True:
+                    back_and_forth_transposition(2)
+                    for i, value in enumerate(data[::-1]):
+                        determine_step(i, data, 2)
+                        if manual_sweep_flags == [0, 1]:
+                            if self.isinarea(point = [self.value1, value], grid_area = self.grid_space, dgrid_area = [self.step1 / 2, self.step2 / 2]):
+                                globals()['dataframe'] = [*dataframe_after]
+                                step(2, value = value)
+                                append_read_parameters()
+                                tofile() 
+                        else:
+                            break
+                i += 1
+                globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                update_filename(i)
+                globals()['dataframe'].to_csv(self.filename_sweep, index=False)
 
             if manual_sweep_flags == [1, 1]:
                 print([1, 1], ' = ', manual_sweep_flags)
                 data1 = pd.read_csv(manual_filenames[0]).values.reshape(-1)
                 data2 = pd.read_csv(manual_filenames[1]).values.reshape(-1)
-                for value1 in data1:
+                for i1, value1 in enumerate(data1):
+                    determine_step(i1, data1, 1)
                     step(1, value = value1)
                     dataframe_after = [*globals()['dataframe']]
-                    for value2 in data2:
-                        globals()['dataframe'] = [*dataframe_after]
-                        step(2, value = value2)
-                        append_read_parameters()
-                        tofile()
+                    for i2, value2 in enumerate(data2):
+                        if self.isinarea(point = [self.value1, value], grid_area = self.grid_space, dgrid_area = [self.step1 / 2, self.step2 / 2]):
+                            globals()['dataframe'] = [*dataframe_after]
+                            determine_step(i2, data2, 2)
+                            step(2, value = value2)
+                            append_read_parameters()
+                            tofile()
+                    if back_and_forth_slave == True:
+                        back_and_forth_transposition(2)
+                        for i2, value2 in enumerate(data2[::-1]):
+                            if self.isinarea(point = [self.value1, value], grid_area = self.grid_space, dgrid_area = [self.step1 / 2, self.step2 / 2]):
+                                globals()['dataframe'] = [*dataframe_after]
+                                determine_step(i2, data2, 2)
+                                step(2, value = value2)
+                                append_read_parameters()
+                                tofile()
                                 
                     i += 1
                     globals()['dataframe'] = pd.DataFrame(columns=self.columns)
@@ -3414,18 +3584,64 @@ class Sweeper_write(threading.Thread):
                             tofile()
                         else:
                             self.value3 += self.step3
-                    self.value3 = self.min_sweep3
+                    if back_and_forth_slave == True:
+                        back_and_forth_transposition(3)
+                        while condition(3) and manual_sweep_flags == [0, 0, 0]:
+                            if self.isinarea(point = (self.value1, self.value2, self.value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                globals()['dataframe'] = [*dataframe_after_after]
+                                step(3)
+                                append_read_parameters()
+                                tofile()
+                            else:
+                                self.value3 += self.step3
+                        back_and_forth_transposition(3)                    
+                    self.value3 = self.from_sweep3
                     i += 1
                     globals()['dataframe'] = pd.DataFrame(columns=self.columns)
                     update_filename(i)
                     globals()['dataframe'].to_csv(self.filename_sweep, index=False)
-                self.value2 = self.min_sweep3
+                    
+                if back_and_forth_master == True:
+                    back_and_forth_transposition(2)
+                    while condition(2) and manual_sweep_flags == [0, 0, 0]:
+                        globals()['dataframe'] = [*dataframe_after]
+                        step(2)
+                        dataframe_after_after = [*globals()['dataframe']]
+                        while condition(3) and manual_sweep_flags == [0, 0, 0]:
+                            if self.isinarea(point = (self.value1, self.value2, self.value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                globals()['dataframe'] = [*dataframe_after_after]
+                                step(3)
+                                append_read_parameters()
+                                tofile()
+                            else:
+                                self.value3 += self.step3
+                                
+                        if back_and_forth_slave == True:
+                            back_and_forth_transposition(3)
+                            while condition(3) and manual_sweep_flags == [0, 0, 0]:
+                                if self.isinarea(point = (self.value1, self.value2, self.value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                    globals()['dataframe'] = [*dataframe_after_after]
+                                    step(3)
+                                    append_read_parameters()
+                                    tofile()
+                                else:
+                                    self.value3 += self.step3
+                            back_and_forth_transposition(3)                    
+                        self.value3 = self.from_sweep3
+                        i += 1
+                        globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                        update_filename(i)
+                        globals()['dataframe'].to_csv(self.filename_sweep, index=False)
+                        back_and_forth_transposition(3)
+                    
+                self.value2 = self.from_sweep3
             self.sweeper_flag3 == False
 
             if manual_sweep_flags == [1, 0, 0]:
                 data = pd.read_csv(manual_filenames[0]).values.reshape[-1]
-                for value in data:
+                for i, value in enumerate(data):
                     if manual_sweep_flags == [1, 0, 0]:
+                        determine_step(i, data, 1)
                         step(1, value = value)
                         dataframe_after = [*globals()['dataframe']]
                         while condition(2) and manual_sweep_flags == [1, 0, 0]:
@@ -3433,15 +3649,66 @@ class Sweeper_write(threading.Thread):
                             step(2)
                             dataframe_after_after = [*globals()['dataframe']]
                             while condition(3) and manual_sweep_flags == [1, 0, 0]:
-                                globals()['dataframe'] = [*dataframe_after_after]
-                                step(3)
-                                append_read_parameters()
-                                tofile()
-                            self.value3 = self.min_sweep3
+                                if self.isinarea(point = (value, self.value2, self.value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                    globals()['dataframe'] = [*dataframe_after_after]
+                                    step(3)
+                                    append_read_parameters()
+                                    tofile()
+                                else:
+                                    self.value3 += self.step3
+                            
+                            if back_and_forth_slave == True:
+                                back_and_forth_transposition(3)
+                                while condition(3) and manual_sweep_flags == [1, 0, 0]:
+                                    if self.isinarea(point = (value, self.value2, self.value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                        globals()['dataframe'] = [*dataframe_after_after]
+                                        step(3)
+                                        append_read_parameters()
+                                        tofile()
+                                    else:
+                                        self.value3 += self.step3
+                                back_and_forth_transposition(3)
+                                
+                            self.value3 = self.from_sweep3
                             i += 1
                             globals()['dataframe'] = pd.DataFrame(columns=self.columns)
                             update_filename(i)
                             globals()['dataframe'].to_csv(self.filename_sweep, index=False) 
+                        
+                        if back_and_forth_master == True:
+                            back_and_forth_transposition(2)
+                            while condition(2) and manual_sweep_flags == [1, 0, 0]:
+                                globals()['dataframe'] = [*dataframe_after]
+                                step(2)
+                                dataframe_after_after = [*globals()['dataframe']]
+                                while condition(3) and manual_sweep_flags == [1, 0, 0]:
+                                    if self.isinarea(point = (value, self.value2, self.value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                        globals()['dataframe'] = [*dataframe_after_after]
+                                        step(3)
+                                        append_read_parameters()
+                                        tofile()
+                                    else:
+                                        self.value3 += self.step3
+                                
+                                if back_and_forth_slave == True:
+                                    back_and_forth_transposition(3)
+                                    while condition(3) and manual_sweep_flags == [1, 0, 0]:
+                                        if self.isinarea(point = (value, self.value2, self.value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                            globals()['dataframe'] = [*dataframe_after_after]
+                                            step(3)
+                                            append_read_parameters()
+                                            tofile()
+                                        else:
+                                            self.value3 += self.step3
+                                    back_and_forth_transposition(3)
+                                    
+                                self.value3 = self.from_sweep3
+                                i += 1
+                                globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                                update_filename(i)
+                                globals()['dataframe'].to_csv(self.filename_sweep, index=False) 
+                                back_and_forth_transposition(2)
+                                
                     else:
                         break
 
@@ -3449,23 +3716,78 @@ class Sweeper_write(threading.Thread):
                 step(1)
                 dataframe_after = [*globals()['dataframe']]
                 data = pd.read_csv(manual_filenames[1]).values.reshape(-1)
-                for value in data:
+                for i, value in enumerate(data):
                     if manual_sweep_flags == [0, 1, 0]:
+                        determine_step(i, data, 2)
                         globals()['dataframe'] = [*dataframe_after]
                         step(2, value = value)
                         dataframe_after_after = [*globals()['dataframe']]
                         while condition(3) and manual_sweep_flags == [0, 1, 0]:
-                            globals()['dataframe'] = [*dataframe_after_after]
-                            step(3)
-                            append_read_parameters()
-                            tofile()
-                        self.value3 = self.min_sweep3
+                            if self.isinarea(point = (self.value1, value, self.value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                globals()['dataframe'] = [*dataframe_after_after]
+                                step(3)
+                                append_read_parameters()
+                                tofile()
+                            else:
+                                self.value3 += self.step3
+                            
+                        if back_and_forth_slave == True:
+                            back_and_forth_transposition(3)
+                            while condition(3) and manual_sweep_flags == [0, 1, 0]:
+                                if self.isinarea(point = (self.value1, value, self.value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                    globals()['dataframe'] = [*dataframe_after_after]
+                                    step(3)
+                                    append_read_parameters()
+                                    tofile()
+                                else:
+                                    self.value3 += self.step3
+                            back_and_forth_transposition(3)
+                            
+                        self.value3 = self.from_sweep3
                         i += 1
                         globals()['dataframe'] = pd.DataFrame(columns=self.columns)
                         update_filename(i)
                         globals()['dataframe'].to_csv(self.filename_sweep, index=False)
                     else:
                         break
+                    
+                if back_and_forth_master == True:
+                    back_and_forth_transposition(2)
+                    for i, value in enumerate(data[::1]):
+                        if manual_sweep_flags == [0, 1, 0]:
+                            determine_step(i, data, 2)
+                            globals()['dataframe'] = [*dataframe_after]
+                            step(2, value = value)
+                            dataframe_after_after = [*globals()['dataframe']]
+                            while condition(3) and manual_sweep_flags == [0, 1, 0]:
+                                if self.isinarea(point = (self.value1, value, self.value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                    globals()['dataframe'] = [*dataframe_after_after]
+                                    step(3)
+                                    append_read_parameters()
+                                    tofile()
+                                else:
+                                    self.value3 += self.step3
+                                
+                            if back_and_forth_slave == True:
+                                back_and_forth_transposition(3)
+                                while condition(3) and manual_sweep_flags == [0, 1, 0]:
+                                    if self.isinarea(point = (self.value1, value, self.value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                        globals()['dataframe'] = [*dataframe_after_after]
+                                        step(3)
+                                        append_read_parameters()
+                                        tofile()
+                                    else:
+                                        self.value3 += self.step3
+                                back_and_forth_transposition(3)
+                                
+                            self.value3 = self.from_sweep3
+                            i += 1
+                            globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                            update_filename(i)
+                            globals()['dataframe'].to_csv(self.filename_sweep, index=False)
+                        else:
+                            break
+                    back_and_forth_transposition(2)
 
             while condition(1) and manual_sweep_flags == [0, 0, 1]:
                 step(1)
@@ -3475,116 +3797,395 @@ class Sweeper_write(threading.Thread):
                     step(2)
                     dataframe_after_after = [*globals()['dataframe']]
                     data = pd.read_csv(manual_filenames[2]).values.reshape(-1)
-                    for value in data:
+                    for i, value in enumerate(data):
                         if manual_sweep_flags == [0, 0, 1]:
-                            globals()['dataframe'] = [*dataframe_after_after]
-                            step(3, value = value)
-                            append_read_parameters()
-                            tofile()
+                            if self.isinarea(point = (self.value1, self.value2, value), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                globals()['dataframe'] = [*dataframe_after_after]
+                                determine_step(i, data, 3)
+                                step(3, value = value)
+                                append_read_parameters()
+                                tofile()
                         else:
                             break
-                        i += 1
-                        globals()['dataframe'] = pd.DataFrame(columns=self.columns)
-                        update_filename(i)
-                        globals()['dataframe'].to_csv(self.filename_sweep, index=False)
-                self.value2 = self.min_sweep3
+                        
+                    if back_and_forth_slave == True:
+                        back_and_forth_transposition(3)
+                        for i, value in enumerate(data):
+                            if manual_sweep_flags == [0, 0, 1]:
+                                if self.isinarea(point = (self.value1, self.value2, value), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                    globals()['dataframe'] = [*dataframe_after_after]
+                                    determine_step(i, data, 3)
+                                    step(3, value = value)
+                                    append_read_parameters()
+                                    tofile()
+                        back_and_forth_transposition(3)
+                    i += 1
+                    globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                    update_filename(i)
+                    globals()['dataframe'].to_csv(self.filename_sweep, index=False)
+                
+                if back_and_forth_master == True:
+                    back_and_forth_transposition(2)
+                    while condition(2) and manual_sweep_flags == [0, 0, 1]:
+                        globals()['dataframe'] = [*dataframe_after]
+                        step(2)
+                        dataframe_after_after = [*globals()['dataframe']]
+                        data = pd.read_csv(manual_filenames[2]).values.reshape(-1)
+                        for i, value in enumerate(data):
+                            if manual_sweep_flags == [0, 0, 1]:
+                                if self.isinarea(point = (self.value1, self.value2, value), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                    globals()['dataframe'] = [*dataframe_after_after]
+                                    determine_step(i, data, 3)
+                                    step(3, value = value)
+                                    append_read_parameters()
+                                    tofile()
+                            else:
+                                break
+                            
+                        if back_and_forth_slave == True:
+                            back_and_forth_transposition(3)
+                            for i, value in enumerate(data):
+                                if manual_sweep_flags == [0, 0, 1]:
+                                    if self.isinarea(point = (self.value1, self.value2, value), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                        globals()['dataframe'] = [*dataframe_after_after]
+                                        determine_step(i, data, 3)
+                                        step(3, value = value)
+                                        append_read_parameters()
+                                        tofile()
+                            back_and_forth_transposition(3)
+                    back_and_forth_transposition(2)
+                    i += 1
+                    globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                    update_filename(i)
+                    globals()['dataframe'].to_csv(self.filename_sweep, index=False)
+                    
+                self.value2 = self.from_sweep3
 
-                if manual_sweep_flags == [1, 1, 0]:
-                    data1 = pd.read_csv(manual_filenames[0]).values.reshape(-1)
-                    for value1 in data1:
-                        if manual_sweep_flags == [1, 1, 0]:
-                            step(1, value = value1)
-                            dataframe_after = [*globals()['dataframe']]
-                            data2 = pd.read_csv(manual_filenames[1]).values.reshape(-1)
-                            for value2 in data2:
-                                if manual_sweep_flags == [1, 1, 0]:
-                                    globals()['dataframe'] = [*dataframe_after]
-                                    step(2, value = value2)
-                                    dataframe_after_after = [*globals()['dataframe']]
-                                    while condition(3) and manual_sweep_flags == [0, 1, 0]:
+            if manual_sweep_flags == [1, 1, 0]:
+                data1 = pd.read_csv(manual_filenames[0]).values.reshape(-1)
+                for i1, value1 in enumerate(data1):
+                    if manual_sweep_flags == [1, 1, 0]:
+                        determine_step(i1, data1, 1)
+                        step(1, value = value1)
+                        dataframe_after = [*globals()['dataframe']]
+                        data2 = pd.read_csv(manual_filenames[1]).values.reshape(-1)
+                        for i2, value2 in enumerate(data2):
+                            if manual_sweep_flags == [1, 1, 0]:
+                                determine_step(i2, data2, 2)
+                                globals()['dataframe'] = [*dataframe_after]
+                                step(2, value = value2)
+                                dataframe_after_after = [*globals()['dataframe']]
+                                while condition(3) and manual_sweep_flags == [1, 1, 0]:
+                                    if self.isinarea(point = (value1, value2, self.value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
                                         globals()['dataframe'] = [*dataframe_after_after]
                                         step(3)
                                         append_read_parameters()
                                         tofile()
-                                    i += 1
-                                    globals()['dataframe'] = pd.DataFrame(columns=self.columns)
-                                    update_filename(i)
-                                    globals()['dataframe'].to_csv(self.filename_sweep, index=False)
+                                    else:
+                                        self.value3 += self.step3
+                                if back_and_forth_slave == True:
+                                    back_and_forth_transposition(3)
+                                    while condition(3) and manual_sweep_flags == [1, 1, 0]:
+                                        if self.isinarea(point = (value1, value2, self.value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                            globals()['dataframe'] = [*dataframe_after_after]
+                                            step(3)
+                                            append_read_parameters()
+                                            tofile()
+                                        else:
+                                            self.value3 += self.step3
+                                    back_and_forth_transposition(3)
+                                        
+                            else:
+                                break
+                        i += 1
+                        globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                        update_filename(i)
+                        globals()['dataframe'].to_csv(self.filename_sweep, index=False)
+                        
+                        if back_and_forth_master == True:
+                            back_and_forth_transposition(2)
+                            for i2, value2 in enumerate(data2[::-1]):
+                                if manual_sweep_flags == [1, 1, 0]:
+                                    determine_step(i2, data2, 2)
+                                    globals()['dataframe'] = [*dataframe_after]
+                                    step(2, value = value2)
+                                    dataframe_after_after = [*globals()['dataframe']]
+                                    while condition(3) and manual_sweep_flags == [1, 1, 0]:
+                                        if self.isinarea(point = (value1, value2, self.value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                            globals()['dataframe'] = [*dataframe_after_after]
+                                            step(3)
+                                            append_read_parameters()
+                                            tofile()
+                                        else:
+                                            self.value3 += self.step3
+                                    if back_and_forth_slave == True:
+                                        back_and_forth_transposition(3)
+                                        while condition(3) and manual_sweep_flags == [1, 1, 0]:
+                                            if self.isinarea(point = (value1, value2, self.value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                                globals()['dataframe'] = [*dataframe_after_after]
+                                                step(3)
+                                                append_read_parameters()
+                                                tofile()
+                                            else:
+                                                self.value3 += self.step3
+                                        back_and_forth_transposition(3)
+                                            
                                 else:
                                     break
-                        else:
-                            break
+                            i += 1
+                            globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                            update_filename(i)
+                            globals()['dataframe'].to_csv(self.filename_sweep, index=False)
+                        back_and_forth_transposition(2)
+                    else:
+                        break
+                            
+            if manual_sweep_flags == [1, 0, 1]:
+                data1 = pd.read_csv(manual_filenames[0]).values.reshape(-1)
+                for i1, value1 in enumerate(data1):
+                    if manual_sweep_flags == [1, 0, 1]:
+                        determine_step(i1, data1, 1)
+                        step(1, value = value1)
+                        while condition(2) and manual_sweep_flags == [1, 0, 1]:
+                            globals()['dataframe'] = [*dataframe_after]
+                            step(2)
+                            dataframe_after_after = [*globals()['dataframe']]
+                            data3 = pd.read_csv(manual_filenames[2]).values.reshape(-1)
+                            for i3, value3 in enumerate(data3):
+                                if manual_sweep_flags == [1, 0, 1]:
+                                    if self.isinarea(point = (value1, self.value2, value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                        globals()['dataframe'] = [*dataframe_after_after]
+                                        determine_step(i3, data3, 3)
+                                        step(3, value = value3)
+                                        append_read_parameters()
+                                        tofile()
+                                        
+                            if back_and_forth_slave == True:
+                                back_and_forth_transposition(3)
+                                for i3, value3 in enumerate(data3):
+                                    if manual_sweep_flags == [1, 0, 1]:
+                                        if self.isinarea(point = (value1, self.value2, value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                            globals()['dataframe'] = [*dataframe_after_after]
+                                            determine_step(i3, data3, 3)
+                                            step(3, value = value3)
+                                            append_read_parameters()
+                                            tofile()
+                                back_and_forth_transposition(3)
                                 
-
-                if manual_sweep_flags == [1, 0, 1]:
-                    data1 = pd.read_csv(manual_filenames[0]).values.reshape(-1)
-                    for value1 in data1:
-                        if manual_sweep_flags == [1, 0, 1]:
-                            step(1, value = value1)
+                            i += 1
+                            globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                            update_filename(i)
+                            globals()['dataframe'].to_csv(self.filename_sweep, index=False)
+                            
+                        if back_and_forth_master == True:
+                            back_and_forth_transposition(2)
                             while condition(2) and manual_sweep_flags == [1, 0, 1]:
                                 globals()['dataframe'] = [*dataframe_after]
                                 step(2)
                                 dataframe_after_after = [*globals()['dataframe']]
                                 data3 = pd.read_csv(manual_filenames[2]).values.reshape(-1)
-                                for value3 in data3:
+                                for i3, value3 in enumerate(data3):
                                     if manual_sweep_flags == [1, 0, 1]:
-                                        globals()['dataframe'] = [*dataframe_after_after]
-                                        step(3, value = value3)
-                                        append_read_parameters()
-                                        tofile()
+                                        if self.isinarea(point = (value1, self.value2, value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                            globals()['dataframe'] = [*dataframe_after_after]
+                                            determine_step(i3, data3, 3)
+                                            step(3, value = value3)
+                                            append_read_parameters()
+                                            tofile()
+                                            
+                                if back_and_forth_slave == True:
+                                    back_and_forth_transposition(3)
+                                    for i3, value3 in enumerate(data3):
+                                        if manual_sweep_flags == [1, 0, 1]:
+                                            if self.isinarea(point = (value1, self.value2, value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                                globals()['dataframe'] = [*dataframe_after_after]
+                                                determine_step(i3, data3, 3)
+                                                step(3, value = value3)
+                                                append_read_parameters()
+                                                tofile()
+                                    back_and_forth_transposition(3)
+                                    
                                 i += 1
                                 globals()['dataframe'] = pd.DataFrame(columns=self.columns)
                                 update_filename(i)
                                 globals()['dataframe'].to_csv(self.filename_sweep, index=False)
-
-                while condition(1) and manual_sweep_flags == [0, 1, 1]:
-                    step(1)
-                    dataframe_after = [*globals()['dataframe']]
-                    data2 = pd.read_csv(manual_filenames[2]).values.reshape(-1)
-                    for value2 in data2:
+                            back_and_forth_transposition(2)
+                            
+                            i += 1
+                            globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                            update_filename(i)
+                            globals()['dataframe'].to_csv(self.filename_sweep, index=False)
+                            
+                            
+            while condition(1) and manual_sweep_flags == [0, 1, 1]:
+                step(1)
+                dataframe_after = [*globals()['dataframe']]
+                data2 = pd.read_csv(manual_filenames[2]).values.reshape(-1)
+                for i2, value2 in enumerate(data2):
+                    if manual_sweep_flags == [0, 1, 1]:
+                        globals()['dataframe'] = [*dataframe_after]
+                        determine_step(i2, data2, 2)
+                        step(2, value = value2)
+                        dataframe_after_after = [*dataframe]
+                        data3 = pd.read_csv(
+                            manual_filenames[2]).values.reshape(-1)
+                        for i3, value3 in enumerate(data3):
+                            if manual_sweep_flags == [0, 1, 1]:
+                                if self.isinarea(point = (self.value1, value2, value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                    globals()['dataframe'] = [*dataframe_after_after]
+                                    determine_step(i3, data3, 3)
+                                    step(3, value = value3)
+                                    append_read_parameters()
+                                    tofile()
+                            else:
+                                break
+                            
+                        if back_and_forth_slave == True:
+                            back_and_forth_transposition(3)
+                            for i3, value3 in enumerate(data3):
+                                if manual_sweep_flags == [0, 1, 1]:
+                                    if self.isinarea(point = (self.value1, value2, value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                        globals()['dataframe'] = [*dataframe_after_after]
+                                        determine_step(i3, data3, 3)
+                                        step(3, value = value3)
+                                        append_read_parameters()
+                                        tofile()
+                                else:
+                                    break
+                            back_and_forth_transposition(3)
+                            
+                        i += 1
+                        globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                        update_filename(i)
+                        globals()['dataframe'].to_csv(self.filename_sweep, index=False)
+                    else:
+                        break
+                    
+                if back_and_forth_master == True:
+                    back_and_forth_transposition(2)
+                    for i2, value2 in enumerate(data2):
                         if manual_sweep_flags == [0, 1, 1]:
                             globals()['dataframe'] = [*dataframe_after]
+                            determine_step(i2, data2, 2)
                             step(2, value = value2)
                             dataframe_after_after = [*dataframe]
                             data3 = pd.read_csv(
                                 manual_filenames[2]).values.reshape(-1)
-                            for value3 in data3:
+                            for i3, value3 in enumerate(data3):
                                 if manual_sweep_flags == [0, 1, 1]:
-                                    globals()['dataframe'] = [*dataframe_after_after]
-                                    step(3, value = value3)
-                                    append_read_parameters()
-                                    tofile()
+                                    if self.isinarea(point = (self.value1, value2, value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                        globals()['dataframe'] = [*dataframe_after_after]
+                                        determine_step(i3, data3, 3)
+                                        step(3, value = value3)
+                                        append_read_parameters()
+                                        tofile()
                                 else:
                                     break
+                                
+                            if back_and_forth_slave == True:
+                                back_and_forth_transposition(3)
+                                for i3, value3 in enumerate(data3):
+                                    if manual_sweep_flags == [0, 1, 1]:
+                                        if self.isinarea(point = (self.value1, value2, value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                            globals()['dataframe'] = [*dataframe_after_after]
+                                            determine_step(i3, data3, 3)
+                                            step(3, value = value3)
+                                            append_read_parameters()
+                                            tofile()
+                                    else:
+                                        break
+                                back_and_forth_transposition(3)
+                                
                             i += 1
                             globals()['dataframe'] = pd.DataFrame(columns=self.columns)
                             update_filename(i)
                             globals()['dataframe'].to_csv(self.filename_sweep, index=False)
                         else:
                             break
-                            
+                    back_and_forth_transposition(2)
+                    
+                    i += 1
+                    globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                    update_filename(i)
+                    globals()['dataframe'].to_csv(self.filename_sweep, index=False)
+                        
 
-                if manual_sweep_flags == [1, 1, 1]:
-                    data1 = pd.read_csv(manual_filenames[0]).values.reshape(-1)
-                    for value1 in data1:
-                        step(1, value = value1)
-                        dataframe_after = [*globals()['dataframe']]
-                        data2 = pd.read_csv(
-                            manual_filenames[2]).values.reshape(-1)
-                        for value2 in data2:
-                            globals()['dataframe'] = [*dataframe_after]
-                            step(2, value = value2)
-                            dataframe_after_after = [*globals()['dataframe']]
-                            data3 = pd.read_csv(manual_filenames[2]).values.reshape(-1)
-                            for value3 in data3:
+            if manual_sweep_flags == [1, 1, 1]:
+                data1 = pd.read_csv(manual_filenames[0]).values.reshape(-1)
+                for i1, value1 in enumerate(data1):
+                    determine_step(i1, data1, 1)
+                    step(1, value = value1)
+                    dataframe_after = [*globals()['dataframe']]
+                    data2 = pd.read_csv(
+                        manual_filenames[2]).values.reshape(-1)
+                    for i2, value2 in enumerate(data2):
+                        globals()['dataframe'] = [*dataframe_after]
+                        determine_step(i2, data2, 2)
+                        step(2, value = value2)
+                        dataframe_after_after = [*globals()['dataframe']]
+                        data3 = pd.read_csv(manual_filenames[2]).values.reshape(-1)
+                        for i3, value3 in enumerate(data3):
+                            if self.isinarea(point = (value1, value2, value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
                                 globals()['dataframe'] = [*dataframe_after_after]
+                                determine_step(i3, data3, 3)
                                 step(value = value3)
                                 append_read_parameters()
                                 tofile()
+                                
+                        if back_and_forth_slave == True:
+                            back_and_forth_transposition(3)
+                            for i3, value3 in enumerate(data3):
+                                if self.isinarea(point = (value1, value2, value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                    globals()['dataframe'] = [*dataframe_after_after]
+                                    determine_step(i3, data3, 3)
+                                    step(value = value3)
+                                    append_read_parameters()
+                                    tofile()
+                            back_and_forth_transposition(3)
+                                    
+                        i += 1
+                        globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                        update_filename(i)
+                        globals()['dataframe'].to_csv(self.filename_sweep, index=False)
+                    
+                    if back_and_forth_master == True:
+                        back_and_forth_transposition(2)
+                        for i2, value2 in enumerate(data2):
+                            globals()['dataframe'] = [*dataframe_after]
+                            determine_step(i2, data2, 2)
+                            step(2, value = value2)
+                            dataframe_after_after = [*globals()['dataframe']]
+                            data3 = pd.read_csv(manual_filenames[2]).values.reshape(-1)
+                            for i3, value3 in enumerate(data3):
+                                if self.isinarea(point = (value1, value2, value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                    globals()['dataframe'] = [*dataframe_after_after]
+                                    determine_step(i3, data3, 3)
+                                    step(value = value3)
+                                    append_read_parameters()
+                                    tofile()
+                                    
+                            if back_and_forth_slave == True:
+                                back_and_forth_transposition(3)
+                                for i3, value3 in enumerate(data3):
+                                    if self.isinarea(point = (value1, value2, value3), grid_area = self.grid_space, dgrid_area = (self.step1 / 2, self.step2 / 2, self.step3 / 2), sweep_dimension = 3):
+                                        globals()['dataframe'] = [*dataframe_after_after]
+                                        determine_step(i3, data3, 3)
+                                        step(value = value3)
+                                        append_read_parameters()
+                                        tofile()
+                                back_and_forth_transposition(3)
+                                        
                             i += 1
                             globals()['dataframe'] = pd.DataFrame(columns=self.columns)
                             update_filename(i)
                             globals()['dataframe'].to_csv(self.filename_sweep, index=False)
+                        back_and_forth_transposition(2)
+                        
+                        i += 1
+                        globals()['dataframe'] = pd.DataFrame(columns=self.columns)
+                        update_filename(i)
+                        globals()['dataframe'].to_csv(self.filename_sweep, index=False)
+                        
 
 
 class VerticalNavigationToolbar2Tk(NavigationToolbar2Tk):
