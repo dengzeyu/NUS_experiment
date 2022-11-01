@@ -7,6 +7,7 @@ from csv import writer
 import threading
 from tkinter import ttk
 import tkinter as tk
+from ToolTip import CreateToolTip
 import matplotlib.animation as animation
 from matplotlib import style
 from matplotlib.figure import Figure
@@ -21,6 +22,7 @@ import pandas as pd
 import matplotlib
 import numpy as np
 import random
+
 matplotlib.use("TkAgg")
 plt.rcParams['animation.html'] = 'jshtml'
 LARGE_FONT = ('Verdana', 12)
@@ -29,7 +31,7 @@ style.use('ggplot')
 
 # Check if everything connected properly
 rm = visa.ResourceManager()
-list_of_devices = rm.list_resources()
+list_of_devices = list(rm.list_resources())
 
 '''
 temp = rm.open_resource('ASRL3::INSTR', baud_rate=115200,
@@ -151,6 +153,16 @@ def create_preset(dimension):
 
 for i in range(3):
     create_preset(i+1)
+    
+class Time():
+    
+    def __init__(self, adress = None):
+        
+        self.set_options = ['Time']
+        self.get_options = []
+        
+    def set_Time(self, value = None):
+        pass
 
 class lock_in():
 
@@ -584,6 +596,9 @@ except:
     types_of_devices = []
     for i in range (len(list_of_devices)):
         types_of_devices.append('Not a class')
+        
+list_of_devices.insert(0, 'Time')
+types_of_devices.insert(0, 'Time')
         
 with open(cur_dir + '\\config\\adress_dictionary.txt', 'r') as file:
     adress_dict = file.read()
@@ -1265,7 +1280,7 @@ class Sweeper1d(tk.Frame):
         label_devices.place(relx = 0.05, rely = 0.16)
 
         self.combo_to_sweep1 = ttk.Combobox(
-            self, value=['Time', *list_of_devices])
+            self, value=list_of_devices)
         self.combo_to_sweep1.bind(
             "<<ComboboxSelected>>", self.update_sweep_parameters)
         self.combo_to_sweep1.place(relx=0.15, rely=0.16)
@@ -1289,9 +1304,11 @@ class Sweeper1d(tk.Frame):
 
         self.button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause())
         self.button_pause.place(relx = 0.3, rely = 0.25 +lstbox_height)
+        CreateToolTip(self.button_pause, 'Pause sweep')
         
         self.button_stop = tk.Button(self, text = '⏹️', font = LARGE_FONT, command = lambda: self.stop())
         self.button_stop.place(relx = 0.3375, rely = 0.25 + lstbox_height)
+        CreateToolTip(self.button_stop, 'Stop sweep')
         
         self.button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero())
         self.button_tozero.place(relx = 0.3, rely = 0.3 + lstbox_height)
@@ -1327,6 +1344,7 @@ class Sweeper1d(tk.Frame):
 
         label_step = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
         label_step.place(relx=0.12, rely=0.32)
+        CreateToolTip(label_step, 'Speed of 1d-sweep')
 
         self.entry_from = tk.Entry(self)
         self.entry_from.insert(0, self.from1_init)
@@ -1343,6 +1361,7 @@ class Sweeper1d(tk.Frame):
         label_delay_factor = tk.Label(
             self, text='Delay factor, s', justify=tk.LEFT, font=LARGE_FONT)
         label_delay_factor.place(relx=0.12, rely=0.4)
+        CreateToolTip(label_delay_factor, 'Sleep time per 1 point')
 
         self.entry_delay_factor = tk.Entry(self)
         self.entry_delay_factor.insert(0, self.delay_factor1_init)
@@ -1369,10 +1388,12 @@ class Sweeper1d(tk.Frame):
         button_new_manual = tk.Button(self, text = '🖊', font = LARGE_FONT, command=lambda: self.open_blank(
             filename=self.manual_filenames[0]))
         button_new_manual.place(relx=0.12, rely=0.56)
+        CreateToolTip(button_new_manual, 'Create new sweep instruction')
 
         button_explore_manual = tk.Button(
             self, text = '🔎', font = LARGE_FONT, command=lambda: self.explore_files())
         button_explore_manual.place(relx=0.15, rely=0.56)
+        CreateToolTip(button_explore_manual, 'Explore existing sweep instruction')
 
         self.filename_textvariable = tk.StringVar(self, value = filename_sweep)
         width = int(len(self.filename_textvariable.get()) * 0.95)
@@ -1382,6 +1403,7 @@ class Sweeper1d(tk.Frame):
 
         button_settings = tk.Button(self, text = '⚙️', font = SUPER_LARGE, command = lambda: self.open_settings())
         button_settings.place(relx = 0.85, rely = 0.15)
+        CreateToolTip(button_settings, 'Settings')
 
         button_filename = tk.Button(
             self, text = 'Browse...', command=lambda: self.set_filename_sweep())
@@ -1394,26 +1416,21 @@ class Sweeper1d(tk.Frame):
         graph_button = tk.Button(
             self, text='📊', font = SUPER_LARGE, command=lambda: self.open_graph())
         graph_button.place(relx=0.7, rely=0.76)
+        CreateToolTip(graph_button, 'Graph')
 
     def update_sweep_parameters(self, event, interval=1000):
-        if self.combo_to_sweep1.current() == 0:
-            self.sweep_options1['value'] = ['']
-            self.sweep_options1.current(0)
-            self.sweep_options1.after(interval)
-            pass
-        else:
-            if types_of_devices != []:
-                class_of_sweeper_device = types_of_devices[self.combo_to_sweep1.current(
-                ) - 1]
-                
-                if class_of_sweeper_device != 'Not a class':
-                    self.sweep_options1['value'] = getattr(
-                        globals()[class_of_sweeper_device](), 'set_options')
-                    self.sweep_options1.after(interval)
-                else:
-                    self.sweep_options1['value'] = ['']
+        if types_of_devices != []:
+            class_of_sweeper_device = types_of_devices[self.combo_to_sweep1.current(
+            ) - 1]
+            
+            if class_of_sweeper_device != 'Not a class':
+                self.sweep_options1['value'] = getattr(
+                    globals()[class_of_sweeper_device](), 'set_options')
+                self.sweep_options1.after(interval)
             else:
                 self.sweep_options1['value'] = ['']
+        else:
+            self.sweep_options1['value'] = ['']
                 
         if self.combo_to_sweep1.current() != self.combo_to_sweep1_current:
             self.preset.loc[0, 'combo_to_sweep1'] = self.combo_to_sweep1.current()
@@ -1582,13 +1599,10 @@ class Sweeper1d(tk.Frame):
         self.rewrite_preset()
 
         # creating columns
-        if self.combo_to_sweep1.current() == 0:
-            columns = ['Time']
-        else:
-            device_to_sweep1 = list_of_devices[self.combo_to_sweep1.current()]
-            parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](), 'set_options')
-            parameter_to_sweep1 = parameters[self.sweep_options1.current()]
-            columns = ['Time', device_to_sweep1 + '.' + parameter_to_sweep1]
+        device_to_sweep1 = list_of_devices[self.combo_to_sweep1.current()]
+        parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](), 'set_options')
+        parameter_to_sweep1 = parameters[self.sweep_options1.current()]
+        columns = [device_to_sweep1 + '.' + parameter_to_sweep1]
         for option in parameters_to_read:
             columns.append(option)
 
@@ -1714,6 +1728,7 @@ class Sweeper2d(tk.Frame):
         
         label_back_and_forth_slave = tk.Label(self, text = '🔁', font = SUPER_LARGE)
         label_back_and_forth_slave.place(relx = 0.3935, rely = 0.6)
+        CreateToolTip(label_back_and_forth_slave, 'Back and forth sweep\nfor this axis')
     
         devices = tk.StringVar()
         devices.set(value=parameters_to_read)
@@ -1734,9 +1749,11 @@ class Sweeper2d(tk.Frame):
 
         self.button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause())
         self.button_pause.place(relx = 0.45, rely = 0.25 + lstbox_height)
+        CreateToolTip(self.button_pause, 'Pause sweep')
         
         self.button_stop = tk.Button(self, text = '⏹️', font = LARGE_FONT, command = lambda: self.stop())
         self.button_stop.place(relx = 0.4875, rely = 0.25 + lstbox_height)
+        CreateToolTip(self.button_stop, 'Stop sweep')
         
         self.button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero())
         self.button_tozero.place(relx = 0.45, rely = 0.3 + lstbox_height)
@@ -1752,6 +1769,7 @@ class Sweeper2d(tk.Frame):
 
         label_step1 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
         label_step1.place(relx=0.12, rely=0.37)
+        CreateToolTip(label_step1, 'Speed of 1d-sweep')
 
         self.entry_from1 = tk.Entry(self)
         self.entry_from1.insert(0, self.from1_init)
@@ -1768,6 +1786,7 @@ class Sweeper2d(tk.Frame):
         label_delay_factor1 = tk.Label(
             self, text='Delay factor, s', justify=tk.LEFT, font=LARGE_FONT)
         label_delay_factor1.place(relx=0.12, rely=0.45)
+        CreateToolTip(label_delay_factor1, 'Sleep time per 1 point')
 
         self.entry_delay_factor1 = tk.Entry(self)
         self.entry_delay_factor1.insert(0, self.delay_factor1_init)
@@ -1781,6 +1800,7 @@ class Sweeper2d(tk.Frame):
 
         label_step2 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
         label_step2.place(relx=0.27, rely=0.37)
+        CreateToolTip(label_step2, 'Speed of 1d-sweep')
 
         self.entry_from2 = tk.Entry(self)
         self.entry_from2.insert(0, self.from2_init)
@@ -1797,6 +1817,7 @@ class Sweeper2d(tk.Frame):
         label_delay_factor2 = tk.Label(
             self, text='Delay factor, s', justify=tk.LEFT, font=LARGE_FONT)
         label_delay_factor2.place(relx=0.27, rely=0.45)
+        CreateToolTip(label_delay_factor2, 'Sleep time per 1 point')
 
         self.entry_delay_factor2 = tk.Entry(self)
         self.entry_delay_factor2.insert(0, self.delay_factor2_init)
@@ -1826,10 +1847,12 @@ class Sweeper2d(tk.Frame):
         button_new_manual1 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(
             filename=self.manual_filenames[0], i=1))
         button_new_manual1.place(relx=0.12, rely=0.6)
+        CreateToolTip(button_new_manual1, 'Create new sweep instruction')
 
         button_explore_manual1 = tk.Button(
             self, text='🔎', font = LARGE_FONT, command=lambda: self.explore_files(i=0))
         button_explore_manual1.place(relx=0.15, rely=0.6)
+        CreateToolTip(button_explore_manual1, 'Explore existing sweep instruction')
 
         checkbox_manual2 = ttk.Checkbutton(self, text='Maunal sweep select',
                                            variable=self.status_manual2, onvalue=1,
@@ -1839,13 +1862,16 @@ class Sweeper2d(tk.Frame):
         button_new_manual2 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(
             filename=self.manual_filenames[1], i=0))
         button_new_manual2.place(relx=0.27, rely=0.6)
+        CreateToolTip(button_new_manual2, 'Create new sweep instruction')
 
         button_explore_manual2 = tk.Button(
             self, text='🔎', font = LARGE_FONT, command=lambda: self.explore_files(i=1))
         button_explore_manual2.place(relx=0.3, rely=0.6)
+        CreateToolTip(button_explore_manual2, 'Explore existing sweep instruction')
         
         label_condition = tk.Label(self, text = 'Constraints:', font = LARGE_FONT)
         label_condition.place(relx = 0.12, rely = 0.66)
+        CreateToolTip(label_condition, 'Master sweep: x\nSlave sweep: y\nSet condition for a sweep map')
         
         self.text_condition = tk.Text(self, width = 40, height = 7)
         self.text_condition.place(relx = 0.12, rely = 0.7)
@@ -1858,6 +1884,7 @@ class Sweeper2d(tk.Frame):
 
         button_settings = tk.Button(self, text = '⚙️', font = SUPER_LARGE, command = lambda: self.open_settings())
         button_settings.place(relx = 0.85, rely = 0.15)
+        CreateToolTip(button_settings, 'Settings')
 
         button_filename = tk.Button(
             self, text = 'Browse...', command=lambda: self.set_filename_sweep())
@@ -1870,6 +1897,7 @@ class Sweeper2d(tk.Frame):
         graph_button = tk.Button(
             self, text='📊', font = SUPER_LARGE, command=lambda: self.open_graph())
         graph_button.place(relx=0.7, rely=0.8)
+        CreateToolTip(graph_button, 'Graph')
         
     def update_master2_combo(self, event, interval = 1000):
         if self.combo_master1['value'][self.combo_master1.current()] == '':
@@ -2276,9 +2304,11 @@ class Sweeper3d(tk.Frame):
         
         self.button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause())
         self.button_pause.place(relx = 0.6, rely = 0.25 + lstbox_height)
+        CreateToolTip(self.button_pause, 'Pause sweep')
         
         self.button_stop = tk.Button(self, text = '⏹️', font = LARGE_FONT, command = lambda: self.stop())
         self.button_stop.place(relx = 0.6335, rely = 0.25 + lstbox_height)
+        CreateToolTip(self.button_stop, 'Stop sweep')
         
         self.button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero())
         self.button_tozero.place(relx = 0.6, rely = 0.3 + lstbox_height)
@@ -2327,6 +2357,7 @@ class Sweeper3d(tk.Frame):
         
         label_back_and_forth_master = tk.Label(self, text = '🔁', font = SUPER_LARGE)
         label_back_and_forth_master.place(relx = 0.3635, rely = 0.61)
+        CreateToolTip(label_back_and_forth_master, 'Back and forth sweep\nfor this axis')
 
         self.combo_to_sweep3 = ttk.Combobox(self, value=list_of_devices)
         self.combo_to_sweep3.current(0)
@@ -2353,6 +2384,7 @@ class Sweeper3d(tk.Frame):
         
         label_back_and_forth_slave = tk.Label(self, text = '🔁', font = SUPER_LARGE)
         label_back_and_forth_slave.place(relx = 0.5135, rely = 0.61)
+        CreateToolTip(label_back_and_forth_slave, 'Back and forth sweep\nfor this axis')
 
         self.devices = tk.StringVar()
         self.devices.set(value=parameters_to_read)
@@ -2377,6 +2409,7 @@ class Sweeper3d(tk.Frame):
 
         label_step1 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
         label_step1.place(relx=0.12, rely=0.37)
+        CreateToolTip(label_step1, 'Speed of 1d-sweep')
 
         self.entry_from1 = tk.Entry(self)
         self.entry_from1.insert(0, self.from1_init)
@@ -2393,6 +2426,7 @@ class Sweeper3d(tk.Frame):
         label_delay_factor1 = tk.Label(
             self, text='Delay factor, s', justify=tk.LEFT, font=LARGE_FONT)
         label_delay_factor1.place(relx=0.12, rely=0.45)
+        CreateToolTip(label_delay_factor1, 'Sleep time per 1 point')
 
         self.entry_delay_factor1 = tk.Entry(self)
         self.entry_delay_factor1.insert(0, self.delay_factor1_init)
@@ -2406,6 +2440,7 @@ class Sweeper3d(tk.Frame):
 
         label_step2 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
         label_step2.place(relx=0.27, rely=0.37)
+        CreateToolTip(label_step2, 'Speed of 1d-sweep')
 
         self.entry_from2 = tk.Entry(self)
         self.entry_from2.insert(0, self.from2_init)
@@ -2422,6 +2457,7 @@ class Sweeper3d(tk.Frame):
         label_delay_factor2 = tk.Label(
             self, text='Delay factor, s', justify=tk.LEFT, font=LARGE_FONT)
         label_delay_factor2.place(relx=0.27, rely=0.45)
+        CreateToolTip(label_delay_factor2, 'Sleep time per 1 point')
 
         self.entry_delay_factor2 = tk.Entry(self)
         self.entry_delay_factor2.insert(0, self.delay_factor2_init)
@@ -2435,6 +2471,7 @@ class Sweeper3d(tk.Frame):
 
         label_step3 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
         label_step3.place(relx=0.42, rely=0.37)
+        CreateToolTip(label_step3, 'Speed of 1d-sweep')
 
         self.entry_from3 = tk.Entry(self)
         self.entry_from3.insert(0, self.from3_init)
@@ -2451,6 +2488,7 @@ class Sweeper3d(tk.Frame):
         label_delay_factor3 = tk.Label(
             self, text='Delay factor, s', justify=tk.LEFT, font=LARGE_FONT)
         label_delay_factor3.place(relx=0.42, rely=0.45)
+        CreateToolTip(label_delay_factor3, 'Sleep time per 1 point')
 
         self.entry_delay_factor3 = tk.Entry(self)
         self.entry_delay_factor3.insert(0, self.delay_factor3_init)
@@ -2480,10 +2518,12 @@ class Sweeper3d(tk.Frame):
         button_new_manual1 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(
             filename=self.manual_filenames[0], i=0))
         button_new_manual1.place(relx=0.12, rely=0.61)
+        CreateToolTip(button_new_manual1, 'Create new sweep instruction')
 
         button_explore_manual1 = tk.Button(
             self, text='🔎', font = LARGE_FONT, command=lambda: self.explore_files(i=0))
         button_explore_manual1.place(relx=0.15, rely=0.61)
+        CreateToolTip(button_explore_manual1, 'Explore existing sweep instruction')
 
         checkbox_manual2 = ttk.Checkbutton(self, text='Maunal sweep select',
                                            variable=self.status_manual2, onvalue=1,
@@ -2493,10 +2533,12 @@ class Sweeper3d(tk.Frame):
         button_new_manual2 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(
             filename=self.manual_filenames[1], i=1))
         button_new_manual2.place(relx=0.27, rely=0.61)
+        CreateToolTip(button_new_manual2, 'Create new sweep instruction')
 
         button_explore_manual2 = tk.Button(
             self, text='🔎', font = LARGE_FONT, command=lambda: self.explore_files(i=1))
         button_explore_manual2.place(relx=0.3, rely=0.61)
+        CreateToolTip(button_explore_manual2, 'Explore existing sweep instruction')
 
         checkbox_manual3 = ttk.Checkbutton(self, text='Maunal sweep select',
                                            variable=self.status_manual3, onvalue=1,
@@ -2506,13 +2548,16 @@ class Sweeper3d(tk.Frame):
         button_new_manual3 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(
             filename=self.manual_filenames[2], i=2))
         button_new_manual3.place(relx=0.42, rely=0.61)
+        CreateToolTip(button_new_manual3, 'Create new sweep instruction')
 
         button_explore_manual3 = tk.Button(
             self, text='🔎', font = LARGE_FONT, command=lambda: self.explore_files(i=2))
         button_explore_manual3.place(relx=0.45, rely=0.61)
+        CreateToolTip(button_explore_manual3, 'Explore existing sweep instruction')
         
         label_condition = tk.Label(self, text = 'Constraints:', font = LARGE_FONT)
         label_condition.place(relx = 0.12, rely = 0.66)
+        CreateToolTip(label_condition, 'Master sweep: x\nSlave sweep: y\nSlave-slave sweep: z\nSet condition for a sweep map')
         
         self.text_condition = tk.Text(self, width = 60, height = 7)
         self.text_condition.place(relx = 0.12, rely = 0.7)
@@ -2525,6 +2570,7 @@ class Sweeper3d(tk.Frame):
 
         button_settings = tk.Button(self, text = '⚙️', font = SUPER_LARGE, command = lambda: self.open_settings())
         button_settings.place(relx = 0.85, rely = 0.15)
+        CreateToolTip(button_settings, 'Settings')
 
         button_filename = tk.Button(
             self, text = 'Browse...', command=lambda: self.set_filename_sweep())
@@ -2537,6 +2583,7 @@ class Sweeper3d(tk.Frame):
         graph_button = tk.Button(
             self, text='📊', font = SUPER_LARGE, command=lambda: self.open_graph())
         graph_button.place(relx=0.75, rely=0.8)
+        CreateToolTip(graph_button, 'Graph')
 
     def update_master23_combo(self, event, interval = 1000):
         if self.combo_master1['value'][self.combo_master1.current()] == '':
@@ -3529,6 +3576,7 @@ class Sweeper_write(threading.Thread):
         global tozero_flag
         global back_and_forth_slave
         global back_and_forth_master
+        global zero_time
         
         def append_read_parameters():
             #appends dataframe with parameters to read
@@ -3564,15 +3612,14 @@ class Sweeper_write(threading.Thread):
             global stop_flag
             
             axis = str(axis)
-            result = getattr(self, 'value' + axis) < float(globals()['to_sweep' + axis])
             
             if stop_flag == True:
                 return False
             
             if float(globals()['ratio_sweep' + axis]) > 0:
-                return result
+                return getattr(self, 'value' + axis) < float(globals()['to_sweep' + axis]) and getattr(self, 'value' + axis) > float(globals()['from_sweep' + axis])
             else:
-                return not result
+                return getattr(self, 'value' + axis) > float(globals()['to_sweep' + axis]) and getattr(self, 'value' + axis) < float(globals()['from_sweep' + axis])
         
         def step(axis = 1, value = None):
             
@@ -3642,20 +3689,24 @@ class Sweeper_write(threading.Thread):
         
         def update_filename():
             global filename_sweep
-            i = globals()['ind']
-            i += 1
+            globals()['ind'] += 1
             globals()['dataframe'] = pd.DataFrame(columns=self.columns)
-            self.filename_sweep = self.filename_sweep[:-(5 + len(str(i)))] + str(-i) + '.csv'
+            self.filename_sweep = self.filename_sweep[:-(5 + len(str(globals()['ind'])))] + '.csv'
             filename_sweep = self.filename_sweep
             globals()['dataframe'].to_csv(self.filename_sweep, index=False)
             return
         
-        def back_and_forth_transposition(axis):
+        def back_and_forth_transposition(axis, full = True):
             axis = str(axis)
-            dub = getattr(self, 'to_sweep' + axis)
-            setattr(self, 'to_sweep' + axis, getattr(self, 'from_sweep' + axis))
-            setattr(self, 'from_sweep' + axis, dub)
-            setattr(self, 'step' + axis, - getattr(self, 'step' + axis))
+            if full == True:
+                dub = getattr(self, 'to_sweep' + axis)
+                setattr(self, 'to_sweep' + axis, getattr(self, 'from_sweep' + axis))
+                setattr(self, 'from_sweep' + axis, dub)
+                setattr(self, 'step' + axis, - getattr(self, 'step' + axis))
+                setattr(self, 'ratio' + axis, - getattr(self, 'ratio' + axis))
+            else:
+                setattr(self, 'value' + axis, getattr(self, 'from' + axis))
+            update_filename()
             
         def determine_step(i, data, axis):
             axis = str(axis)
@@ -3710,16 +3761,126 @@ class Sweeper_write(threading.Thread):
                     self.value3 += self.step3
                 else:
                     pass
+                
+        def inner_loop_single(direction = 1):
+            #commits a walk through slave (for 2d) or slave-slave (for 3d) axis
+            
+            if manual_sweep_flags.pop() == 0:
+                while condition(len(manual_sweep_flags)) and manual_sweep_flags.pop() == 0:
+                    inner_step()
+            elif manual_sweep_flags.pop() == 1:
+                data_inner = pd.read_csv(manual_filenames.pop()).values.reshape(-1)
+                for i, value in enumerate(data_inner[::direction]):
+                    if manual_sweep_flags.pop() == 1:
+                        data_inner = pd.read_csv(manual_filenames[1]).values.reshape(-1)
+                        determine_step(i, data_inner, len(manual_sweep_flags))
+                        inner_step(value)
+                    else:
+                        break
+            else:
+                raise Exception('manual_sweep_flag is not correct, needs 0 or 1, but got ', manual_sweep_flags.pop())
+
+        def inner_loop_back_and_forth():
+            #travels through a slave-slave axis back and forth as many times, as was given
+            global back_and_forth_slave
+            
+            if back_and_forth_slave == 1:
+                inner_loop_single()
+                back_and_forth_transposition(len(manual_sweep_flags), False)
+            
+            elif back_and_forth_slave > 1:
+                for i in range(1, back_and_forth_slave + 1):
+                    inner_loop_single(round(2 * (i % 2) - 1))
+                    back_and_forth_transposition(len(manual_sweep_flags))
+                if back_and_forth_slave % 2 == 1:
+                    back_and_forth_transposition(len(manual_sweep_flags))
+                    
+            else:
+                raise Exception('back_and_forth_slave is not correct, needs > 1, but got ', back_and_forth_slave)
+                    
+        def external_loop_single(direction = 1):
+            #perform sequence of steps through master (for 2-d) or slave (for 3-d) axis
+            #with inner_loop on each step
+            if manual_sweep_flags[-1] == 0:
+                cur_axis = len(manual_sweep_flags) - 1
+                while condition(cur_axis) and manual_sweep_flags[-1] == 0:
+                    if len(manual_sweep_flags) == 3:
+                        update_dataframe(True)
+                    step(cur_axis)
+                    if len(manual_sweep_flags) == 2:
+                        globals()['dataframe_after'] = [*globals()['dataframe']]
+                    elif len(manual_sweep_flags) == 3:
+                        globals()['dataframe_after_after'] = [*globals()['dataframe']]
+                    else:
+                        raise Exception('manual_sweep_flag is not correct size, should be 1, 2 or 3, but got ', len(manual_sweep_flags))
+                    inner_loop_back_and_forth()
+            elif manual_sweep_flags[-1] == 1:
+                data_middle = pd.read_csv(manual_filenames[-1].values.reshape(-1))
+                for i, value in enumerate(data_middle[::direction]):
+                    if manual_sweep_flags[-1] == 1:
+                        determine_step(i, data_middle, cur_axis)
+                        step(cur_axis, value = value)
+                        if len(manual_sweep_flags) == 2:
+                            globals()['dataframe_after'] = [*globals()['dataframe']]
+                        else:
+                            globals()['dataframe_after_after'] = [*globals()['dataframe']]
+                        inner_loop_back_and_forth()
+                    else:
+                        break
+            else:
+                raise Exception('manual_sweep_flag is not correct, needs 0 or 1, but got ', manual_sweep_flags[-1])
+            
+        def external_loop_back_and_forth():
+            #travels through a slave axis back and forth as many times, as was given
+            global back_and_forth_slave
+            
+            if back_and_forth_master == 1:
+                external_loop_single()
+                back_and_forth_transposition(len(manual_sweep_flags), False)
+            
+            elif back_and_forth_master > 1:
+                for i in range(1, back_and_forth_master + 1):
+                    external_loop_single(round(2 * (i % 2) - 1))
+                    back_and_forth_transposition(len(manual_sweep_flags))
+                if back_and_forth_master % 2 == 1:
+                    back_and_forth_transposition(len(manual_sweep_flags))
+                    
+            else:
+                raise Exception('back_and_forth_slave is not correct, needs > 1, but got ', back_and_forth_slave)
+
+        def master_loop():
+            #perform sequence of steps through master (3-d) axis
+            #with external_loop on each step
+            if manual_sweep_flags[-2] == 0:
+                cur_axis = len(manual_sweep_flags) - 2
+                while condition(cur_axis) and manual_sweep_flags[-2] == 0:
+                    step(cur_axis)
+                    globals()['dataframe_after'] = [*globals()['dataframe']]
+                    external_loop_back_and_forth()
+            elif manual_sweep_flags[-2] == 1:
+                data_external = pd.read_csv(manual_filenames[-2].values.reshape(-1))
+                for i, value in enumerate(data_external):
+                    if manual_sweep_flags[-2] == 1:
+                        determine_step(i, data_external, cur_axis)
+                        step(cur_axis, value = value)
+                        globals()['dataframe_after'] = [*globals()['dataframe']]
+                        external_loop_back_and_forth()
+                    else:
+                        break
+            else:
+                raise Exception('manual_sweep_flag is not correct, needs 0 or 1, but got ', manual_sweep_flags[-2])
+
         
         if self.sweeper_flag1 == True:
+            
+            zero_time = time.process_time()
+            
             globals()['dataframe'] = pd.DataFrame(columns=self.columns)
             globals()['dataframe'].to_csv(self.filename_sweep, index=False)
             
             while condition(1) and manual_sweep_flags == [0]:
-                if self.device_to_sweep1 == 'Time':
-                    globals()['dataframe'] = [time.process_time() - zero_time]
-                else:
-                    step(1)
+                globals()['dataframe'] = [time.process_time() - zero_time]
+                step(1)
                 append_read_parameters()
                 tofile()
 
@@ -3732,6 +3893,8 @@ class Sweeper_write(threading.Thread):
                 self.sweeper_flag1 = False
 
         if self.sweeper_flag2 == True:
+            
+            zero_time = time.process_time()
 
             if self.time1 > self.time2 and master_lock == False:
                 self.transposition(1, 2)
@@ -3743,76 +3906,7 @@ class Sweeper_write(threading.Thread):
             update_filename()
 
             if len(manual_sweep_flags) == 2:        
-                if manual_sweep_flags[0] == 0:
-                    while condition(1) and manual_sweep_flags[0] == 0:
-                        step(1)
-                        globals()['dataframe_after'] = [*globals()['dataframe']]
-                        if manual_sweep_flags[1] == 0:
-                            while condition(2) and manual_sweep_flags == [0, 0]:
-                                inner_step()
-                            if back_and_forth_slave == True:
-                                back_and_forth_transposition(2)
-                                while condition(2) and manual_sweep_flags == [0, 0]:
-                                    inner_step()
-                                back_and_forth_transposition(2)
-                            self.value2 = self.from_sweep2
-                            update_filename()
-                        else:
-                            data2 = pd.read_csv(manual_filenames[1]).values.reshape(-1)
-                            for i2, value2 in enumerate(data2):
-                                if manual_sweep_flags == [0, 1]:
-                                    data2 = pd.read_csv(manual_filenames[1]).values.reshape(-1)
-                                    determine_step(i2, data2, 2)
-                                    inner_step(value2)
-                                else:
-                                    break
-                                if back_and_forth_slave == True:
-                                    back_and_forth_transposition(2)
-                                    for i2, value2 in enumerate(data2[::-1]):
-                                        if manual_sweep_flags == [0, 1]:
-                                            data2 = pd.read_csv(manual_filenames[1]).values.reshape(-1)[::-1]
-                                            determine_step(i2, data2, 2)
-                                            inner_step(value2)
-                                        else:
-                                            break
-                                    back_and_forth_transposition(2)
-                                    update_filename()
-                else:
-                    data1 = pd.read_csv(manual_filenames[0]).values.reshape(-1)
-                    for i1, value1 in enumerate(data1):
-                        determine_step(i1, data1, 1)
-                        step(1, value = value1)
-                        globals()['dataframe_after'] = [*globals()['dataframe']]
-                        if manual_sweep_flags[1] == 0:
-                            while condition(2) and manual_sweep_flags == [1, 0]:
-                                inner_step()
-                            if back_and_forth_slave == True:
-                                back_and_forth_transposition(2)
-                                while condition(2) and manual_sweep_flags == [1, 0]:
-                                    inner_step()
-                                back_and_forth_transposition(2)
-                            self.value2 = self.from_sweep2
-                            update_filename()
-                        else:
-                            data2 = pd.read_csv(manual_filenames[1]).values.reshape(-1)
-                            for i2, value2 in enumerate(data2):
-                                if manual_sweep_flags == [1, 1]:
-                                    data2 = pd.read_csv(manual_filenames[1]).values.reshape(-1)
-                                    determine_step(i2, data2, 2)
-                                    inner_step(value2)
-                                else:
-                                    break
-                                if back_and_forth_slave == True:
-                                    back_and_forth_transposition(2)
-                                    for i2, value2 in enumerate(data2[::-1]):
-                                        if manual_sweep_flags == [1, 1]:
-                                            data2 = pd.read_csv(manual_filenames[1]).values.reshape(-1)[::-1]
-                                            determine_step(i2, data2, 2)
-                                            inner_step(value2)
-                                        else:
-                                            break
-                                    back_and_forth_transposition(2)
-                                    update_filename()
+                external_loop_back_and_forth()
                 self.sweeper_flag2 == False
 
             self.sweeper_flag2 == False
@@ -3839,321 +3933,7 @@ class Sweeper_write(threading.Thread):
             update_filename()
 
             if len(manual_sweep_flags) == 3:
-                if manual_sweep_flags[0] == 0:
-                    while condition(1) and manual_sweep_flags[0] == 0:
-                        step(1)
-                        globals()['dataframe_after'] = [*globals()['dataframe']]
-                        if manual_sweep_flags[1] == 0:
-                            while condition(2) and manual_sweep_flags[1] == 0:
-                                update_dataframe(True)
-                                step(2)
-                                globals['dataframe_after_after'] = [*globals()['dataframe']]
-                                if manual_sweep_flags[2] == 0:
-                                    while condition(3) and manual_sweep_flags == [0, 0, 0]:
-                                        inner_step()
-                                    if back_and_forth_slave == True:
-                                        back_and_forth_transposition(3)
-                                        while condition(3) and manual_sweep_flags == [0, 0, 0]:
-                                            inner_step()
-                                        back_and_forth_transposition(3)
-                                    self.value3 = self.from_sweep3
-                                    update_filename()
-                                else:
-                                    data3 = pd.read_csv(manual_filenames[2]).values.reshape(-1)
-                                    for i3, value3 in enumerate(data3):
-                                        if manual_sweep_flags == [0, 0, 1]:
-                                            data3 = pd.read_csv(manual_filenames[3]).values.reshape(-1)
-                                            determine_step(i3, data3, 3)
-                                            inner_step(value3 = value3)
-                                        else:
-                                            break
-                                    if back_and_forth_slave == True:
-                                        back_and_forth_transposition(3)
-                                        for i3, value3 in enumerate(data3[::-1]):
-                                            if manual_sweep_flags == [0, 0, 1]:
-                                                data3 = pd.read_csv(manual_filenames[3]).values.reshape(-1)[::-1]
-                                                determine_step(i3, data3, 3)
-                                                inner_step(value3 = value3)
-                                            else:
-                                                break
-                                        back_and_forth_transposition(3)
-                                        update_filename()
-                            if back_and_forth_master == True:
-                                back_and_forth_transposition(2)
-                                while condition(2) and manual_sweep_flags[1] == 0:
-                                    update_dataframe(True)
-                                    step(2)
-                                    globals['dataframe_after_after'] = [*globals()['dataframe']]
-                                    if manual_sweep_flags[2] == 0:
-                                        while condition(3) and manual_sweep_flags == [0, 0, 0]:
-                                            inner_step()
-                                        if back_and_forth_slave == True:
-                                            back_and_forth_transposition(3)
-                                            while condition(3) and manual_sweep_flags == [0, 0, 0]:
-                                                inner_step()
-                                            back_and_forth_transposition(3)
-                                        self.value3 = self.from_sweep3
-                                        update_filename()
-                                    else:
-                                        data3 = pd.read_csv(manual_filenames[2]).values.reshape(-1)
-                                        for i3, value3 in enumerate(data3):
-                                            if manual_sweep_flags == [0, 0, 1]:
-                                                data3 = pd.read_csv(manual_filenames[3]).values.reshape(-1)
-                                                determine_step(i3, data3, 3)
-                                                inner_step(value3 = value3)
-                                            else:
-                                                break
-                                        if back_and_forth_slave == True:
-                                            back_and_forth_transposition(3)
-                                            for i3, value3 in enumerate(data3[::-1]):
-                                                if manual_sweep_flags == [0, 0, 1]:
-                                                    data3 = pd.read_csv(manual_filenames[3]).values.reshape(-1)[::-1]
-                                                    determine_step(i3, data3, 3)
-                                                    inner_step(value3 = value3)
-                                                else:
-                                                    break
-                                            back_and_forth_transposition(3)
-                                            update_filename()
-                                back_and_forth_transposition(2)
-                        else:
-                            data2 = pd.read_csv(manual_filenames[1]).values.reshape(-1)
-                            for i2, value2 in enumerate(data2):
-                                if manual_sweep_flags == [0, 1, 0]:
-                                    data2 = pd.read_csv(manual_filenames[1]).values.reshape(-1)
-                                    determine_step(i2, data2, 2)
-                                    update_dataframe(True)
-                                    step(2, value2)
-                                    globals['dataframe_after_after'] = [*globals()['dataframe']]
-                                    if manual_sweep_flags[2] == 0:
-                                        while condition(3) and manual_sweep_flags == [0, 1, 0]:
-                                            inner_step()
-                                        if back_and_forth_slave == True:
-                                            back_and_forth_transposition(3)
-                                            while condition(3) and manual_sweep_flags == [0, 1, 0]:
-                                                inner_step()
-                                            back_and_forth_transposition(3)
-                                        self.value3 = self.from_sweep3
-                                        update_filename()
-                                    else:
-                                        data3 = pd.read_csv(manual_filenames[2]).values.reshape(-1)
-                                        for i3, value3 in enumerate(data3):
-                                            if manual_sweep_flags == [0, 1, 1]:
-                                                data3 = pd.read_csv(manual_filenames[3]).values.reshape(-1)
-                                                determine_step(i3, data3, 3)
-                                                inner_step(value3 = value3)
-                                            else:
-                                                break
-                                        if back_and_forth_slave == True:
-                                            back_and_forth_transposition(3)
-                                            for i3, value3 in enumerate(data3[::-1]):
-                                                if manual_sweep_flags == [0, 1, 1]:
-                                                    data3 = pd.read_csv(manual_filenames[3]).values.reshape(-1)[::-1]
-                                                    determine_step(i3, data3, 3)
-                                                    inner_step(value3 = value3)
-                                                else:
-                                                    break
-                                            back_and_forth_transposition(3)
-                                            update_filename()
-                            if back_and_forth_master == True:
-                                back_and_forth_transposition(2)
-                                data2 = pd.read_csv(manual_filenames[1]).values.reshape(-1)
-                                for i2, value2 in enumerate(data2[::-1]):
-                                    if manual_sweep_flags == [0, 1, 0]:
-                                        data2 = pd.read_csv(manual_filenames[1]).values.reshape(-1)[::-1]
-                                        determine_step(i2, data2, 2)
-                                        update_dataframe(True)
-                                        step(2, value2)
-                                        globals['dataframe_after_after'] = [*globals()['dataframe']]
-                                        if manual_sweep_flags[2] == 0:
-                                            while condition(3) and manual_sweep_flags == [0, 1, 0]:
-                                                inner_step()
-                                            if back_and_forth_slave == True:
-                                                back_and_forth_transposition(3)
-                                                while condition(3) and manual_sweep_flags == [0, 1, 0]:
-                                                    inner_step()
-                                                back_and_forth_transposition(3)
-                                            self.value3 = self.from_sweep3
-                                            update_filename()
-                                        else:
-                                            data3 = pd.read_csv(manual_filenames[2]).values.reshape(-1)
-                                            for i3, value3 in enumerate(data3):
-                                                if manual_sweep_flags == [0, 1, 1]:
-                                                    data3 = pd.read_csv(manual_filenames[3]).values.reshape(-1)
-                                                    determine_step(i3, data3, 3)
-                                                    inner_step(value3 = value3)
-                                                else:
-                                                    break
-                                            if back_and_forth_slave == True:
-                                                back_and_forth_transposition(3)
-                                                for i3, value3 in enumerate(data3[::-1]):
-                                                    if manual_sweep_flags == [0, 1, 1]:
-                                                        data3 = pd.read_csv(manual_filenames[3]).values.reshape(-1)[::-1]
-                                                        determine_step(i3, data3, 3)
-                                                        inner_step(value3 = value3)
-                                                    else:
-                                                        break
-                                                back_and_forth_transposition(3)
-                                                update_filename()
-                else:
-                    data1 = pd.read_csv(manual_filenames[0]).values.reshape(-1)
-                    for i1, value1 in enumerate(data1):
-                        if manual_sweep_flags == [1, 0, 0]:
-                            data1 = pd.read_csv(manual_filenames[0]).values.reshape(-1)
-                            determine_step(i1, data1, 1)
-                            update_dataframe(True)
-                            step(1, value1)
-                            globals()['dataframe_after'] = [*globals()['dataframe']]
-                            if manual_sweep_flags[1] == 0:
-                                while condition(2) and manual_sweep_flags[1] == 0:
-                                    update_dataframe(True)
-                                    step(2)
-                                    globals['dataframe_after_after'] = [*globals()['dataframe']]
-                                    if manual_sweep_flags[2] == 0:
-                                        while condition(3) and manual_sweep_flags == [1, 0, 0]:
-                                            inner_step()
-                                        if back_and_forth_slave == True:
-                                            back_and_forth_transposition(3)
-                                            while condition(3) and manual_sweep_flags == [1, 0, 0]:
-                                                inner_step()
-                                            back_and_forth_transposition(3)
-                                        self.value3 = self.from_sweep3
-                                        update_filename()
-                                    else:
-                                        data3 = pd.read_csv(manual_filenames[2]).values.reshape(-1)
-                                        for i3, value3 in enumerate(data3):
-                                            if manual_sweep_flags == [1, 0, 1]:
-                                                data3 = pd.read_csv(manual_filenames[3]).values.reshape(-1)
-                                                determine_step(i3, data3, 3)
-                                                inner_step(value3 = value3)
-                                            else:
-                                                break
-                                        if back_and_forth_slave == True:
-                                            back_and_forth_transposition(3)
-                                            for i3, value3 in enumerate(data3[::-1]):
-                                                if manual_sweep_flags == [1, 0, 1]:
-                                                    data3 = pd.read_csv(manual_filenames[3]).values.reshape(-1)[::-1]
-                                                    determine_step(i3, data3, 3)
-                                                    inner_step(value3 = value3)
-                                                else:
-                                                    break
-                                            back_and_forth_transposition(3)
-                                            update_filename()
-                                if back_and_forth_master == True:
-                                    back_and_forth_transposition(2)
-                                    while condition(2) and manual_sweep_flags[1] == 0:
-                                        update_dataframe(True)
-                                        step(2)
-                                        globals['dataframe_after_after'] = [*globals()['dataframe']]
-                                        if manual_sweep_flags[2] == 0:
-                                            while condition(3) and manual_sweep_flags == [1, 0, 0]:
-                                                inner_step()
-                                            if back_and_forth_slave == True:
-                                                back_and_forth_transposition(3)
-                                                while condition(3) and manual_sweep_flags == [1, 0, 0]:
-                                                    inner_step()
-                                                back_and_forth_transposition(3)
-                                            self.value3 = self.from_sweep3
-                                            update_filename()
-                                        else:
-                                            data3 = pd.read_csv(manual_filenames[2]).values.reshape(-1)
-                                            for i3, value3 in enumerate(data3):
-                                                if manual_sweep_flags == [1, 0, 1]:
-                                                    data3 = pd.read_csv(manual_filenames[3]).values.reshape(-1)
-                                                    determine_step(i3, data3, 3)
-                                                    inner_step(value3 = value3)
-                                                else:
-                                                    break
-                                            if back_and_forth_slave == True:
-                                                back_and_forth_transposition(3)
-                                                for i3, value3 in enumerate(data3[::-1]):
-                                                    if manual_sweep_flags == [1, 0, 1]:
-                                                        data3 = pd.read_csv(manual_filenames[3]).values.reshape(-1)[::-1]
-                                                        determine_step(i3, data3, 3)
-                                                        inner_step(value3 = value3)
-                                                    else:
-                                                        break
-                                                back_and_forth_transposition(3)
-                                                update_filename()
-                                    back_and_forth_transposition(2)
-                            else:
-                                data2 = pd.read_csv(manual_filenames[1]).values.reshape(-1)
-                                for i2, value2 in enumerate(data2):
-                                    if manual_sweep_flags == [1, 1, 0]:
-                                        data2 = pd.read_csv(manual_filenames[1]).values.reshape(-1)
-                                        determine_step(i2, data2, 2)
-                                        update_dataframe(True)
-                                        step(2, value2)
-                                        globals['dataframe_after_after'] = [*globals()['dataframe']]
-                                        if manual_sweep_flags[2] == 0:
-                                            while condition(3) and manual_sweep_flags == [1, 1, 0]:
-                                                inner_step()
-                                            if back_and_forth_slave == True:
-                                                back_and_forth_transposition(3)
-                                                while condition(3) and manual_sweep_flags == [1, 1, 0]:
-                                                    inner_step()
-                                                back_and_forth_transposition(3)
-                                            self.value3 = self.from_sweep3
-                                            update_filename()
-                                        else:
-                                            data3 = pd.read_csv(manual_filenames[2]).values.reshape(-1)
-                                            for i3, value3 in enumerate(data3):
-                                                if manual_sweep_flags == [0, 1, 1]:
-                                                    data3 = pd.read_csv(manual_filenames[3]).values.reshape(-1)
-                                                    determine_step(i3, data3, 3)
-                                                    inner_step(value3 = value3)
-                                                else:
-                                                    break
-                                            if back_and_forth_slave == True:
-                                                back_and_forth_transposition(3)
-                                                for i3, value3 in enumerate(data3[::-1]):
-                                                    if manual_sweep_flags == [1, 1, 1]:
-                                                        data3 = pd.read_csv(manual_filenames[3]).values.reshape(-1)[::-1]
-                                                        determine_step(i3, data3, 3)
-                                                        inner_step(value3 = value3)
-                                                    else:
-                                                        break
-                                                back_and_forth_transposition(3)
-                                                update_filename()
-                                if back_and_forth_master == True:
-                                    back_and_forth_transposition(2)
-                                    data2 = pd.read_csv(manual_filenames[1]).values.reshape(-1)
-                                    for i2, value2 in enumerate(data2[::-1]):
-                                        if manual_sweep_flags == [1, 1, 0]:
-                                            data2 = pd.read_csv(manual_filenames[1]).values.reshape(-1)[::-1]
-                                            determine_step(i2, data2, 2)
-                                            update_dataframe(True)
-                                            step(2, value2)
-                                            globals['dataframe_after_after'] = [*globals()['dataframe']]
-                                            if manual_sweep_flags[2] == 0:
-                                                while condition(3) and manual_sweep_flags == [1, 1, 0]:
-                                                    inner_step()
-                                                if back_and_forth_slave == True:
-                                                    back_and_forth_transposition(3)
-                                                    while condition(3) and manual_sweep_flags == [1, 1, 0]:
-                                                        inner_step()
-                                                    back_and_forth_transposition(3)
-                                                self.value3 = self.from_sweep3
-                                                update_filename()
-                                            else:
-                                                data3 = pd.read_csv(manual_filenames[2]).values.reshape(-1)
-                                                for i3, value3 in enumerate(data3):
-                                                    if manual_sweep_flags == [1, 1, 1]:
-                                                        data3 = pd.read_csv(manual_filenames[3]).values.reshape(-1)
-                                                        determine_step(i3, data3, 3)
-                                                        inner_step(value3 = value3)
-                                                    else:
-                                                        break
-                                                if back_and_forth_slave == True:
-                                                    back_and_forth_transposition(3)
-                                                    for i3, value3 in enumerate(data3[::-1]):
-                                                        if manual_sweep_flags == [1, 1, 1]:
-                                                            data3 = pd.read_csv(manual_filenames[3]).values.reshape(-1)[::-1]
-                                                            determine_step(i3, data3, 3)
-                                                            inner_step(value3 = value3)
-                                                        else:
-                                                            break
-                                                    back_and_forth_transposition(3)
-                                                    update_filename()
+                master_loop()
                 self.sweeper_flag3 == False
 
 
