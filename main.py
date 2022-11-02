@@ -11,8 +11,8 @@ from ToolTip import CreateToolTip
 import matplotlib.animation as animation
 from matplotlib import style
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import (
-    FigureCanvasTkAgg, NavigationToolbar2Tk)
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, 
+                                               NavigationToolbar2Tk)
 import matplotlib.pyplot as plt
 import pyvisa as visa
 from pyvisa import constants
@@ -21,7 +21,7 @@ from datetime import datetime
 import pandas as pd
 import matplotlib
 import numpy as np
-import random
+#import random
 
 matplotlib.use("TkAgg")
 plt.rcParams['animation.html'] = 'jshtml'
@@ -96,8 +96,8 @@ manual_filenames = [cur_dir + '\data_files\manual' + datetime.today().strftime(
 
 master_lock = False
 
-back_and_forth_slave = False
-back_and_forth_master = False
+back_and_forth_slave = 1
+back_and_forth_master = 1
 
 columns = []
 
@@ -1285,6 +1285,21 @@ class Sweeper1d(tk.Frame):
             "<<ComboboxSelected>>", self.update_sweep_parameters)
         self.combo_to_sweep1.place(relx=0.15, rely=0.16)
 
+        self.status_back_and_forth_slave = tk.IntVar(value = 0)
+        
+        back_and_forth_slave = 1
+        
+        self.back_and_forth_slave_count = 2
+    
+        self.checkbox_back_and_forth_slave = ttk.Checkbutton(self,
+                                           variable=self.status_back_and_forth_slave, onvalue=1,
+                                           offvalue=0, command=lambda: self.save_back_and_forth_slave_status())
+        self.checkbox_back_and_forth_slave.place(relx=0.23, rely=0.56)
+        
+        label_back_and_forth_slave = tk.Label(self, text = '🔁', font = SUPER_LARGE)
+        label_back_and_forth_slave.place(relx = 0.2435, rely = 0.55)
+        CreateToolTip(label_back_and_forth_slave, 'Back and forth sweep\nfor this axis')
+
         self.devices = tk.StringVar()
         self.devices.set(value=parameters_to_read)
         self.lstbox_to_read = tk.Listbox(self, listvariable = self.devices,
@@ -1380,10 +1395,10 @@ class Sweeper1d(tk.Frame):
         self.manual_sweep_flags = [0]
         self.manual_filenames = [self.filename]
 
-        checkbox_manual = ttk.Checkbutton(self, text='Maunal sweep select',
+        self.checkbox_manual1 = ttk.Checkbutton(self, text='Maunal sweep select',
                                           variable=self.status_manual, onvalue=1,
                                           offvalue=0, command=lambda: self.save_manual_status())
-        checkbox_manual.place(relx=0.12, rely=0.52)
+        self.checkbox_manual1.place(relx=0.12, rely=0.52)
 
         button_new_manual = tk.Button(self, text = '🖊', font = LARGE_FONT, command=lambda: self.open_blank(
             filename=self.manual_filenames[0]))
@@ -1400,6 +1415,8 @@ class Sweeper1d(tk.Frame):
         self.entry_filename = tk.Entry(self, textvariable = self.filename_textvariable, font = LARGE_FONT, 
                                        width = width)
         self.entry_filename.place(relx = 0.97 - width / 100, rely = 0.9)
+
+        self.script = ''
 
         button_settings = tk.Button(self, text = '⚙️', font = SUPER_LARGE, command = lambda: self.open_settings())
         button_settings.place(relx = 0.85, rely = 0.15)
@@ -1490,6 +1507,14 @@ class Sweeper1d(tk.Frame):
         if self.manual_sweep_flags[0] != self.status_manual.get():
             self.manual_sweep_flags[0] = self.status_manual.get()
 
+    def save_back_and_forth_slave_status(self):
+        global back_and_forth_slave
+        
+        if self.status_back_and_forth_slave == 0:
+            back_and_forth_slave = 1
+        else:
+            back_and_forth_slave = self.back_and_forth_status_slave
+
     def open_blank(self, filename):
         df = pd.DataFrame(columns=['steps'])
         df.to_csv(filename, index=False)
@@ -1579,6 +1604,7 @@ class Sweeper1d(tk.Frame):
         global sweeper_flag2
         global sweeper_flag3
         global columns
+        global script
         global manual_filenames
         global manual_sweep_flags
         global zero_time
@@ -1624,6 +1650,7 @@ class Sweeper1d(tk.Frame):
         sweeper_flag3 = False
         manual_filenames = self.manual_filenames
         manual_sweep_flags = self.manual_sweep_flags
+        script = self.script
 
         zero_time = time.process_time()
         Sweeper_write()
@@ -1719,7 +1746,9 @@ class Sweeper2d(tk.Frame):
         
         self.status_back_and_forth_slave = tk.IntVar(value = 0)
         
-        back_and_forth_slave = False
+        back_and_forth_slave = 1
+        
+        self.back_and_forth_slave_count = 2
     
         self.checkbox_back_and_forth_slave = ttk.Checkbutton(self,
                                            variable=self.status_back_and_forth_slave, onvalue=1,
@@ -1839,10 +1868,10 @@ class Sweeper2d(tk.Frame):
         self.manual_filenames = [self.filename[:-4] +
                                  '1.csv', self.filename[:-4] + '2.csv']
 
-        checkbox_manual1 = ttk.Checkbutton(self, text='Maunal sweep select',
+        self.checkbox_manual1 = ttk.Checkbutton(self, text='Maunal sweep select',
                                            variable=self.status_manual1, onvalue=1,
                                            offvalue=0, command=lambda: self.save_manual_status(i=1))
-        checkbox_manual1.place(relx=0.12, rely=0.57)
+        self.checkbox_manual1.place(relx=0.12, rely=0.57)
 
         button_new_manual1 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(
             filename=self.manual_filenames[0], i=1))
@@ -1854,10 +1883,10 @@ class Sweeper2d(tk.Frame):
         button_explore_manual1.place(relx=0.15, rely=0.6)
         CreateToolTip(button_explore_manual1, 'Explore existing sweep instruction')
 
-        checkbox_manual2 = ttk.Checkbutton(self, text='Maunal sweep select',
+        self.checkbox_manual2 = ttk.Checkbutton(self, text='Maunal sweep select',
                                            variable=self.status_manual2, onvalue=1,
                                            offvalue=0, command=lambda: self.save_manual_status(i=2))
-        checkbox_manual2.place(relx=0.27, rely=0.57)
+        self.checkbox_manual2.place(relx=0.27, rely=0.57)
 
         button_new_manual2 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(
             filename=self.manual_filenames[1], i=0))
@@ -1881,6 +1910,8 @@ class Sweeper2d(tk.Frame):
         self.entry_filename = tk.Entry(self, textvariable = self.filename_textvariable, font = LARGE_FONT, 
                                        width = width)
         self.entry_filename.place(relx = 0.97 - width / 100, rely = 0.9)
+
+        self.script = ''
 
         button_settings = tk.Button(self, text = '⚙️', font = SUPER_LARGE, command = lambda: self.open_settings())
         button_settings.place(relx = 0.85, rely = 0.15)
@@ -2058,9 +2089,9 @@ class Sweeper2d(tk.Frame):
         global back_and_forth_slave
         
         if self.status_back_and_forth_slave == 0:
-            back_and_forth_slave = False
+            back_and_forth_slave = 1
         else:
-            back_and_forth_slave = True
+            back_and_forth_slave = self.back_and_forth_status_slave
     
     def open_blank(self, filename, i):
         df = pd.DataFrame(columns=['steps'])
@@ -2152,6 +2183,7 @@ class Sweeper2d(tk.Frame):
         global sweeper_flag2
         global sweeper_flag3
         global condition
+        global script
         global columns
         global manual_sweep_flags
         global manual_filenames
@@ -2229,6 +2261,7 @@ class Sweeper2d(tk.Frame):
         sweeper_flag2 = True
         sweeper_flag3 = False
         condition = self.text_condition.get(1.0, tk.END)[:-1]
+        script = self.script
         manual_sweep_flags = self.manual_sweep_flags
         manual_filenames = self.manual_filenames
 
@@ -2350,6 +2383,8 @@ class Sweeper3d(tk.Frame):
         
         self.status_back_and_forth_master = tk.IntVar(value = 0)
     
+        self.back_and_forth_master_count = 2
+    
         self.checkbox_back_and_forth_master = ttk.Checkbutton(self,
                                            variable=self.status_back_and_forth_master, onvalue=1,
                                            offvalue=0, command=lambda: self.save_back_and_forth_master_status())
@@ -2374,8 +2409,10 @@ class Sweeper3d(tk.Frame):
                 self.update_sweep_parameters3(event = None)
         
         self.status_back_and_forth_slave = tk.IntVar(value = 0)
+        
+        self.back_and_forth_slave_count = 2
     
-        back_and_forth_slave = False
+        back_and_forth_slave = 1
     
         self.checkbox_back_and_forth_slave = ttk.Checkbutton(self,
                                            variable=self.status_back_and_forth_slave, onvalue=1,
@@ -2510,11 +2547,11 @@ class Sweeper3d(tk.Frame):
         self.manual_filenames = [self.filename[:-4] + '1.csv',
                                  self.filename[:-4] + '1.csv', self.filename[:-4] + '1.csv']
 
-        checkbox_manual1 = ttk.Checkbutton(self, text='Maunal sweep select',
+        self.checkbox_manual1 = ttk.Checkbutton(self, text='Maunal sweep select',
                                            variable=self.status_manual1, onvalue=1,
                                            offvalue=0, command=lambda: self.save_manual_status(i=1))
-        checkbox_manual1.place(relx=0.12, rely=0.57)
-
+        self.checkbox_manual1.place(relx=0.12, rely=0.57)
+        
         button_new_manual1 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(
             filename=self.manual_filenames[0], i=0))
         button_new_manual1.place(relx=0.12, rely=0.61)
@@ -2525,10 +2562,10 @@ class Sweeper3d(tk.Frame):
         button_explore_manual1.place(relx=0.15, rely=0.61)
         CreateToolTip(button_explore_manual1, 'Explore existing sweep instruction')
 
-        checkbox_manual2 = ttk.Checkbutton(self, text='Maunal sweep select',
+        self.checkbox_manual2 = ttk.Checkbutton(self, text='Maunal sweep select',
                                            variable=self.status_manual2, onvalue=1,
                                            offvalue=0, command=lambda: self.save_manual_status(i=2))
-        checkbox_manual2.place(relx=0.27, rely=0.57)
+        self.checkbox_manual2.place(relx=0.27, rely=0.57)
 
         button_new_manual2 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(
             filename=self.manual_filenames[1], i=1))
@@ -2540,10 +2577,10 @@ class Sweeper3d(tk.Frame):
         button_explore_manual2.place(relx=0.3, rely=0.61)
         CreateToolTip(button_explore_manual2, 'Explore existing sweep instruction')
 
-        checkbox_manual3 = ttk.Checkbutton(self, text='Maunal sweep select',
+        self.checkbox_manual3 = ttk.Checkbutton(self, text='Maunal sweep select',
                                            variable=self.status_manual3, onvalue=1,
                                            offvalue=0, command=lambda: self.save_manual_status(i=3))
-        checkbox_manual3.place(relx=0.42, rely=0.57)
+        self.checkbox_manual3.place(relx=0.42, rely=0.57)
 
         button_new_manual3 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(
             filename=self.manual_filenames[2], i=2))
@@ -2567,6 +2604,8 @@ class Sweeper3d(tk.Frame):
         self.entry_filename = tk.Entry(self, textvariable = self.filename_textvariable, font = LARGE_FONT, 
                                        width = width)
         self.entry_filename.place(relx = 0.97 - width / 100, rely = 0.9)
+
+        self.script = ''
 
         button_settings = tk.Button(self, text = '⚙️', font = SUPER_LARGE, command = lambda: self.open_settings())
         button_settings.place(relx = 0.85, rely = 0.15)
@@ -2817,17 +2856,17 @@ class Sweeper3d(tk.Frame):
         global back_and_forth_master
         
         if self.status_back_and_forth_master == 0:
-            back_and_forth_master = False
+            back_and_forth_master = 1
         else:
-            back_and_forth_master = True
+            back_and_forth_master = self.back_and_forth_master_count
             
     def save_back_and_forth_slave_status(self):
         global back_and_forth_slave
         
         if self.status_back_and_forth_slave == 0:
-            back_and_forth_slave = False
+            back_and_forth_slave = 1
         else:
-            back_and_forth_slave = True
+            back_and_forth_slave = self.back_and_forth_slave_count
     
     def open_blank(self, filename, i):
         df = pd.DataFrame(columns=['steps'])
@@ -2925,6 +2964,7 @@ class Sweeper3d(tk.Frame):
         global sweeper_flag2
         global sweeper_flag3
         global condition
+        global script
         global columns
         global manual_filenames
         global manual_sweep_flags
@@ -3065,6 +3105,7 @@ class Sweeper3d(tk.Frame):
         sweeper_flag2 = False
         sweeper_flag3 = True
         condition = self.text_condition.get(1.0, tk.END)[:-1]
+        script = self.script
         manual_filenames = self.manual_filenames
         manual_sweep_flags = self.manual_sweep_flags
 
@@ -3079,7 +3120,7 @@ class Settings(tk.Frame):
         
         parent = globals()['Sweeper_object']
         
-        label_adress = tk.Label(self, text = 'Set device type:')
+        label_adress = tk.Label(self, text = 'Set device type:', font = LARGE_FONT)
         label_adress.place(relx = 0.05, rely = 0.05)
         
         self.combo_adresses = ttk.Combobox(self, value = list_of_devices)
@@ -3094,7 +3135,7 @@ class Settings(tk.Frame):
         self.combo_types.bind("<<ComboboxSelected>>", self.set_type_to_adress)
         self.combo_types.place(relx = 0.2, rely = 0.1)
         
-        label_names = tk.Label(self, text = 'Change names:')
+        label_names = tk.Label(self, text = 'Change names:', font = LARGE_FONT)
         label_names.place(relx = 0.05, rely = 0.15)
             
         self.combo_devices = ttk.Combobox(self, value = list_of_devices)
@@ -3116,23 +3157,88 @@ class Settings(tk.Frame):
         self.combo_get_parameters.current(0)
         self.combo_get_parameters.place(relx=0.05, rely=0.3)
         
-        self.entry_new_device = tk.Entry(self, width = 30)
-        self.entry_new_device.place(relx = 0.2, rely = 0.2)
-        
-        self.entry_new_set_parameter = tk.Entry(self, width = 30)
-        self.entry_new_set_parameter.place(relx = 0.2, rely = 0.25)
-        
-        self.entry_new_get_parameter = tk.Entry(self, width = 30)
-        self.entry_new_get_parameter.place(relx = 0.2, rely = 0.3)
-        
         button_change_name_device = tk.Button(self, text = 'Change device name', command = lambda: self.update_names_devices(parent))
-        button_change_name_device.place(relx = 0.35, rely = 0.19)
+        button_change_name_device.place(relx = 0.2, rely = 0.19)
         
         button_change_name_set_parameters = tk.Button(self, text = 'Change set name', command = lambda: self.update_names_set_parameters(parent))
-        button_change_name_set_parameters.place(relx = 0.35, rely = 0.24)
+        button_change_name_set_parameters.place(relx = 0.2, rely = 0.24)
         
         button_change_name_get_parameters = tk.Button(self, text = 'Change get name', command = lambda: self.update_names_get_parameters(parent))
-        button_change_name_get_parameters.place(relx = 0.35, rely = 0.29)
+        button_change_name_get_parameters.place(relx = 0.2, rely = 0.29)
+        
+        if hasattr(parent, 'back_and_forth_master_count'): 
+            
+            label_back_and_forth_master = tk.Label(self, text = 'Set number of back and forth walks for slave axis', font = LARGE_FONT)
+            label_back_and_forth_master.place(relx = 0.55, rely = 0.1)
+            
+            label_back_and_forth_slave = tk.Label(self, text = 'Set number of back and forth walks for slave-slave axis', font = LARGE_FONT)
+            label_back_and_forth_slave.place(relx = 0.55, rely = 0.2)
+            
+            self.combo_back_and_forth_master = ttk.Combobox(self, value = [2, 'custom', 'continious'])
+            self.combo_back_and_forth_master.place(relx = 0.55, rely = 0.15)
+            
+            button_set_back_and_forth_master = tk.Button(self, text = 'Set', command = lambda: self.update_back_and_forth_master_count(parent = parent))
+            button_set_back_and_forth_master.place(relx = 0.68, rely = 0.14)
+            
+            self.combo_back_and_forth_slave = ttk.Combobox(self, value = [2, 'custom', 'continious'])
+            self.combo_back_and_forth_slave.place(relx = 0.55, rely = 0.25)
+            
+            button_set_back_and_forth_slave = tk.Button(self, text = 'Set', command = lambda: self.update_back_and_forth_slave_count(parent = parent))
+            button_set_back_and_forth_slave.place(relx = 0.68, rely = 0.24)
+        
+        else:
+            
+            label_back_and_forth_slave = tk.Label(self, text = 'Set number of back and forth walks for slave-slave axis', font = LARGE_FONT)
+            label_back_and_forth_slave.place(relx = 0.55, rely = 0.1)
+            
+            self.combo_back_and_forth_slave = ttk.Combobox(self, value = [2, 'custom', 'continious'])
+            self.combo_back_and_forth_slave.place(relx = 0.55, rely = 0.15)
+            
+            button_set_back_and_forth_slave = tk.Button(self, text = 'Set', command = lambda: self.update_back_and_forth_slave_count(parent = parent))
+            button_set_back_and_forth_slave.place(relx = 0.68, rely = 0.14)
+        
+        for_text_loops = ''
+        indent = '\t'
+        
+        for i in range(1, 4):
+            try:
+                if getattr(parent, 'checkbox_manual' + str(i)).state() == ():
+                    for_text_loops += indent * (i - 1) + 'while condition(axis = ' + str(i) + '):\n' + indent * i + 'step(axis = ' + str(i) + ')\n' + indent * i + 'sleep(time_delay' + str(i) + ')\n'
+                else:
+                    for_text_loops += indent * (i - 1) + 'for i' + str(i) + ', value' + str(i) + 'in enumerate(data' + str(i)+ '):\n' + indent * i + 'step(axis = ' + str(i) + ')\n' + indent * i + 'sleep(time_delay' + str(i) + ')\n'
+            except AttributeError:
+                pass
+        
+        label_script = tk.Label(self, text = 'Manual script', font = LARGE_FONT)
+        label_script.place(relx = 0.05, rely = 0.36)
+        
+        depth = for_text_loops.count('\n') // 3
+        
+        text_loops = tk.Text(self, width = 60, height = 3 * depth)
+        text_loops.place(relx = 0.05, rely = 0.4)
+        text_loops.insert(tk.END, for_text_loops)
+        text_loops.configure(font = LARGE_FONT, state = tk.DISABLED, bg = '#f0f0f0')
+        
+        self.text_script = tk.Text(self, width = 60, height = 10)
+        self.text_script.place(relx = 0.05, rely = 0.652 - (3 - depth) * 0.083)
+        self.text_script.configure(font = LARGE_FONT)
+        
+        button_explore_script = tk.Button(
+            self, text='🔎', font = SUPER_LARGE, command=lambda: self.explore_script())
+        button_explore_script.place(relx=0.525, rely=0.4)
+        CreateToolTip(button_explore_script, 'Explore existing script')
+        
+        button_save_script = tk.Button(
+            self, text='💾', font = SUPER_LARGE, command=lambda: self.save_script())
+        button_save_script.place(relx=0.525, rely=0.48)
+        CreateToolTip(button_save_script, 'Save this script')
+        
+        self.script_filename = ''
+        
+        button_set_script = tk.Button(
+            self, text = 'Apply script', font = LARGE_FONT, command = lambda: self.set_script(parent))
+        button_set_script.place(relx = 0.525, rely = 0.56)
+        
         
     def set_type_to_adress(self, interval = 1000):
         global adress_dict
@@ -3162,7 +3268,7 @@ class Settings(tk.Frame):
             self.combo_set_parameters.after(interval)
 
     def update_names_devices(self, parent, interval = 1000):
-        new_device_name = self.entry_new_device.get()
+        new_device_name = self.combo_devices.get()
         new_device_values = list(self.combo_devices['values'])
         new_device_values[self.combo_devices.current()] = new_device_name
         self.combo_devices['values'] = new_device_values
@@ -3183,7 +3289,7 @@ class Settings(tk.Frame):
             pass
         
     def update_names_set_parameters(self, parent, interval = 1000):
-        new_set_parameter_name = self.entry_new_set_parameter.get()
+        new_set_parameter_name = self.combo_set_parameters.get()
         new_set_parameters_values = list(self.combo_set_parameters['values'])
         new_set_parameters_values[self.combo_set_parameters.current()] = new_set_parameter_name
         self.combo_set_parameters['values'] = new_set_parameters_values
@@ -3204,7 +3310,7 @@ class Settings(tk.Frame):
             pass
         
     def update_names_get_parameters(self, parent, interval = 1000):
-        new_get_parameter_name = self.entry_new_get_parameter.get()
+        new_get_parameter_name = self.combo_get_parameters.get()
         new_get_parameters_values = list(self.combo_get_parameters['values'])
         new_get_parameters_values[self.combo_get_parameters.current()] = new_get_parameter_name
         
@@ -3215,7 +3321,48 @@ class Settings(tk.Frame):
         parent.devices.set(value=new_get_parameters_values)
         parent.lstbox_to_read.after(interval)
         
-            
+    def update_back_and_forth_slave_count(self, parent):
+        if self.combo_back_and_forth_slave.current() == 0:
+            parent.back_and_forth_slave_count = 2
+        elif self.combo_back_and_forth_slave.current() == 1:
+            parent.back_and_forth_slave_count = int(self.combo_back_and_forth_slave.get())
+        else:
+            parent.back_and_forth_slave_count = int(1e6)
+       
+    def update_back_and_forth_master_count(self, parent):
+        if self.combo_back_and_forth_master.current() == 0:
+            parent.back_and_forth_master_count = 2
+        elif self.combo_back_and_forth_master.current() == 1:
+            parent.back_and_forth_master_count = int(self.combo_back_and_forth_master.get())
+        else:
+            parent.back_and_forth_master_count = int(1e6)
+       
+    def explore_script(self, interval = 1):
+        script_filename = tk.filedialog.askopenfilename(initialdir=cur_dir,
+                                                                 title='Select a manual sweeper',
+                                                                 filetypes=(('CSV files', '*.csv*'),
+                                                                            ('all files', '*.*')))
+        with open(script_filename, 'r') as file:
+            try:
+                file.open()
+                script = file.read()
+            except:
+                file.close()
+            finally:
+                file.close()
+                
+        self.text_script.delete(0, tk.END)
+        self.text_script.insert(tk.END, script)
+        self.text_script.after(interval)
+        
+    def save_script(self):
+        self.script_filename = tk.filedialog.asksaveasfilename(title='Save the file',
+                                                         initialfile=cur_dir + '\config\script' + datetime.today().strftime(
+                                                             '%H_%M_%d_%m_%Y'),
+                                                         defaultextension='.csv')
+        
+    def set_script(self, parent):
+        parent.script = self.text_script.get(1.0, tk.END)[:-1]
 
 class Sweeper_write(threading.Thread):
 
@@ -3577,6 +3724,7 @@ class Sweeper_write(threading.Thread):
         global back_and_forth_slave
         global back_and_forth_master
         global zero_time
+        global script
         
         def append_read_parameters():
             #appends dataframe with parameters to read
@@ -3677,6 +3825,7 @@ class Sweeper_write(threading.Thread):
                     delay_factor = getattr(self, 'delay_factor' + str(axis))
                     time.sleep(delay_factor)
                     ###################
+                    exec(script)
                     return 
                 else:
                     try_tozero()
@@ -3936,7 +4085,6 @@ class Sweeper_write(threading.Thread):
                 master_loop()
                 self.sweeper_flag3 == False
 
-
 class VerticalNavigationToolbar2Tk(NavigationToolbar2Tk):
     def __init__(self, canvas, window):
         super().__init__(canvas, window, pack_toolbar=False)
@@ -3956,7 +4104,6 @@ class VerticalNavigationToolbar2Tk(NavigationToolbar2Tk):
     # disable showing mouse position in toolbar
     def set_message(self, s):
         pass
-
 
 class Graph(tk.Frame):
 
