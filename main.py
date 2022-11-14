@@ -22,6 +22,14 @@ import pandas as pd
 import matplotlib
 import numpy as np
 #import random
+from my_devices import lock_in, SourceMeter, TC300
+from Universal_frontend import Universal_frontend
+from StartPage import StartPage
+
+from Sweeper1d import Sweeper1d
+from Sweeper2d import Sweeper2d
+from Sweeper3d import Sweeper3d
+
 
 matplotlib.use("TkAgg")
 plt.rcParams['animation.html'] = 'jshtml'
@@ -853,9 +861,6 @@ class StartPage(tk.Frame):
         global settings_flag
         settings_flag = True
         self.controller.show_frame(Sweeper3d)
-        
-    
-
 
 class Lock_in_settings(tk.Frame):
 
@@ -4266,45 +4271,48 @@ class Graph(tk.Frame):
         self.combo_z4.bind("<<ComboboxSelected>>")
         self.combo_z4.place(relx = 0.795, rely = 0.96)   
         '''
-        if sweeper_flag1 == True:
-            self.combo_x1.current(0)
-            x1_status = 0
-            self.combo_y1.current(2)
-            y1_status = 2
-            self.combo_x2.current(0)
-            x2_status = 0
-            self.combo_y2.current(2)
-            y2_status = 2
-            self.combo_x3.current(0)
-            x3_status = 0
-            self.combo_y3.current(2)
-            y3_status = 2
-        if sweeper_flag2 == True:
-            self.combo_x1.current(0)
-            x1_status = 0
-            self.combo_y1.current(3)
-            y1_status = 3
-            self.combo_x2.current(0)
-            x2_status = 0
-            self.combo_y2.current(3)
-            y2_status = 3
-            self.combo_x3.current(0)
-            x3_status = 0
-            self.combo_y3.current(3)
-            y3_status = 3
-        if sweeper_flag3 == True:
-            self.combo_x1.current(0)
-            x1_status = 0
-            self.combo_y1.current(4)
-            y1_status = 4
-            self.combo_x2.current(0)
-            x2_status = 0
-            self.combo_y2.current(4)
-            y2_status = 4
-            self.combo_x3.current(0)
-            x3_status = 0
-            self.combo_y3.current(4)
-            y3_status = 4
+        try:
+            if sweeper_flag1 == True:
+                self.combo_x1.current(0)
+                x1_status = 0
+                self.combo_y1.current(2)
+                y1_status = 2
+                self.combo_x2.current(0)
+                x2_status = 0
+                self.combo_y2.current(2)
+                y2_status = 2
+                self.combo_x3.current(0)
+                x3_status = 0
+                self.combo_y3.current(2)
+                y3_status = 2
+            if sweeper_flag2 == True:
+                self.combo_x1.current(0)
+                x1_status = 0
+                self.combo_y1.current(3)
+                y1_status = 3
+                self.combo_x2.current(0)
+                x2_status = 0
+                self.combo_y2.current(3)
+                y2_status = 3
+                self.combo_x3.current(0)
+                x3_status = 0
+                self.combo_y3.current(3)
+                y3_status = 3
+            if sweeper_flag3 == True:
+                self.combo_x1.current(0)
+                x1_status = 0
+                self.combo_y1.current(4)
+                y1_status = 4
+                self.combo_x2.current(0)
+                x2_status = 0
+                self.combo_y2.current(4)
+                y2_status = 4
+                self.combo_x3.current(0)
+                x3_status = 0
+                self.combo_y3.current(4)
+                y3_status = 4
+        except tk.TclError:
+            pass
 
         plot221 = FigureCanvasTkAgg(fig221, self)
         plot221.draw()
