@@ -660,6 +660,7 @@ ax4 = fig224.add_subplot(111)
 ax4.tick_params(axis='both', which='major', pad=pad, labelsize=labelsize)
 
 
+
 def animate221(i):
     # function to animate graph on each step
     global x1
@@ -1544,14 +1545,14 @@ class Sweeper1d(tk.Frame):
         global animate221
         global animate222
         global animate223
-        self.window_graph = Universal_frontend(classes=(Graph,), start=Graph)
+        self.window = Universal_frontend(classes=(Graph,), start=Graph)
         self.ani221 = animation.FuncAnimation(
             fig221, animate221, interval=interval)
         self.ani222 = animation.FuncAnimation(
             fig222, animate222, interval=interval)
         self.ani223 = animation.FuncAnimation(
             fig223, animate223, interval=interval)
-        self.window_graph.mainloop()
+        self.window.mainloop()
         
     def pause(self):
         global pause_flag
@@ -3865,11 +3866,11 @@ class Sweeper_write(threading.Thread):
                 return False
             
             if speed >= 0:
-                result = value >= from_sweep and value < to_sweep
+                result = value >= from_sweep and value <= to_sweep
                 print('Condition checked, result is ' + str(result) + f'\nBoundaries are [{from_sweep};{to_sweep}), Value is {value}, Ratio is positive')
                 return result
             else:
-                result = value > to_sweep and value <= from_sweep
+                result = value >= to_sweep and value <= from_sweep
                 print('Condition checked, result is ' + str(result) + f'\nBoundaries are [{from_sweep};{to_sweep}), Value is {value}, Ratio is negative')
                 return result
             
@@ -3932,6 +3933,7 @@ class Sweeper_write(threading.Thread):
                     delay_factor = globals()['delay_factor' + str(axis)]
                     time.sleep(delay_factor)
                     ###################
+                    globals()['self'] = self
                     exec(script, globals())
                     return 
                 else:
@@ -4143,9 +4145,7 @@ class Sweeper_write(threading.Thread):
             elif walks > 1:
                 for i in range(1, walks + 1):
                     inner_loop_single(direction = round(2 * (i % 2) - 1))
-                    if i != walks:
-                        '''if it's not last walk through, then make a step back'''
-                        step(axis = len(manual_sweep_flags), back = True)
+                    step(axis = len(manual_sweep_flags), back = True)
                     back_and_forth_transposition(len(manual_sweep_flags))
                         
                 if walks % 2 == 1:
@@ -4208,9 +4208,7 @@ class Sweeper_write(threading.Thread):
             elif walks > 1:
                 for i in range(1, walks + 1):
                     external_loop_single(round(2 * (i % 2) - 1))
-                    if i != walks:
-                        '''if it's not last walk through, then make a step back'''
-                        step(axis = len(manual_sweep_flags), back = True)
+                    step(axis = len(manual_sweep_flags), back = True)
                     back_and_forth_transposition(len(manual_sweep_flags) - 1)
                     
                 if back_and_forth_master % 2 == 1:
@@ -4259,9 +4257,7 @@ class Sweeper_write(threading.Thread):
             elif walks > 1:
                 for i in range(1, walks + 1):
                     master_loop_single(round(2 * (i % 2) - 1))
-                    if i != walks:
-                        '''if it's not last walk through, then make a step back'''
-                        step(axis = 1, back = True)
+                    step(axis = 1, back = True)
                     back_and_forth_transposition(1)
                     
                 if back_and_forth_master % 2 == 1:
