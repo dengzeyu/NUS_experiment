@@ -5,6 +5,7 @@ import re
 import json
 from csv import writer
 import threading
+import multiprocessing as mp
 from tkinter import ttk
 import tkinter as tk
 from ToolTip import CreateToolTip
@@ -21,6 +22,7 @@ from datetime import datetime
 import pandas as pd
 import matplotlib
 import numpy as np
+from ctypes import c_wchar_p
 #import random
 
 matplotlib.use("TkAgg")
@@ -110,6 +112,10 @@ back_and_forth_slave_slave = 1
 columns = []
 
 # variables for plotting
+
+num_fig = 1
+ax_queue = mp.Queue()
+fig_queue = mp.Queue()
 
 x1 = []
 x1_status = 0
@@ -643,6 +649,17 @@ zero_time = time.perf_counter()
 labelsize = 4
 pad = 1
 
+def create_fig(size = (1.8, 1), labelsize = 4, pad = 1):
+    global num_fig
+    global fig_queue
+    global ax_queue
+    globals()[f'fig{num_fig}'] = Figure(figsize = size, dpi = 300)
+    fig_queue.put(globals()[f'fig{num_fig}'])
+    globals()[f'ax{num_fig}'] = globals()[f'fig{num_fig}'].add_subplot(111)
+    globals()[f'ax{num_fig}'].tick_params(axis='both', which='major', pad=pad, labelsize=labelsize)
+    ax_queue.put(globals()[f'ax{num_fig}'])
+    num_fig += 1
+
 fig221 = Figure(figsize=(1.8, 1), dpi=300)
 ax1 = fig221.add_subplot(111)
 ax1.tick_params(axis='both', which='major', pad=pad, labelsize=labelsize)
@@ -659,8 +676,38 @@ fig224 = Figure(figsize=(1.8, 1), dpi=300)
 ax4 = fig224.add_subplot(111)
 ax4.tick_params(axis='both', which='major', pad=pad, labelsize=labelsize)
 
+class graph_animation(mp.Process):
+    '''gets data and plot it on axes'''
+    
+    def __init__(self, i, order = 1):
+        mp.Process.__init__(self)
+        self.filename_sweep = mp.Value(c_wchar_p, filename_sweep)
+        self.x = mp.Array('d', globals()[f'x{order}'])
+        self.x_status = mp.Value('i', globals()[f'x{order}_status'])
+        self.y = mp.Array('d', globals()[f'y{order}'])
+        self.y_status = mp.Value('i', globals()[f'y{order}_status'])
+        self.ax = ax_queue.get()
+        self.fig = fig_queue.get()
+        self.daemon = True
+        self.start()
 
+        try:
+            data = pd.read_csv(self.filename_sweep.value)
+            self.x.value = data[columns[self.x_status.value]].values
+            self.y.value = data[columns[self.y_status.value]].values
+            self.ax.clear()
+            self.ax.plot(self.x.value, self.y.value, '-', lw=1, color='darkblue')
+        except FileNotFoundError:
+            self.ax.clear()
+            self.ax.plot(self.x.value, self.y.value, '-', lw=1, color='darkblue')
 
+animate221 = lambda i: graph_animation(i, order = 1)
+create_fig()
+animate222 = lambda i: graph_animation(i, order = 2)
+create_fig()
+animate223 = lambda i: graph_animation(i, order = 3)
+
+'''
 def animate221(i):
     # function to animate graph on each step
     global x1
@@ -719,6 +766,7 @@ def animate223(i):
     except FileNotFoundError:
         ax3.clear()
         ax3.plot(x3, y3, '-', lw=1, color='darkgreen')
+'''
 
 zero_time = time.perf_counter()
 
