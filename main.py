@@ -5,16 +5,15 @@ import re
 import json
 from csv import writer
 import threading
-import multiprocessing as mp
 from tkinter import ttk
 import tkinter as tk
 from ToolTip import CreateToolTip
 import matplotlib.animation as animation
-from matplotlib import style
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, 
                                                NavigationToolbar2Tk)
 import matplotlib.pyplot as plt
+from matplotlib import style
 import pyvisa as visa
 from pyvisa import constants
 import time
@@ -22,7 +21,6 @@ from datetime import datetime
 import pandas as pd
 import matplotlib
 import numpy as np
-from ctypes import c_wchar_p
 #import random
 
 matplotlib.use("TkAgg")
@@ -112,10 +110,6 @@ back_and_forth_slave_slave = 1
 columns = []
 
 # variables for plotting
-
-num_fig = 1
-ax_queue = mp.Queue()
-fig_queue = mp.Queue()
 
 x1 = []
 x1_status = 0
@@ -647,199 +641,85 @@ zero_time = time.perf_counter()
 
 # defining plots initial parameters
 labelsize = 4
-pad = 1
+pad = 0
 
-def create_fig(size = (1.8, 1), labelsize = 4, pad = 1):
-    global num_fig
-    global fig_queue
-    global ax_queue
-    globals()[f'fig{num_fig}'] = Figure(figsize = size, dpi = 300)
-    fig_queue.put(globals()[f'fig{num_fig}'])
-    globals()[f'ax{num_fig}'] = globals()[f'fig{num_fig}'].add_subplot(111)
-    globals()[f'ax{num_fig}'].tick_params(axis='both', which='major', pad=pad, labelsize=labelsize)
-    ax_queue.put(globals()[f'ax{num_fig}'])
-    num_fig += 1
+def onclick(event):
+    ax = event.inaxes
+    if ax is None:
+        pass
+    elif event.button == 1:  # left click
+        ax.set_autoscale_on(False)
+    elif event.button == 3:  # right click
+        ax.set_autoscale_on(True)
+    else:
+        pass
 
-fig221 = Figure(figsize=(1.8, 1), dpi=300)
-ax1 = fig221.add_subplot(111)
-ax1.tick_params(axis='both', which='major', pad=pad, labelsize=labelsize)
+def create_fig(i, figsize=(1.8, 1)):
+    globals()[f'fig{i}'] = Figure(figsize, dpi=300)
+    globals()[f'fig{i}'].tight_layout()
+    globals()[f'ax{i}'] = globals()[f'fig{i}'].add_subplot(111)
+    globals()[f'ax{i}'].tick_params(axis='y', which='major', length = 0, pad=pad, labelsize=labelsize)
+    globals()[f'ax{i}'].tick_params(axis='x', which='major', length = 0, pad=pad + 1, labelsize=labelsize)
+    globals()[f'ax{i}'].set_xlabel('x', fontsize = 6, labelpad = 0)
+    globals()[f'ax{i}'].set_ylabel('y', fontsize = 6, labelpad = 1)
+    globals()[f'ax{i}'].set_title(f'Plot {i}', fontsize = 8, pad = -5)
+    globals()[f'x_transformation{i}'] = 'x'
+    globals()[f'y_transformation{i}'] = 'y'
 
-fig222 = Figure(figsize=(1.8, 1), dpi=300)
-ax2 = fig222.add_subplot(111)
-ax2.tick_params(axis='both', which='major', pad=pad, labelsize=labelsize)
+for i in range(1, 4):
+    create_fig(i)
 
-fig223 = Figure(figsize=(1.8, 1), dpi=300)
-ax3 = fig223.add_subplot(111)
-ax3.tick_params(axis='both', which='major', pad=pad, labelsize=labelsize)
-
-fig224 = Figure(figsize=(1.8, 1), dpi=300)
-ax4 = fig224.add_subplot(111)
-ax4.tick_params(axis='both', which='major', pad=pad, labelsize=labelsize)
-
-class graph_animation(mp.Process):
-    '''gets data and plot it on axes'''
+def my_animate(i, n):
+    # function to animate graph on each step
+    global columns
+    global filename_sweep
+    global x_transformation
+    global y_transformation
     
-    def __init__(self, i, order = 1):
-        mp.Process.__init__(self)
-        self.filename_sweep = mp.Value(c_wchar_p, filename_sweep)
-        self.x = mp.Array('d', globals()[f'x{order}'])
-        self.x_status = mp.Value('i', globals()[f'x{order}_status'])
-        self.y = mp.Array('d', globals()[f'y{order}'])
-        self.y_status = mp.Value('i', globals()[f'y{order}_status'])
-        self.ax = ax_queue.get()
-        self.fig = fig_queue.get()
-        self.daemon = True
-        self.start()
-
+    if n == 1:
+        color = 'darkblue'
+    elif n == 2:
+        color = 'darkgreen'
+    elif n == 3:
+        color = 'crimson'
+    else:
+        color = 'black'
+    
+    try:
+        data = pd.read_csv(filename_sweep)
+        globals()[f'x{n}'] = data[columns[globals()[f'x{n}_status']]].values
+        globals()[f'y{n}'] = data[columns[globals()[f'y{n}_status']]].values
+        x = globals()[f'x{n}']
+        y = globals()[f'y{n}']
+        
         try:
-            data = pd.read_csv(self.filename_sweep.value)
-            self.x.value = data[columns[self.x_status.value]].values
-            self.y.value = data[columns[self.y_status.value]].values
-            self.ax.clear()
-            self.ax.plot(self.x.value, self.y.value, '-', lw=1, color='darkblue')
-        except FileNotFoundError:
-            self.ax.clear()
-            self.ax.plot(self.x.value, self.y.value, '-', lw=1, color='darkblue')
-
-animate221 = lambda i: graph_animation(i, order = 1)
-create_fig()
-animate222 = lambda i: graph_animation(i, order = 2)
-create_fig()
-animate223 = lambda i: graph_animation(i, order = 3)
-
-'''
-def animate221(i):
-    # function to animate graph on each step
-    global x1
-    global y1
-    global x1_status
-    global y1_status
-    global columns
-    global filename_sweep
-
-    try:
-        data = pd.read_csv(filename_sweep)
-        x1 = data[columns[x1_status]].values
-        y1 = data[columns[y1_status]].values
-        ax1.clear()
-        ax1.plot(x1, y1, '-', lw=1, color='darkblue')
+            x = eval(globals()[f'x_transformation{n}'], locals())
+        except:
+            pass
+        
+        try:
+            y = eval(globals()[f'y_transformation{n}'], locals())
+        except:
+            pass
+        
+        globals()[f'ax{n}'].plot(x, y, '-', lw=1, color=color)
     except FileNotFoundError:
-        ax1.clear()
-        ax1.plot(x1, y1, '-', lw=1, color='darkblue')
-
-
-def animate222(i):
-    # function to animate graph on each step
-    global x2
-    global y2
-    global x2_status
-    global y2_status
-    global columns
-    global filename_sweep
-
-    try:
-        data = pd.read_csv(filename_sweep)
-        x2 = data[columns[x2_status + 1]].values
-        y2 = data[columns[y2_status + 1]].values
-        ax2.clear()
-        ax2.plot(x2, y2, '-', lw=1, color='crimson')
-    except FileNotFoundError:
-        ax2.clear()
-        ax2.plot(x2, y2, '-', lw=1, color='crimson')
-
-
-def animate223(i):
-    # function to animate graph on each step
-    global x3
-    global y3
-    global x3_status
-    global y3_status
-    global columns
-    global filename_sweep
-
-    try:
-        data = pd.read_csv(filename_sweep)
-        x3 = data[columns[x3_status + 1]].values
-        y3 = data[columns[y3_status + 1]].values
-        ax3.clear()
-        ax3.plot(x3, y3, '-', lw=1, color='darkgreen')
-    except FileNotFoundError:
-        ax3.clear()
-        ax3.plot(x3, y3, '-', lw=1, color='darkgreen')
-'''
+        x = globals()[f'x{n}']
+        y = globals()[f'y{n}']
+        
+        try:
+            x = eval(x_transformation, locals())
+        except:
+            pass
+        
+        try:
+            y = eval(y_transformation, locals())
+        except:
+            pass
+        
+        globals()[f'ax{n}'].plot(x, y, '-', lw=1, color=color)
 
 zero_time = time.perf_counter()
-
-if 'lock_in' in types_of_devices:
-
-    config_parameters_filename = cur_dir + '\config\parameters_' + datetime.today().strftime(
-        '%H_%M_%d_%m_%Y') + '.csv' '.csv'
-    
-    config_parameters = pd.DataFrame(columns=['Sensitivity', 'Time_constant',
-                                     'Low_pass_filter_slope', 'Synchronous_filter_status',
-                                              'Remote', 'Amplitude', 'Frequency',
-                                              'Phase'])
-    
-    config_parameters.to_csv(config_parameters_filename, index=False)
-    
-    config_channels_filename = cur_dir + '\config\channels_' + datetime.today().strftime(
-        '%H_%M_%d_%m_%Y') + '.csv' '.csv'
-    
-    config_channels = pd.DataFrame(columns=['Ch1', 'Ch2'])
-    
-    config_channels.to_csv(config_channels_filename, index=False)
-    
-    
-    class write_config_parameters(threading.Thread):
-    
-        def __init__(self, adress='GPIB0::3::INSTR'):
-            threading.Thread.__init__(self)
-            self.adress = adress
-            self.daemon = True
-            self.start()
-    
-        def run(self):
-            while True:
-                dataframe_parameters = lock_in(adress=self.adress).parameter()
-                with open(config_parameters_filename, 'a') as f_object:
-                    try:
-                        # Pass this file object to csv.writer()
-                        # and get a writer object
-                        writer_object = writer(f_object)
-    
-                        # Pass the list as an argument into
-                        # the writerow()
-                        writer_object.writerow(*dataframe_parameters.values)
-                        time.sleep(5)
-    
-                        # Close the file object
-                        f_object.close()
-                    except KeyboardInterrupt:
-                        f_object.close()
-    
-    
-    class write_config_channels(threading.Thread):
-    
-        def __init__(self, adress='GPIB0::3::INSTR'):
-            threading.Thread.__init__(self)
-            self.adress = adress
-            self.daemon = True
-            self.start()
-    
-        def run(self):
-            while True:
-                dataframe_channels = lock_in(adress=self.adress).channels()
-                with open(config_channels_filename, 'a') as f_object:
-                    try:
-                        writer_object = writer(f_object)
-                        writer_object.writerow(*dataframe_channels.values)
-                        time.sleep(0.3)
-    
-                        # Close the file object
-                        f_object.close()
-                    except:
-                        f_object.close()
-
 
 class Universal_frontend(tk.Tk):
 
@@ -880,10 +760,6 @@ class StartPage(tk.Frame):
         label = tk.Label(self, text='Start Page', font=LARGE_FONT)
         label.pack(pady=10, padx=10)
 
-        lock_in_settings_button = tk.Button(
-            self, text="Lock in settings", command=lambda: controller.show_frame(Lock_in_settings))
-        lock_in_settings_button.place(relx=0.1, rely=0.1)
-
         sweeper1d_button = tk.Button(
             self, text='1D - sweeper', command=lambda: self.sweeper1d_show())
         sweeper1d_button.place(relx=0.1, rely=0.4)
@@ -910,397 +786,6 @@ class StartPage(tk.Frame):
         global settings_flag
         settings_flag = True
         self.controller.show_frame(Sweeper3d)
-
-class Lock_in_settings(tk.Frame):
-
-    def __init__(self, parent, controller):
-
-        tk.Frame.__init__(self, parent)
-
-        label = tk.Label(self, text='Lock in settings', font=LARGE_FONT)
-        label.place(relx=0.485, rely=0.02)
-
-        label_time_constant = tk.Label(self, text='Time constant')
-        label_time_constant.place(relx=0.02, rely=0.015)
-
-        self.combo_time_constant = ttk.Combobox(self,
-                                                value=lock_in().time_constant_options)
-        self.combo_time_constant.current(8)
-        self.combo_time_constant.bind(
-            "<<ComboboxSelected>>", self.set_time_constant)
-        self.combo_time_constant.place(relx=0.02, rely=0.05)
-
-        self.value_time_constant = tk.StringVar(value='0.0')
-        self.label_value_time_constant = tk.Label(
-            self, text=(self.value_time_constant.get()))
-        self.label_value_time_constant.place(relx=0.02, rely=0.085)
-
-        label_low_pass_filter_slope = tk.Label(
-            self, text='Low pass filter slope')
-        label_low_pass_filter_slope.place(relx=0.02, rely=0.125)
-
-        self.combo_low_pass_filter_slope = ttk.Combobox(self,
-                                                        value=lock_in().low_pass_filter_slope_options)
-        self.combo_low_pass_filter_slope.current(1)
-        self.combo_low_pass_filter_slope.bind(
-            "<<ComboboxSelected>>", self.set_low_pass_filter_slope)
-        self.combo_low_pass_filter_slope.place(relx=0.02, rely=0.160)
-
-        self.value_low_pass_filter_slope = tk.StringVar(value='0.0')
-        self.label_value_low_pass_filter_slope = tk.Label(
-            self, text=(self.value_low_pass_filter_slope.get()))
-        self.label_value_low_pass_filter_slope.place(relx=0.02, rely=0.195)
-
-        label_synchronous_filter_status = tk.Label(
-            self, text='Synchronous filter status')
-        label_synchronous_filter_status.place(relx=0.02, rely=0.235)
-
-        self.combo_synchronous_filter_status = ttk.Combobox(self,
-                                                            value=lock_in().synchronous_filter_status_options)
-        self.combo_synchronous_filter_status.current(0)
-        self.combo_synchronous_filter_status.bind(
-            "<<ComboboxSelected>>", self.set_synchronous_filter_status)
-        self.combo_synchronous_filter_status.place(relx=0.02, rely=0.270)
-
-        self.value_synchronous_filter_status = tk.StringVar(value='0.0')
-        self.label_value_synchronous_filter_status = tk.Label(
-            self, text=(self.value_synchronous_filter_status.get()))
-        self.label_value_synchronous_filter_status.place(relx=0.02, rely=0.305)
-
-        label_aux_rule = tk.Label(
-            self, text='AUX output voltage \n -10.5 < V < 10.5')
-        label_aux_rule.place(relx=0.02, rely=0.4)
-
-        label_aux1_voltage = tk.Label(self, text='AUX1 output')
-        label_aux1_voltage.place(relx=0.02, rely=0.45)
-
-        self.aux1_initial = tk.StringVar(value='0')
-
-        entry_aux1_voltage = tk.Entry(self, textvariable=self.aux1_initial)
-        entry_aux1_voltage.place(relx=0.02, rely=0.485)
-
-        label_aux2_voltage = tk.Label(self, text='AUX2 output')
-        label_aux2_voltage.place(relx=0.02, rely=0.515)
-
-        self.aux2_initial = tk.StringVar(value='0')
-
-        entry_aux2_voltage = tk.Entry(self, textvariable=self.aux2_initial)
-        entry_aux2_voltage.place(relx=0.02, rely=0.550)
-
-        label_aux3_voltage = tk.Label(self, text='AUX3 output')
-        label_aux3_voltage.place(relx=0.02, rely=0.580)
-
-        self.aux3_initial = tk.StringVar(value='0')
-
-        entry_aux3_voltage = tk.Entry(self, textvariable=self.aux3_initial)
-        entry_aux3_voltage.place(relx=0.02, rely=0.615)
-
-        label_aux4_voltage = tk.Label(self, text='AUX4 output')
-        label_aux4_voltage.place(relx=0.02, rely=0.645)
-
-        self.aux4_initial = tk.StringVar(value='0')
-
-        entry_aux4_voltage = tk.Entry(self, textvariable=self.aux4_initial)
-        entry_aux4_voltage.place(relx=0.02, rely=0.680)
-
-        button_aux_voltage = tk.Button(self, text='Set AUX voltage',
-                                        command=self.aux_button_clicked)
-        button_aux_voltage.place(relx=0.15, rely=0.675)
-
-        label_sensitivity = tk.Label(self, text='Sensitivity')
-        label_sensitivity.place(relx=0.15, rely=0.015)
-
-        self.combo_sensitivity = ttk.Combobox(
-            self, value=lock_in().sensitivity_options)
-        self.combo_sensitivity.current(15)
-        self.combo_sensitivity.bind(
-            "<<ComboboxSelected>>", self.set_sensitivity)
-        self.combo_sensitivity.place(relx=0.15, rely=0.05)
-
-        self.value_sensitivity = tk.StringVar(value='0.0')
-        self.label_value_sensitivity = tk.Label(
-            self, text=(self.value_sensitivity.get()))
-        self.label_value_sensitivity.place(relx=0.15, rely=0.085)
-
-        label_remote = tk.Label(self, text='Display locking')
-        label_remote.place(relx=0.15, rely=0.125)
-
-        self.combo_remote = ttk.Combobox(
-            self, value=lock_in().remote_status_options)
-        self.combo_remote.current(1)
-        self.combo_remote.bind("<<ComboboxSelected>>", self.set_remote)
-        self.combo_remote.place(relx=0.15, rely=0.160)
-
-        self.value_remote = tk.StringVar(value='0.0')
-        self.label_value_remote = tk.Label(
-            self, text=(self.value_remote.get()))
-        self.label_value_remote.place(relx=0.15, rely=0.195)
-
-        self.value_ch1 = tk.StringVar(value='0.0')
-        self.label_value_ch1 = tk.Label(self, text=(
-            '\n' + self.value_ch1.get()), font=('Arial', 16))
-        self.label_value_ch1.place(relx=0.15, rely=0.3)
-
-        self.combo_ch1 = ttk.Combobox(self, value=lock_in().modes_ch1_options)
-        self.combo_ch1.current(0)
-        self.combo_ch1.bind("<<ComboboxSelected>>", self.set_ch1_mode)
-        self.combo_ch1.place(relx=0.15, rely=0.4)
-
-        self.value_ch2 = tk.StringVar(value='0.0')
-        self.label_value_ch2 = tk.Label(self, text=(
-            '\n' + self.value_ch1.get()), font=('Arial', 16))
-        self.label_value_ch2.place(relx=0.3, rely=0.3)
-
-        self.combo_ch2 = ttk.Combobox(self, value=lock_in().modes_ch2_options)
-        self.combo_ch2.current(0)
-        self.combo_ch2.bind("<<ComboboxSelected>>", self.set_ch2_mode)
-        self.combo_ch2.place(relx=0.3, rely=0.4)
-
-        label_amplitude = tk.Label(
-            self, text='Amplitude of SIN output, V. \n 0.004 < V < 5.000')
-        label_amplitude.place(relx=0.485, rely=0.315)
-
-        self.amplitude_initial = tk.StringVar(value='0.5')
-
-        entry_amplitude = tk.Entry(self, textvariable=self.amplitude_initial)
-        entry_amplitude.place(relx=0.5, rely=0.4)
-
-        self.value_amplitude = tk.StringVar(value='0.0')
-        self.label_value_amplitude = tk.Label(
-            self, text=(self.value_amplitude.get()))
-        self.label_value_amplitude.place(relx=0.5, rely=0.435)
-
-        label_frequency = tk.Label(
-            self, text='Frequency, Hz. \n 0.001 < Hz < 102000')
-        label_frequency.place(relx=0.65, rely=0.315)
-
-        self.frequency_initial = tk.StringVar(value='30.0')
-
-        entry_frequency = tk.Entry(self, textvariable=self.frequency_initial)
-        entry_frequency.place(relx=0.65, rely=0.4)
-
-        self.value_frequency = tk.StringVar(value='0.0')
-        self.label_value_frequency = tk.Label(
-            self, text=(self.value_frequency.get()))
-        self.label_value_frequency.place(relx=0.65, rely=0.435)
-
-        label_phase = tk.Label(
-            self, text='Phase shift, deg. \n -360.00 < deg < 729.99')
-        label_phase.place(relx=0.8, rely=0.315)
-
-        self.phase_initial = tk.StringVar(value='0.0')
-
-        entry_phase = tk.Entry(self, textvariable=self.phase_initial)
-        entry_phase.place(relx=0.8, rely=0.4)
-
-        self.value_phase = tk.StringVar(value='0.0')
-        self.label_value_phase = tk.Label(self, text=(self.value_phase.get()))
-        self.label_value_phase.place(relx=0.8, rely=0.435)
-
-        button_reference = tk.Button(self, text='Set reference parameters',
-                                      command=self.reference_button_clicked)
-        button_reference.place(relx=0.8, rely=0.485)
-
-        '''
-        units = tk.StringVar()
-        units.set(r'X Y R Θ CH1 CH2 AUX1 AUX2 AUX3 AUX4')
-        label_listbox = tk.Label(self, textvariable = 'Units to collect \n in datafile')
-        label_listbox.place(relx = 0.5, rely = 0.5)
-        lstbox = tk.Listbox(self, listvariable = units, 
-                            selectmode = 'multiple', width=20, height=10)
-        lstbox.place(relx = 0.5, rely = 0.55)
-        def select():
-            reslist = list()
-            seleccion = lstbox.curselection()
-            for i in seleccion:
-                entrada = lstbox.get(i)
-                reslist.append(entrada)
-            for val in reslist:
-                print(val)
-        button_listbox = tk.Button(self, text = "Collect data", command = select)
-        button_listbox.place(relx = 0.615, rely = 0.665)
-        '''
-        thread_update_sensitivity = threading.Thread(
-            target=self.update_sensitivity())
-        thread_update_time_constant = threading.Thread(
-            target=self.update_time_constant())
-        thread_update_low_pass_filter_slope = threading.Thread(
-            target=self.update_low_pass_filter_slope())
-        thread_update_synchronous_filter_status = threading.Thread(
-            target=self.update_synchronous_filter_status())
-        thread_update_remote = threading.Thread(target=self.update_remote())
-        thread_update_amplitude = threading.Thread(
-            target=self.update_amplitude())
-        thread_update_phase = threading.Thread(target=self.update_phase())
-        thread_update_frequency = threading.Thread(
-            target=self.update_frequency())
-        thread_update_ch1 = threading.Thread(target=self.update_value_ch1())
-        thread_update_ch2 = threading.Thread(target=self.update_value_ch2())
-
-        thread_update_sensitivity.start()
-        thread_update_time_constant.start()
-        thread_update_low_pass_filter_slope.start()
-        thread_update_synchronous_filter_status.start()
-        thread_update_remote.start()
-        thread_update_amplitude.start()
-        thread_update_phase.start()
-        thread_update_frequency.start()
-        thread_update_ch1.start()
-        thread_update_ch2.start()
-
-        thread_update_sensitivity.join()
-        thread_update_time_constant.join()
-        thread_update_low_pass_filter_slope.join()
-        thread_update_synchronous_filter_status.join()
-        thread_update_remote.join()
-        thread_update_amplitude.join()
-        thread_update_phase.join()
-        thread_update_frequency.join()
-        thread_update_ch1.join()
-        thread_update_ch2.join()
-
-        button_back_home = tk.Button(self, text='Back to Home',
-                                      command=lambda: controller.show_frame(StartPage))
-        button_back_home.place(relx=0.85, rely=0.85)
-
-    def set_sensitivity(self, event):
-        lock_in().set_sensitivity(mode=int(self.combo_sensitivity.current()))
-
-    def set_time_constant(self, event):
-        lock_in().set_time_constant(mode=int(self.combo_time_constant.current()))
-
-    def set_low_pass_filter_slope(self, event):
-        lock_in().set_low_pass_filter_slope(
-            mode=int(self.combo_low_pass_filter_slope.current()))
-
-    def set_synchronous_filter_status(self, event):
-        lock_in().set_synchronous_filter_status(
-            mode=int(self.combo_synchronous_filter_status.current()))
-
-    def set_ch1_mode(self, event):
-        lock_in().set_ch1_mode(mode=int(self.combo_ch1.current()))
-
-    def set_ch2_mode(self, event):
-        lock_in().set_ch2_mode(mode=int(self.combo_ch2.current()))
-
-    def set_remote(self, event):
-        lock_in().set_remote(mode=int(self.combo_remote.current()))
-
-    def aux_button_clicked(self):
-        lock_in().set_AUX1_output(value=float(self.aux1_initial.get()))
-        lock_in().set_AUX2_output(value=float(self.aux2_initial.get()))
-        lock_in().set_AUX3_output(value=float(self.aux3_initial.get()))
-        lock_in().set_AUX4_output(value=float(self.aux4_initial.get()))
-
-    def reference_button_clicked(self):
-        lock_in().set_frequency(value=float(self.frequency_initial.get()))
-        lock_in().set_phase(value=float(self.phase_initial.get()))
-        lock_in().set_amplitude(value=float(self.amplitude_initial.get()))
-
-    def update_time_constant(self, interval=2987):
-
-        try:
-            value = pd.read_csv(config_parameters_filename)[
-                'Time_constant'].values[-1]
-        except IndexError:
-            value = 0.0
-        self.label_value_time_constant['text'] = str(
-            lock_in().time_constant_options[int(value)])
-        self.label_value_time_constant.after(
-            interval, self.update_time_constant)
-
-    def update_sensitivity(self, interval=2989):
-
-        try:
-            value = pd.read_csv(config_parameters_filename)[
-                'Sensitivity'].values[-1]
-        except IndexError:
-            value = 0.0
-        self.label_value_sensitivity['text'] = str(
-            lock_in().sensitivity_options[int(value)])
-        self.label_value_sensitivity.after(interval, self.update_sensitivity)
-
-    def update_low_pass_filter_slope(self, interval=2991):
-
-        try:
-            value = pd.read_csv(config_parameters_filename)[
-                'Low_pass_filter_slope'].values[-1]
-        except IndexError:
-            value = 0.0
-        self.label_value_low_pass_filter_slope['text'] = str(
-            lock_in().low_pass_filter_slope_options[int(value)])
-        self.label_value_low_pass_filter_slope.after(
-            interval, self.update_low_pass_filter_slope)
-
-    def update_synchronous_filter_status(self, interval=2993):
-
-        try:
-            value = pd.read_csv(config_parameters_filename)[
-                'Synchronous_filter_status'].values[-1]
-        except IndexError:
-            value = 0.0
-        self.label_value_synchronous_filter_status['text'] = str(
-            lock_in().synchronous_filter_status_options[int(value)])
-        self.label_value_synchronous_filter_status.after(
-            interval, self.update_synchronous_filter_status)
-
-    def update_remote(self, interval=2995):
-
-        try:
-            value = pd.read_csv(config_parameters_filename)[
-                'Remote'].values[-1]
-        except IndexError:
-            value = 0.0
-        self.label_value_remote['text'] = str(
-            lock_in().remote_status_options[int(value)])
-        self.label_value_remote.after(interval, self.update_remote)
-
-    def update_amplitude(self, interval=2997):
-
-        try:
-            value = pd.read_csv(config_parameters_filename)[
-                'Amplitude'].values[-1]
-        except IndexError:
-            value = 0.0
-        self.label_value_amplitude['text'] = str(value)
-        self.label_value_amplitude.after(interval, self.update_amplitude)
-
-    def update_phase(self, interval=2999):
-
-        try:
-            value = pd.read_csv(config_parameters_filename)['Phase'].values[-1]
-        except IndexError:
-            value = 0.0
-        self.label_value_phase['text'] = str(value)
-        self.label_value_phase.after(interval, self.update_phase)
-
-    def update_frequency(self, interval=3001):
-
-        try:
-            value = pd.read_csv(config_parameters_filename)[
-                'Frequency'].values[-1]
-        except IndexError:
-            value = 0.0
-        self.label_value_frequency['text'] = str(value)
-        self.label_value_frequency.after(interval, self.update_frequency)
-
-    def update_value_ch1(self, interval=307):
-
-        try:
-            value = pd.read_csv(config_channels_filename)['Ch1'].values[-1]
-        except IndexError:
-            value = 0.0
-        self.label_value_ch1['text'] = '\n' + str(value)
-        self.label_value_ch1.after(interval, self.update_value_ch1)
-
-    def update_value_ch2(self, interval=311):
-
-        try:
-            value = pd.read_csv(config_channels_filename)['Ch2'].values[-1]
-        except IndexError:
-            value = 0.0
-        self.label_value_ch2['text'] = '\n' + str(value)
-        self.label_value_ch2.after(interval, self.update_value_ch2)
 
 class Sweeper1d(tk.Frame):
 
@@ -1587,19 +1072,16 @@ class Sweeper1d(tk.Frame):
         self.window_settings.mainloop()
 
     def open_graph(self):
-        global fig221
-        global fig222
-        global fig223
-        global animate221
-        global animate222
-        global animate223
+        global fig1
+        global fig2
+        global fig3
         self.window = Universal_frontend(classes=(Graph,), start=Graph)
-        self.ani221 = animation.FuncAnimation(
-            fig221, animate221, interval=interval)
-        self.ani222 = animation.FuncAnimation(
-            fig222, animate222, interval=interval)
-        self.ani223 = animation.FuncAnimation(
-            fig223, animate223, interval=interval)
+        self.ani1 = animation.FuncAnimation(
+            fig1, lambda i: my_animate(i, n = 1), interval=interval)
+        self.ani2 = animation.FuncAnimation(
+            fig2, lambda i: my_animate(i, n = 2), interval=interval)
+        self.ani3 = animation.FuncAnimation(
+            fig3, lambda i: my_animate(i, n = 3), interval=interval)
         self.window.mainloop()
         
     def pause(self):
@@ -2193,19 +1675,16 @@ class Sweeper2d(tk.Frame):
         self.entry_filename.after(1)
 
     def open_graph(self):
-        global fig221
-        global fig222
-        global fig223
-        global animate221
-        global animate222
-        global animate223
+        global fig1
+        global fig2
+        global fig3
         self.window = Universal_frontend(classes=(Graph,), start=Graph)
-        self.ani221 = animation.FuncAnimation(
-            fig221, animate221, interval=interval)
-        self.ani222 = animation.FuncAnimation(
-            fig222, animate222, interval=interval)
-        self.ani223 = animation.FuncAnimation(
-            fig223, animate223, interval=interval)
+        self.ani1 = animation.FuncAnimation(
+            fig1, lambda i: my_animate(i, n = 1), interval=interval)
+        self.ani2 = animation.FuncAnimation(
+            fig2, lambda i: my_animate(i, n = 2), interval=interval)
+        self.ani3 = animation.FuncAnimation(
+            fig3, lambda i: my_animate(i, n = 3), interval=interval)
         self.window.mainloop()
         
     def pause(self):
@@ -2994,19 +2473,16 @@ class Sweeper3d(tk.Frame):
         self.entry_filename.after(1)
 
     def open_graph(self):
-        global fig221
-        global fig222
-        global fig223
-        global animate221
-        global animate222
-        global animate223
+        global fig1
+        global fig2
+        global fig3
         self.window = Universal_frontend(classes=(Graph,), start=Graph)
-        self.ani221 = animation.FuncAnimation(
-            fig221, animate221, interval=interval)
-        self.ani222 = animation.FuncAnimation(
-            fig222, animate222, interval=interval)
-        self.ani223 = animation.FuncAnimation(
-            fig223, animate223, interval=interval)
+        self.ani1 = animation.FuncAnimation(
+            fig1, lambda i: my_animate(i, n = 1), interval=interval)
+        self.ani2 = animation.FuncAnimation(
+            fig2, lambda i: my_animate(i, n = 2), interval=interval)
+        self.ani3 = animation.FuncAnimation(
+            fig3, lambda i: my_animate(i, n = 3), interval=interval)
         self.window.mainloop()
         
     def pause(self):
@@ -4388,7 +3864,229 @@ class VerticalNavigationToolbar2Tk(NavigationToolbar2Tk):
     def set_message(self, s):
         pass
 
+class FigureSettings(object):
+    
+    def __init__(self, widget):
+        self.widget = widget
+        self.settings_window = None
+        self.id = None
+        self.x = self.y = 0
+        
+    def showsettings(self, ax):
+        "Display settings for a binded figure"
+        if self.settings_window:
+            return
+        x, y, cx, cy = self.widget.bbox('all')
+        x = x + self.widget.winfo_rootx()
+        y = y + self.widget.winfo_rooty()
+        self.settings_window = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(1)
+        tw.wm_geometry("+%d+%d" % (x, y))
+        
+        self.entry_title = tk.Entry(tw)
+        self.entry_title.insert(index = 0, string = str(ax.get_title()))
+        self.entry_title.grid(row = 0, column = 2, padx = 3, pady = 2)
+        
+        button_close = tk.Button(tw, text = '❌', command = lambda: self.hidesettings(ax))
+        button_close.grid(row = 0, column = 5, pady = 2)
+        
+        label_x_device = tk.Label(tw, text = 'x')
+        label_x_device.grid(row = 1, column = 0, pady = 2, sticky = tk.E)
+        
+        self.combo_x_device = ttk.Combobox(tw, values=globals()['columns'])
+        self.combo_x_device.bind("<<ComboboxSelected>>", self.x_device_update)
+        self.combo_x_device.grid(row = 1, column = 1, pady = 2)
+        
+        label_log_x = tk.Label(tw, text = 'log')
+        label_log_x.grid(row = 1, column = 3, pady = 2)
+        
+        self.status_log_x = tk.IntVar()
+        self.checkbox_log_x = tk.Checkbutton(tw, 
+                                             command= lambda: self.save_log_x_status(ax), 
+                                             variable = self.status_log_x,
+                                             onvalue = 0, offvalue = 1)
+        self.checkbox_log_x.grid(row = 1, column = 4, pady = 2)
+        
+        label_y_device = tk.Label(tw, text = 'y')
+        label_y_device.grid(row = 2, column = 0, pady = 2, sticky = tk.E)
+        
+        self.combo_y_device = ttk.Combobox(tw, values=globals()['columns'])
+        self.combo_y_device.bind("<<ComboboxSelected>>", self.y_device_update)
+        self.combo_y_device.grid(row = 2, column = 1, pady = 2)
+        
+        label_log_y = tk.Label(tw, text = 'log')
+        label_log_y.grid(row = 2, column = 3, pady = 2)
+        
+        self.status_log_y = tk.IntVar()
+        self.checkbox_log_y = tk.Checkbutton(tw, 
+                                             command=lambda: self.save_log_y_status(ax), 
+                                             variable = self.status_log_y,
+                                             onvalue = 0, offvalue = 1)
+        self.checkbox_log_y.grid(row = 2, column = 4, pady = 2)
+        
+        label_xlim = tk.Label(tw, text = r'$x_{lim}$ = ')
+        label_xlim.grid(row = 3, column = 0, pady = 2)
+        
+        self.status_xlim = tk.IntVar()
+        self.status_xlim.set(0)
+        
+        self.entry_x_from = tk.Entry(tw, width = 8)
+        self.entry_x_from.grid(row = 3, column = 1, pady = 2)
+        
+        label_dash_x = tk.Label(tw, text = ' - ')
+        label_dash_x.grid(row = 3, column = 2, pady = 2)
+        
+        self.entry_x_to = tk.Entry(tw, width = 8)
+        self.entry_x_to.grid(row = 3, column = 3, pady = 2)
+        
+        checkbox_xlim = tk.Checkbutton(tw, command = lambda: self.set_xlim(ax))
+        checkbox_xlim.grid(row = 3, column = 4, pady = 2)
+        
+        label_ylim = tk.Label(tw, text = r'$y_{lim}$ = ')
+        label_ylim.grid(row = 4, column = 0, pady = 2)
+        
+        self.status_ylim = tk.IntVar()
+        self.status_ylim.set(0)
+        
+        self.entry_y_from = tk.Entry(tw, width = 8)
+        self.entry_y_from.grid(row = 4, column = 1, pady = 2)
+    
+        label_dash_y = tk.Label(tw, text = ' - ')
+        label_dash_y.grid(row = 4, column = 2, pady = 2)
+        
+        self.entry_y_to = tk.Entry(tw, width = 8)
+        self.entry_y_to.grid(row = 4, column = 3, pady = 2)
+        
+        checkbox_ylim = tk.Checkbutton(tw, command = lambda: self.set_ylim(ax))
+        checkbox_ylim.grid(row = 4, column = 4, pady = 2)
+        
+        label_xlabel = tk.Label(tw, text = r'$x_{label} = $')
+        label_xlabel.grid(row = 5, column = 0)
+        
+        self.entry_xlabel = tk.Entry(tw)
+        self.entry_xlabel.insert(index = 0, string = 'x')
+        self.entry_xlabel.grid(row = 5, column = 1)
+    
+        label_ylabel = tk.Label(tw, text = "$x_{label}$ = ")
+        label_ylabel.grid(row = 6, column = 0)
+        
+        self.entry_ylabel = tk.Entry(tw)
+        self.entry_ylabel.insert(index = 0, string = 'y')
+        self.entry_ylabel.grid(row = 6, column = 1)
+        
+        label_x_transformation = tk.Label(tw, text = 'x = ')
+        label_x_transformation.grid(row = 7, column = 0)
+        
+        self.entry_x_transformation = tk.Entry(tw)
+        self.entry_x_transformation.insert(index = 0, string = globals()[f'x_transformation{var2str(ax)[len(var2str(ax)) - 1]}'])
+        self.entry_x_transformation.grid(row = 7, column = 1)
+        
+        label_y_transformation = tk.Label(tw, text = 'y = ')
+        label_y_transformation.grid(row = 7, column = 0)
+        
+        self.entry_y_transformation = tk.Entry(tw)
+        self.entry_y_transformation.insert(index = 0, string = globals()[f'y_transformation{var2str(ax)[len(var2str(ax)) - 1]}'])
+        self.entry_y_transformation.grid(row = 8, column = 1)
+    
+    def x_device_update(self, ax):
+        axes = var2str(ax)
+        globals()[f'x{axes[len(axes)]}_status'] = self.combo_x_device.current()
+
+    def y_device_update(self, ax):
+        axes = var2str(ax)
+        globals()[f'y{axes[len(axes)]}_status'] = self.combo_y_device.current()
+        
+    def save_log_x_status(self, ax):
+        print(f'self.status_log_x = {self.status_log_x.get()}')
+        if self.status_log_x.get() == 0:
+            self.status_log_x.set(1)
+            print(f'X scale on {var2str(ax)} set to log')
+            ax.set_xscale('log')
+        elif self.status_log_x.get() == 1:
+            self.status_log_x.set(0)
+            print(f'X scale on {var2str(ax)} set to linear')
+            ax.set_xscale('linear')
+        
+    def save_log_y_status(self, ax):
+        print(f'self.status_log_y = {self.status_log_y.get()}')
+        if self.status_log_y.get() == 0:
+            self.status_log_y.set(1)
+            print(f'Y scale on {var2str(ax)} set to log')
+            ax.set_yscale('log')
+        elif self.status_log_y.get() == 1:
+            self.status_log_y.set(0)
+            print(f'Y scale on {var2str(ax)} set to linear')
+            ax.set_yscale('linear')
+            
+    def set_xlim(self, ax):
+        if self.status_xlim.get() == 0:
+            ax.autoscale(enable = False, axis = 'x')
+            self.status_xlim.set(1)
+        elif self.status_xlim.get() == 1:
+            ax.autoscale(enable = True, axis = 'x')
+            self.status_xlim.set(0)
+        
+    def set_ylim(self, ax):
+        if self.status_ylim.get() == 0:
+            ax.autoscale(enable = False, axis = 'y')
+            self.status_ylim.set(1)
+        elif self.status_ylim.get() == 1:
+            ax.autoscale(enable = True, axis = 'y')
+            self.status_ylim.set(0)
+        
+    def hidesettings(self, ax):
+        global x_transformation
+        global y_transformation
+        
+        tw = self.settings_window
+        self.settings_window = None
+        if self.status_xlim.get() == 1:
+            try:
+                ax.set_xlim(left = float(self.entry_x_from.get()), right = float(self.entry_x_to.get()))
+            except:
+                pass
+        if self.status_ylim.get() == 1:
+            try:
+                ax.set_ylim(bottom = float(self.entry_y_from.get()), top = float(self.entry_y_to.get()))
+            except:
+                pass
+            
+        try:
+            ax.set_title(self.entry_title.get(), fontsize = 8, pad = -5)
+        except:
+            pass
+        
+        try:
+            ax.set_xlabel(self.entry_xlabel.get(), fontsize = 8)
+        except:
+            pass
+        
+        try:
+            ax.set_ylabel(self.entry_ylabel.get(), fontsize = 8)
+        except:
+            pass
+        
+        try:
+            globals()[f'x_transformation{var2str(ax)[len(var2str(ax)) - 1]}'] = self.entry_x_transformation.get()
+        except:
+            pass
+    
+        try:
+            globals()[f'y_transformation{var2str(ax)[len(var2str(ax)) - 1]}'] = self.entry_y_transformation.get()
+        except:
+            pass
+        
+        if tw:
+            tw.destroy()
+        
+def CreateFigureSettings(widget, ax):
+    settingsFigure = FigureSettings(widget)
+    def enter(event):
+        settingsFigure.showsettings(ax)
+    widget.bind('<Button-3>', enter)
+    
 class Graph(tk.Frame):
+    
 
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
@@ -4435,142 +4133,38 @@ class Graph(tk.Frame):
         self.combo_y3.bind("<<ComboboxSelected>>", self.y3_update)
         self.combo_y3.place(relx=0.165, rely=0.96)
 
-        '''
-        label_x4 = tk.Label(self, text = 'x', font = LARGE_FONT)
-        label_x4.place(relx = 0.52, rely = 0.955)
-        
-        label_y4 = tk.Label(self, text = 'y', font = LARGE_FONT)
-        label_y4.place(relx = 0.65, rely = 0.955)
-        
-        label_z4 = tk.Label(self, text = 'z', font = LARGE_FONT)
-        label_z4.place(relx = 0.78, rely = 0.955)
-        
-        self.combo_x4 = ttk.Combobox(self, values = columns)
-        try:
-            self.combo_x4.current(0)
-        except tk.TclError:
-            pass
-        self.combo_x4.bind("<<ComboboxSelected>>")
-        self.combo_x4.place(relx = 0.535, rely = 0.96)
-        
-        self.combo_y4 = ttk.Combobox(self, values = columns)
-        try:
-            self.combo_y4.current(0)
-        except tk.TclError:
-            pass
-        self.combo_y4.bind("<<ComboboxSelected>>")
-        self.combo_y4.place(relx = 0.665, rely = 0.96)
-    
-        self.combo_z4 = ttk.Combobox(self, values = columns)
-        try:
-            self.combo_z4.current(0)
-        except tk.TclError:
-            pass
-        self.combo_z4.bind("<<ComboboxSelected>>")
-        self.combo_z4.place(relx = 0.795, rely = 0.96)   
-        '''
-        try:
-            if sweeper_flag1 == True:
-                self.combo_x1.current(0)
-                x1_status = 0
-                self.combo_y1.current(2)
-                y1_status = 2
-                self.combo_x2.current(0)
-                x2_status = 0
-                self.combo_y2.current(2)
-                y2_status = 2
-                self.combo_x3.current(0)
-                x3_status = 0
-                self.combo_y3.current(2)
-                y3_status = 2
-            if sweeper_flag2 == True:
-                self.combo_x1.current(0)
-                x1_status = 0
-                self.combo_y1.current(3)
-                y1_status = 3
-                self.combo_x2.current(0)
-                x2_status = 0
-                self.combo_y2.current(3)
-                y2_status = 3
-                self.combo_x3.current(0)
-                x3_status = 0
-                self.combo_y3.current(3)
-                y3_status = 3
-            if sweeper_flag3 == True:
-                self.combo_x1.current(0)
-                x1_status = 0
-                self.combo_y1.current(4)
-                y1_status = 4
-                self.combo_x2.current(0)
-                x2_status = 0
-                self.combo_y2.current(4)
-                y2_status = 4
-                self.combo_x3.current(0)
-                x3_status = 0
-                self.combo_y3.current(4)
-                y3_status = 4
-        except tk.TclError:
-            pass
-
-        plot221 = FigureCanvasTkAgg(fig221, self)
+        plot221 = FigureCanvasTkAgg(globals()['fig1'], self)
         plot221.draw()
         plot221.get_tk_widget().place(relx=0.02, rely=0)
+        CreateFigureSettings(plot221.get_tk_widget(), globals()['ax1'])
+        CreateToolTip(plot221.get_tk_widget(), 'Right click to configure')
 
         toolbar221 = VerticalNavigationToolbar2Tk(plot221, self)
         toolbar221.update()
         toolbar221.place(relx=0.45, rely=0)
         plot221._tkcanvas.place(relx=0.02, rely=0)
 
-        plot222 = FigureCanvasTkAgg(fig222, self)
+        plot222 = FigureCanvasTkAgg(globals()['fig2'], self)
         plot222.draw()
         plot222.get_tk_widget().place(relx=0.52, rely=0)
+        CreateFigureSettings(plot222.get_tk_widget(), globals()['ax2'])
+        CreateToolTip(plot222.get_tk_widget(), 'Right click to configure')
 
         toolbar222 = VerticalNavigationToolbar2Tk(plot222, self)
         toolbar222.update()
         toolbar222.place(relx=0.95, rely=0)
         plot222._tkcanvas.place(relx=0.52, rely=0)
 
-        plot223 = FigureCanvasTkAgg(fig223, self)
+        plot223 = FigureCanvasTkAgg(globals()['fig3'], self)
         plot223.draw()
         plot223.get_tk_widget().place(relx=0.02, rely=0.50)
+        CreateFigureSettings(plot223.get_tk_widget(), globals()['ax3'])
+        CreateToolTip(plot223.get_tk_widget(), 'Right click to configure')
 
         toolbar223 = VerticalNavigationToolbar2Tk(plot223, self)
         toolbar223.update()
         toolbar223.place(relx=0.45, rely=0.5)
         plot223._tkcanvas.place(relx=0.02, rely=0.5)
-
-        '''
-        self.ani224 = animation.FuncAnimation(self.fig224, self.animate224, interval = 3 * interval, fargs = self)
-        plot224 = FigureCanvasTkAgg(self.fig224, self)
-        plot224.draw()
-        plot224.get_tk_widget().place(relx = 0.52, rely = 0.5)
-        
-        toolbar224 = VerticalNavigationToolbar2Tk(plot224, self)
-        toolbar224.update()
-        toolbar224.place(relx = 0.95, rely = 0.5)
-        plot224._tkcanvas.place(relx = 0.52, rely = 0.5)
-        '''
-
-    '''
-    def animate224(i, self):
-    #function to animate graph on each step    
-        global x4
-        global y4
-        global z4
-        try:   
-            self.ax4.clear()
-            colorbar = self.ax4.imshow(z4, interpolation ='nearest')
-            self.ax4.colorbar(colorbar)
-            try:
-                self.ax4.yticks(np.arange(x4.shape[0], step = x4.shape[0] // 10), 
-                              round(x4[::x4.shape[0] // 10], 2))
-                self.ax4.xticks(np.arange(y4.shape[0], step = y4.shape[0] // 10), 
-                              round(y4[::y4.shape[0] // 10], 2))
-            except ZeroDivisionError or ValueError:
-                pass
-        except:
-            pass
-    '''
 
     def x1_update(self, event):
         global x1_status
@@ -4612,5 +4206,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    
-    
