@@ -8,7 +8,7 @@ import threading
 from tkinter import ttk
 import tkinter as tk
 from ToolTip import CreateToolTip
-import matplotlib.animation as animation
+import blit_animation
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, 
                                                NavigationToolbar2Tk)
@@ -57,25 +57,24 @@ def var2str(var, vars_data=locals()):
 
 # assigning variables for sweeping
 
-
 device_to_sweep1 = 'Time'
 device_to_sweep2 = 'Time'
 device_to_sweep3 = 'Time'
 parameter_to_sweep1 = ''
 parameter_to_sweep2 = ''
 parameter_to_sweep3 = ''
-from_sweep1 = 0
-to_sweep1 = 1
-ratio_sweep1 = 0.1
-delay_factor1 = 0.1
-from_sweep2 = 0
-to_sweep2 = 1
-ratio_sweep2 = 0.1
-delay_factor2 = 0.1
-from_sweep3 = 0
-to_sweep3 = 1
-ratio_sweep3 = 0.1
-delay_factor3 = 0.1
+from_sweep1 = float
+to_sweep1 = float
+ratio_sweep1 = float
+delay_factor1 = float
+from_sweep2 = float
+to_sweep2 = float
+ratio_sweep2 = float
+delay_factor2 = float
+from_sweep3 = float
+to_sweep3 = float
+ratio_sweep3 = float
+delay_factor3 = float
 
 month_dictionary = {'01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr', '05': 'May', '06': 'Jun', 
                     '07': 'Jul', '08': 'Aug', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'}
@@ -111,24 +110,7 @@ columns = []
 
 # variables for plotting
 
-x1 = []
-x1_status = 0
-y1 = []
-y1_status = 0
-x2 = []
-x2_status = 0
-y2 = []
-y2_status = 0
-x3 = []
-x3_status = 0
-y3 = []
-y3_status = 0
-x4 = []
-x4_status = 0
-y4 = []
-y4_status = 0
-z4 = [[]]
-z4_status = 0
+cur_animation_num = 1
 
 #creating config files if they were deleted
 
@@ -637,87 +619,70 @@ parameters_to_read = new_parameters_to_read()
 
 zero_time = time.perf_counter()
 
-# animation functions
-
-# defining plots initial parameters
-labelsize = 4
-pad = 0
-
-def onclick(event):
-    ax = event.inaxes
-    if ax is None:
-        pass
-    elif event.button == 1:  # left click
-        ax.set_autoscale_on(False)
-    elif event.button == 3:  # right click
-        ax.set_autoscale_on(True)
-    else:
-        pass
-
-def create_fig(i, figsize=(1.8, 1)):
-    globals()[f'fig{i}'] = Figure(figsize, dpi=300)
-    globals()[f'fig{i}'].tight_layout()
-    globals()[f'ax{i}'] = globals()[f'fig{i}'].add_subplot(111)
-    globals()[f'ax{i}'].tick_params(axis='y', which='major', length = 0, pad=pad, labelsize=labelsize)
-    globals()[f'ax{i}'].tick_params(axis='x', which='major', length = 0, pad=pad + 1, labelsize=labelsize)
-    globals()[f'ax{i}'].set_xlabel('x', fontsize = 6, labelpad = 0)
-    globals()[f'ax{i}'].set_ylabel('y', fontsize = 6, labelpad = 1)
-    globals()[f'ax{i}'].set_title(f'Plot {i}', fontsize = 8, pad = -5)
-    globals()[f'x_transformation{i}'] = 'x'
-    globals()[f'y_transformation{i}'] = 'y'
-
-for i in range(1, 4):
-    create_fig(i)
+def my_animate_initial(n):
+    # function to animate graph on first step
+    ax = globals()[f'ax{n}']
+    line, = ax.plot([0], [0])
+    line.set_data([0], [0])
+    return line,
 
 def my_animate(i, n):
     # function to animate graph on each step
+    
     global columns
     global filename_sweep
     global x_transformation
     global y_transformation
     
-    if n == 1:
+    if n%3 == 1:
         color = 'darkblue'
-    elif n == 2:
+    elif n%3 == 2:
         color = 'darkgreen'
-    elif n == 3:
+    elif n%3 == 0:
         color = 'crimson'
     else:
         color = 'black'
+
+    data = pd.read_csv(filename_sweep)
+    globals()[f'x{n}'] = data[columns[globals()[f'x{n}_status']]].values
+    globals()[f'y{n}'] = data[columns[globals()[f'y{n}_status']]].values
+    x = globals()[f'x{n}']
+    y = globals()[f'y{n}']
     
     try:
-        data = pd.read_csv(filename_sweep)
-        globals()[f'x{n}'] = data[columns[globals()[f'x{n}_status']]].values
-        globals()[f'y{n}'] = data[columns[globals()[f'y{n}_status']]].values
-        x = globals()[f'x{n}']
-        y = globals()[f'y{n}']
-        
-        try:
-            x = eval(globals()[f'x_transformation{n}'], locals())
-        except:
-            pass
-        
-        try:
-            y = eval(globals()[f'y_transformation{n}'], locals())
-        except:
-            pass
-        
-        globals()[f'ax{n}'].plot(x, y, '-', lw=1, color=color)
-    except FileNotFoundError:
-        x = globals()[f'x{n}']
-        y = globals()[f'y{n}']
-        
-        try:
-            x = eval(x_transformation, locals())
-        except:
-            pass
-        
-        try:
-            y = eval(y_transformation, locals())
-        except:
-            pass
-        
-        globals()[f'ax{n}'].plot(x, y, '-', lw=1, color=color)
+        x = eval(globals()[f'x_transformation{n}'], locals())
+    except:
+        pass
+    
+    try:
+        y = eval(globals()[f'y_transformation{n}'], locals())
+    except:
+        pass
+    
+    ax = globals()[f'ax{n}']
+    
+    xscale_status = ax.get_xscale()
+    yscale_status = ax.get_yscale()
+    xlabel = ax.get_xlabel()
+    ylabel = ax.get_ylabel()
+    xlims = ax.get_xlim()
+    ylims = ax.get_ylim()
+    ax.clear()
+    ax.set_xscale(xscale_status)
+    ax.set_yscale(yscale_status)
+    getattr(Graph, 'axes_settings')(i, n)
+    ax.set_xlim(xlims)
+    ax.set_ylim(ylims)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.autoscale(enable = globals()[f'x{n}_autoscale'], axis = 'x')
+    ax.autoscale(enable = globals()[f'y{n}_autoscale'], axis = 'y')
+    
+    ax.plot(x, y, '-', lw=1, color=color)
+    
+    globals()[f'graph_object{globals()["cur_animation_num"] - 3}'].update()
+    globals()[f'graph_object{globals()["cur_animation_num"] - 3}'].update_idletasks()
+    return [ax]
 
 zero_time = time.perf_counter()
 
@@ -860,12 +825,17 @@ class Sweeper1d(tk.Frame):
         button_update_sweep.place(relx = 0.3, rely = 0.21 + lstbox_height)
 
         self.button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause())
-        self.button_pause.place(relx = 0.3, rely = 0.25 +lstbox_height)
-        CreateToolTip(self.button_pause, 'Pause sweep')
+        self.button_pause.place(relx = 0.3, rely = 0.25 + lstbox_height)
+        CreateToolTip(self.button_pause, 'Pause\continue sweep')
         
         self.button_stop = tk.Button(self, text = '⏹️', font = LARGE_FONT, command = lambda: self.stop())
         self.button_stop.place(relx = 0.3375, rely = 0.25 + lstbox_height)
         CreateToolTip(self.button_stop, 'Stop sweep')
+        
+        button_start_sweeping = tk.Button(
+            self, text="▶", command=lambda: self.start_sweeping(), font = LARGE_FONT)
+        button_start_sweeping.place(relx=0.375, rely=0.21, height= 90, width=30)
+        CreateToolTip(button_start_sweeping, 'Start sweeping')
         
         self.button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero())
         self.button_tozero.place(relx = 0.3, rely = 0.3 + lstbox_height)
@@ -954,10 +924,6 @@ class Sweeper1d(tk.Frame):
         button_filename = tk.Button(
             self, text = 'Browse...', command=lambda: self.set_filename_sweep())
         button_filename.place(relx=0.85, rely=0.9)
-
-        button_start_sweeping = tk.Button(
-            self, text="Start sweeping", command=lambda: self.start_sweeping())
-        button_start_sweeping.place(relx=0.7, rely=0.7)
 
         graph_button = tk.Button(
             self, text='📊', font = SUPER_LARGE, command=lambda: self.open_graph())
@@ -1072,17 +1038,25 @@ class Sweeper1d(tk.Frame):
         self.window_settings.mainloop()
 
     def open_graph(self):
-        global fig1
-        global fig2
-        global fig3
-        self.window = Universal_frontend(classes=(Graph,), start=Graph)
-        self.ani1 = animation.FuncAnimation(
-            fig1, lambda i: my_animate(i, n = 1), interval=interval)
-        self.ani2 = animation.FuncAnimation(
-            fig2, lambda i: my_animate(i, n = 2), interval=interval)
-        self.ani3 = animation.FuncAnimation(
-            fig3, lambda i: my_animate(i, n = 3), interval=interval)
-        self.window.mainloop()
+        
+        global cur_animation_num
+        
+        def return_range(x, n):
+            if x % n == 0:
+                return [x + p for p in range(n)]
+            elif x % n == n - 1:
+                return [x - p for p in range(n)][::-1]
+            else:
+                return return_range(x + 1, n)
+        
+        globals()[f'graph_object{globals()["cur_animation_num"]}'] = Graph()
+        for i in return_range(cur_animation_num, 3):
+            globals()[f'x{i + 1}'] = []
+            globals()[f'x{i + 1}_status'] = 0
+            globals()[f'y{i + 1}'] = []
+            globals()[f'y{i + 1}_status'] = 0
+            globals()[f'ani{i+1}'] = StartAnimation
+            globals()[f'ani{i+1}'].start()
         
     def pause(self):
         global pause_flag
@@ -1154,7 +1128,7 @@ class Sweeper1d(tk.Frame):
         device_to_sweep1 = list_of_devices[self.combo_to_sweep1.current()]
         parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](), 'set_options')
         parameter_to_sweep1 = parameters[self.sweep_options1.current()]
-        columns = [device_to_sweep1 + '.' + parameter_to_sweep1]
+        columns = ['time', device_to_sweep1 + '.' + parameter_to_sweep1]
         for option in parameters_to_read:
             columns.append(option)
 
@@ -1181,6 +1155,7 @@ class Sweeper1d(tk.Frame):
         zero_time = time.perf_counter()
         stop_flag = False
         Sweeper_write()
+        self.open_graph()
 
 
 class Sweeper2d(tk.Frame):
@@ -1320,7 +1295,7 @@ class Sweeper2d(tk.Frame):
 
         self.button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause())
         self.button_pause.place(relx = 0.45, rely = 0.25 + lstbox_height)
-        CreateToolTip(self.button_pause, 'Pause sweep')
+        CreateToolTip(self.button_pause, 'Pause\Continue sweep')
         
         self.button_stop = tk.Button(self, text = '⏹️', font = LARGE_FONT, command = lambda: self.stop())
         self.button_stop.place(relx = 0.4875, rely = 0.25 + lstbox_height)
@@ -1328,6 +1303,11 @@ class Sweeper2d(tk.Frame):
         
         self.button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero())
         self.button_tozero.place(relx = 0.45, rely = 0.3 + lstbox_height)
+        
+        button_start_sweeping = tk.Button(
+            self, text="▶", command=lambda: self.start_sweeping(), font = LARGE_FONT)
+        button_start_sweeping.place(relx=0.525, rely=0.21 + lstbox_height, height= 90, width=30)
+        CreateToolTip(button_start_sweeping, 'Start sweeping')
 
         label_options = tk.Label(self, text = 'Options:', font=LARGE_FONT)
         label_options.place(relx = 0.05, rely = 0.25)
@@ -1457,10 +1437,6 @@ class Sweeper2d(tk.Frame):
         button_filename = tk.Button(
             self, text = 'Browse...', command=lambda: self.set_filename_sweep())
         button_filename.place(relx=0.85, rely=0.9)
-
-        button_start_sweeping = tk.Button(
-            self, text="Start sweeping", command=lambda: self.start_sweeping())
-        button_start_sweeping.place(relx=0.7, rely=0.7)
 
         graph_button = tk.Button(
             self, text='📊', font = SUPER_LARGE, command=lambda: self.open_graph())
@@ -1675,16 +1651,24 @@ class Sweeper2d(tk.Frame):
         self.entry_filename.after(1)
 
     def open_graph(self):
-        global fig1
-        global fig2
-        global fig3
+        global cur_animation_num
+        
+        def return_range(x, n):
+            if x % n == 0:
+                return [x + p for p in range(n)]
+            elif x % n == n - 1:
+                return [x - p for p in range(n)][::-1]
+            else:
+                return return_range(x + 1, n)
+        
         self.window = Universal_frontend(classes=(Graph,), start=Graph)
-        self.ani1 = animation.FuncAnimation(
-            fig1, lambda i: my_animate(i, n = 1), interval=interval)
-        self.ani2 = animation.FuncAnimation(
-            fig2, lambda i: my_animate(i, n = 2), interval=interval)
-        self.ani3 = animation.FuncAnimation(
-            fig3, lambda i: my_animate(i, n = 3), interval=interval)
+        for i in return_range(cur_animation_num, 3):
+            globals()[f'x{i + 1}'] = []
+            globals()[f'x{i + 1}_status'] = 0
+            globals()[f'y{i + 1}'] = []
+            globals()[f'y{i + 1}_status'] = 0
+            globals()[f'ani{i+1}'] = StartAnimation
+            globals()[f'ani{i+1}'].start()
         self.window.mainloop()
         
     def pause(self):
@@ -1826,6 +1810,7 @@ class Sweeper2d(tk.Frame):
         zero_time = time.perf_counter()
         stop_flag = False
         Sweeper_write()
+        self.open_graph()
 
 
 class Sweeper3d(tk.Frame):
@@ -1896,7 +1881,7 @@ class Sweeper3d(tk.Frame):
         
         self.button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause())
         self.button_pause.place(relx = 0.6, rely = 0.25 + lstbox_height)
-        CreateToolTip(self.button_pause, 'Pause sweep')
+        CreateToolTip(self.button_pause, 'Pause\Continue sweep')
         
         self.button_stop = tk.Button(self, text = '⏹️', font = LARGE_FONT, command = lambda: self.stop())
         self.button_stop.place(relx = 0.6335, rely = 0.25 + lstbox_height)
@@ -1904,6 +1889,11 @@ class Sweeper3d(tk.Frame):
         
         self.button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero())
         self.button_tozero.place(relx = 0.6, rely = 0.3 + lstbox_height)
+        
+        button_start_sweeping = tk.Button(
+            self, text="▶", command=lambda: self.start_sweeping(), font = LARGE_FONT)
+        button_start_sweeping.place(relx=0.675, rely=0.21 + lstbox_height, height= 90, width=30)
+        CreateToolTip(button_start_sweeping, 'Start sweeping')
 
         self.combo_to_sweep1 = ttk.Combobox(self, value=list_of_devices)
         self.combo_to_sweep1.bind(
@@ -2185,10 +2175,6 @@ class Sweeper3d(tk.Frame):
         button_filename = tk.Button(
             self, text = 'Browse...', command=lambda: self.set_filename_sweep())
         button_filename.place(relx=0.85, rely=0.9)
-
-        button_start_sweeping = tk.Button(
-            self, text="Start sweeping", command=lambda: self.start_sweeping())
-        button_start_sweeping.place(relx=0.75, rely=0.7)
 
         graph_button = tk.Button(
             self, text='📊', font = SUPER_LARGE, command=lambda: self.open_graph())
@@ -2473,16 +2459,24 @@ class Sweeper3d(tk.Frame):
         self.entry_filename.after(1)
 
     def open_graph(self):
-        global fig1
-        global fig2
-        global fig3
+        global cur_animation_num
+        
+        def return_range(x, n):
+            if x % n == 0:
+                return [x + p for p in range(n)]
+            elif x % n == n - 1:
+                return [x - p for p in range(n)][::-1]
+            else:
+                return return_range(x + 1, n)
+        
         self.window = Universal_frontend(classes=(Graph,), start=Graph)
-        self.ani1 = animation.FuncAnimation(
-            fig1, lambda i: my_animate(i, n = 1), interval=interval)
-        self.ani2 = animation.FuncAnimation(
-            fig2, lambda i: my_animate(i, n = 2), interval=interval)
-        self.ani3 = animation.FuncAnimation(
-            fig3, lambda i: my_animate(i, n = 3), interval=interval)
+        for i in return_range(cur_animation_num, 3):
+            globals()[f'x{i + 1}'] = []
+            globals()[f'x{i + 1}_status'] = 0
+            globals()[f'y{i + 1}'] = []
+            globals()[f'y{i + 1}_status'] = 0
+            globals()[f'ani{i+1}'] = StartAnimation
+            globals()[f'ani{i+1}'].start()
         self.window.mainloop()
         
     def pause(self):
@@ -2677,6 +2671,7 @@ class Sweeper3d(tk.Frame):
         
         stop_flag = False
         Sweeper_write()
+        self.open_graph()
 
 class Settings(tk.Frame):
     
@@ -2978,59 +2973,79 @@ class Sweeper_write(threading.Thread):
     def __init__(self):
 
         threading.Thread.__init__(self)
-            
+        
+        self.sweeper_flag1 = sweeper_flag1
+        self.sweeper_flag2 = sweeper_flag2
+        self.sweeper_flag3 = sweeper_flag3
         self.device_to_sweep1 = device_to_sweep1
-        self.device_to_sweep2 = device_to_sweep2
-        self.device_to_sweep3 = device_to_sweep3
         self.parameter_to_sweep1 = parameter_to_sweep1
-        self.parameter_to_sweep2 = parameter_to_sweep2
-        self.parameter_to_sweep3 = parameter_to_sweep3
+        self.parameters_to_read = parameters_to_read
         self.from_sweep1 = float(from_sweep1)
         self.to_sweep1 = float(to_sweep1)
         self.ratio_sweep1 = float(ratio_sweep1)
         self.delay_factor1 = float(delay_factor1)
-        self.from_sweep2 = float(from_sweep2)
-        self.to_sweep2 = float(to_sweep2)
-        self.ratio_sweep2 = float(ratio_sweep2)
-        self.delay_factor2 = float(delay_factor2)
-        self.from_sweep3 = float(from_sweep3)
-        self.to_sweep3 = float(to_sweep3)
-        self.ratio_sweep3 = float(ratio_sweep3)
-        self.delay_factor3 = float(delay_factor3)
-        self.parameters_to_read = parameters_to_read
-        self.filename_sweep = filename_sweep
         self.value1 = float(from_sweep1)
-        self.value2 = float(from_sweep2)
-        self.value3 = float(from_sweep3)
-        self.columns = columns
-        self.sweeper_flag1 = sweeper_flag1
-        self.sweeper_flag2 = sweeper_flag2
-        self.sweeper_flag3 = sweeper_flag3
         self.condition = condition
         self.step1 = float(delay_factor1) * float(ratio_sweep1)
-        self.step2 = float(delay_factor2) * float(ratio_sweep2)
-        self.step3 = float(delay_factor3) * float(ratio_sweep3)
         self.time1 = (float(from_sweep1) - float(to_sweep1)) / float(ratio_sweep1)
-        self.time2 = (float(from_sweep2) - float(to_sweep2)) / float(ratio_sweep2)
-        self.time3 = (float(from_sweep3) - float(to_sweep3)) / float(ratio_sweep3)
-        print(f'Manual_sweep_flags are {manual_sweep_flags}\nrange1 = [{from_sweep1}:{to_sweep1}), ratio_sweep1 = {ratio_sweep1}\nrange2 = [{from_sweep2}:{to_sweep2}), ratio_sweep2 = {ratio_sweep2}\nrange3 = [{from_sweep3}:{to_sweep3}), ratio_sweep3 = {ratio_sweep3}')
-        
-        try:
-            self.nstep1 = (float(to_sweep1) - float(from_sweep1)) / self.ratio_sweep1 / self.delay_factor1
-            self.nstep1 = int(self.nstep1)
-        except ValueError:
-            self.nstep1 = 1
-        try:
-            self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
-            self.nstep2 = int(self.nstep2)
-        except ValueError:
-            self.nstep2 = 1
-        try:
-            self.nstep3 = (float(to_sweep3) - float(from_sweep3)) / self.ratio_sweep3 / self.delay_factor3
-            self.nstep3 = int(self.nstep3)
-        except ValueError:
-            self.nstep3 = 1
+        self.filename_sweep = filename_sweep
+        self.columns = columns
+        globals()['dataframe'] = []
+        if self.sweeper_flag2 == True:
+            self.device_to_sweep2 = device_to_sweep2
+            self.parameter_to_sweep2 = parameter_to_sweep2
+            self.from_sweep2 = float(from_sweep2)
+            self.to_sweep2 = float(to_sweep2)
+            self.ratio_sweep2 = float(ratio_sweep2)
+            self.delay_factor2 = float(delay_factor2)
+            self.filename_sweep = filename_sweep
+            self.value2 = float(from_sweep2)
+            self.columns = columns
+            self.step2 = float(delay_factor2) * float(ratio_sweep2)
+            self.time2 = (float(from_sweep2) - float(to_sweep2)) / float(ratio_sweep2)
             
+            try:
+                self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
+                self.nstep2 = int(self.nstep2)
+            except ValueError:
+                self.nstep2 = 1
+            
+        if self.sweeper_flag3 == True:
+            self.device_to_sweep2 = device_to_sweep2
+            self.device_to_sweep3 = device_to_sweep3
+            self.parameter_to_sweep2 = parameter_to_sweep2
+            self.parameter_to_sweep3 = parameter_to_sweep3
+            self.from_sweep2 = float(from_sweep2)
+            self.to_sweep2 = float(to_sweep2)
+            self.ratio_sweep2 = float(ratio_sweep2)
+            self.delay_factor2 = float(delay_factor2)
+            self.from_sweep3 = float(from_sweep3)
+            self.to_sweep3 = float(to_sweep3)
+            self.ratio_sweep3 = float(ratio_sweep3)
+            self.delay_factor3 = float(delay_factor3)
+            self.filename_sweep = filename_sweep
+            self.value2 = float(from_sweep2)
+            self.value3 = float(from_sweep3)
+            self.columns = columns
+            self.step2 = float(delay_factor2) * float(ratio_sweep2)
+            self.step3 = float(delay_factor3) * float(ratio_sweep3)
+            self.time2 = (float(from_sweep2) - float(to_sweep2)) / float(ratio_sweep2)
+            self.time3 = (float(from_sweep3) - float(to_sweep3)) / float(ratio_sweep3)
+            
+            try:
+                self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
+                self.nstep2 = int(self.nstep2)
+            except ValueError:
+                self.nstep2 = 1
+                
+            try:
+                self.nstep3 = (float(to_sweep3) - float(from_sweep3)) / self.ratio_sweep3 / self.delay_factor3
+                self.nstep3 = int(self.nstep3)
+            except ValueError:
+                self.nstep3 = 1
+            
+        print(f'Manual_sweep_flags are {manual_sweep_flags}\nrange1 = [{from_sweep1}:{to_sweep1}), ratio_sweep1 = {ratio_sweep1}\nrange2 = [{from_sweep2}:{to_sweep2}), ratio_sweep2 = {ratio_sweep2}\nrange3 = [{from_sweep3}:{to_sweep3}), ratio_sweep3 = {ratio_sweep3}')
+
         try:
             threading.Thread.__init__(self)
             self.daemon = True
@@ -3278,24 +3293,24 @@ class Sweeper_write(threading.Thread):
             print('Transposition happened')
             a = str(a)
             b = str(b)
-            setattr(self, 'device_to_sweep' + a, globals()['device_to_sweep' + b])
-            setattr(self, 'device_to_sweep' + b, globals()['device_to_sweep' + a])
-            setattr(self, 'parameter_to_sweep' + a, globals()['parameter_to_sweep' + b])
-            setattr(self, 'parameter_to_sweep' + b, globals()['parameter_to_sweep' + a])
-            setattr(self, 'from_sweep' + a, float(globals()['from_sweep' + b]))
-            setattr(self, 'to_sweep' + a, float(globals()['to_sweep' + b]))
-            setattr(self, 'ratio_sweep' + a, float(globals()['ratio_sweep' + b]))
-            setattr(self, 'delay_factor' + a, float(globals()['delay_factor' + b]))
-            setattr(self, 'from_sweep' + b, float(globals()['from_sweep' + a]))
-            setattr(self, 'to_sweep' + b, float(globals()['to_sweep' + a]))
-            setattr(self, 'ratio_sweep' + b, float(globals()['ratio_sweep' + a]))
-            setattr(self, 'delay_factor' + b, float(globals()['delay_factor' + a]))
-            setattr(self, 'step' + a, float(globals()['delay_factor' + b]) * float(globals()['ratio_sweep' + b]))
-            setattr(self, 'step' + b, float(globals()['delay_factor' + a]) * float(globals()['ratio_sweep' + a]))
-            setattr(self, 'value' + a, float(globals()['from_sweep' + b]))
-            setattr(self, 'value' + b, float(globals()['from_sweep' + a]))
-            setattr(self, 'time' + a, (float(globals()['from_sweep' + b]) - float(globals()['to_sweep' + b])) / float(globals()['ratio_sweep' + b]))
-            setattr(self, 'time' + b, (float(globals()['from_sweep' + a]) - float(globals()['to_sweep' + a])) / float(globals()['ratio_sweep' + a]))
+            globals()[f'device_to_sweep{a}'] = getattr(self, f'device_to_sweep{b}')
+            globals()[f'device_to_sweep{b}'] = getattr(self, f'device_to_sweep{a}')
+            globals()[f'parameter_to_sweep{a}'] = getattr(self, f'parameter_to_sweep{b}')
+            globals()[f'parameter_to_sweep{b}'] = getattr(self, f'parameter_to_sweep{a}')
+            globals()[f'from_sweep{a}'] = float(getattr(self, f'from_sweep{b}'))
+            globals()[f'to_sweep{a}'] = float(getattr(self, f'to_sweep{b}'))
+            globals()[f'ratio_sweep{a}'] = float(getattr(self, f'ratio_sweep{b}'))
+            globals()[f'delay_factor{a}'] = float(getattr(self, f'delay_factor{b}'))
+            globals()[f'from_sweep{b}'] = float(getattr(self, f'from_sweep{a}'))
+            globals()[f'to_sweep{b}'] = float(getattr(self, f'to_sweep{a}'))
+            globals()[f'ratio_sweep{b}'] = float(getattr(self, f'ratio_sweep{a}'))
+            globals()[f'delay_factor{b}'] = float(getattr(self, f'delay_factor{a}'))
+            globals()[f'step{a}']  = float(getattr(self, f'delay_factor{b}')) * float(getattr(self, f'ratio_sweep{b}'))
+            globals()[f'step{b}'] = float(getattr(self, f'delay_factor{a}')) * float(getattr(self, f'ratio_sweep{a}'))
+            globals()[f'value{a}'] = float(getattr(self, f'from_sweep{b}'))
+            globals()[f'value{b}'] = float(getattr(self, f'from_sweep{a}'))
+            globals()[f'time{a}'] = (float(getattr(self, f'from_sweep{b}')) - float(getattr(self, f'to_sweep{b}')) / float(getattr(self, f'ratio_sweep{b}')))
+            globals()[f'time{b}'] = (float(getattr(self, f'from_sweep{a}')) - float(getattr(self, f'to_sweep{a}')) / float(getattr(self, f'ratio_sweep{a}')))
 
     def isinarea(self, point, grid_area, dgrid_area, sweep_dimension = 2):
         '''if point is in grid_area return True. 
@@ -3846,7 +3861,7 @@ class Sweeper_write(threading.Thread):
 
 class VerticalNavigationToolbar2Tk(NavigationToolbar2Tk):
     def __init__(self, canvas, window):
-        super().__init__(canvas, window, pack_toolbar=False)
+        super().__init__(canvas, window, pack_toolbar=True)
 
     # override _Button() to re-pack the toolbar button in vertical direction
     def _Button(self, text, image_file, toggle, command):
@@ -3856,8 +3871,8 @@ class VerticalNavigationToolbar2Tk(NavigationToolbar2Tk):
 
     # override _Spacer() to create vertical separator
     def _Spacer(self):
-        s = tk.Frame(self, width=26, relief=tk.RIDGE, bg="DarkGray", padx=2)
-        s.pack(side=tk.TOP, pady=5)  # pack in vertical direction
+        s = tk.Frame(self, width=26, relief=tk.RIDGE, bg="White", padx=2)
+        s.pack(side=tk.TOP, pady = 5, fill="both", expand=True)  # pack in vertical direction
         return s
 
     # disable showing mouse position in toolbar
@@ -3868,14 +3883,33 @@ class FigureSettings(object):
     
     def __init__(self, widget):
         self.widget = widget
-        self.settings_window = None
         self.id = None
         self.x = self.y = 0
+            
+    def show_plot_settings(self, ax):
+        x, y, cx, cy = self.widget.bbox('all')
+        x = x + self.widget.winfo_rootx()
+        y = y + self.widget.winfo_rooty()
+        self.settings_window = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(1)
+        tw.wm_geometry("+%d+%d" % (x, y))
+        self.entry_title = tk.Entry(tw)
+        self.entry_title.insert(index = 0, string = str(ax.get_title()))
+        self.entry_title.grid(row = 0, column = 0, pady = 2)
         
+        button_close = tk.Button(tw, text = '❌', command = lambda: self.hide_title_settings(ax))
+        button_close.grid(row = 0, column = 1, pady = 2)
+        
+    def hide_title_settings(self, ax):
+    
+        try:
+            ax.set_title(self.entry_title.get(), fontsize = 8, pad = -5)
+        except:
+            pass
+        
+        self.settings_window.destroy()
+    
     def showsettings(self, ax):
-        "Display settings for a binded figure"
-        if self.settings_window:
-            return
         x, y, cx, cy = self.widget.bbox('all')
         x = x + self.widget.winfo_rootx()
         y = y + self.widget.winfo_rooty()
@@ -3885,16 +3919,16 @@ class FigureSettings(object):
         
         self.entry_title = tk.Entry(tw)
         self.entry_title.insert(index = 0, string = str(ax.get_title()))
-        self.entry_title.grid(row = 0, column = 2, padx = 3, pady = 2)
+        self.entry_title.grid(row = 0, column = 1, pady = 2)
         
         button_close = tk.Button(tw, text = '❌', command = lambda: self.hidesettings(ax))
         button_close.grid(row = 0, column = 5, pady = 2)
         
         label_x_device = tk.Label(tw, text = 'x')
-        label_x_device.grid(row = 1, column = 0, pady = 2, sticky = tk.E)
+        label_x_device.grid(row = 1, column = 0, pady = 2, sticky = tk.W)
         
         self.combo_x_device = ttk.Combobox(tw, values=globals()['columns'])
-        self.combo_x_device.bind("<<ComboboxSelected>>", self.x_device_update)
+        self.combo_x_device.bind("<<ComboboxSelected>>", lambda event: self.ax_update(ax, event))
         self.combo_x_device.grid(row = 1, column = 1, pady = 2)
         
         label_log_x = tk.Label(tw, text = 'log')
@@ -3906,12 +3940,13 @@ class FigureSettings(object):
                                              variable = self.status_log_x,
                                              onvalue = 0, offvalue = 1)
         self.checkbox_log_x.grid(row = 1, column = 4, pady = 2)
+        CreateToolTip(self.checkbox_log_x, 'Set x logscale')
         
         label_y_device = tk.Label(tw, text = 'y')
-        label_y_device.grid(row = 2, column = 0, pady = 2, sticky = tk.E)
+        label_y_device.grid(row = 2, column = 0, pady = 2, sticky = tk.W)
         
         self.combo_y_device = ttk.Combobox(tw, values=globals()['columns'])
-        self.combo_y_device.bind("<<ComboboxSelected>>", self.y_device_update)
+        self.combo_y_device.bind("<<ComboboxSelected>>", lambda event: self.ax_device_update(ax, event))
         self.combo_y_device.grid(row = 2, column = 1, pady = 2)
         
         label_log_y = tk.Label(tw, text = 'log')
@@ -3923,123 +3958,137 @@ class FigureSettings(object):
                                              variable = self.status_log_y,
                                              onvalue = 0, offvalue = 1)
         self.checkbox_log_y.grid(row = 2, column = 4, pady = 2)
+        CreateToolTip(self.checkbox_log_y, 'Set y logscale')
         
-        label_xlim = tk.Label(tw, text = r'$x_{lim}$ = ')
-        label_xlim.grid(row = 3, column = 0, pady = 2)
+        label_xlim = tk.Label(tw, text = 'x lim = ')
+        label_xlim.grid(row = 3, column = 0, pady = 2, sticky = tk.W)
         
         self.status_xlim = tk.IntVar()
         self.status_xlim.set(0)
         
         self.entry_x_from = tk.Entry(tw, width = 8)
-        self.entry_x_from.grid(row = 3, column = 1, pady = 2)
+        self.entry_x_from.grid(row = 3, column = 1, pady = 2, sticky = tk.W)
         
         label_dash_x = tk.Label(tw, text = ' - ')
-        label_dash_x.grid(row = 3, column = 2, pady = 2)
+        label_dash_x.grid(row = 3, column = 1, pady = 2)
         
         self.entry_x_to = tk.Entry(tw, width = 8)
-        self.entry_x_to.grid(row = 3, column = 3, pady = 2)
+        self.entry_x_to.grid(row = 3, column = 1, pady = 2, sticky = tk.E)
         
         checkbox_xlim = tk.Checkbutton(tw, command = lambda: self.set_xlim(ax))
-        checkbox_xlim.grid(row = 3, column = 4, pady = 2)
+        checkbox_xlim.grid(row = 3, column = 3, pady = 2)
+        CreateToolTip(checkbox_xlim, 'Set x autoscale off')
         
-        label_ylim = tk.Label(tw, text = r'$y_{lim}$ = ')
-        label_ylim.grid(row = 4, column = 0, pady = 2)
+        label_ylim = tk.Label(tw, text = 'y lim = ')
+        label_ylim.grid(row = 4, column = 0, pady = 2, sticky = tk.W)
         
         self.status_ylim = tk.IntVar()
         self.status_ylim.set(0)
         
         self.entry_y_from = tk.Entry(tw, width = 8)
-        self.entry_y_from.grid(row = 4, column = 1, pady = 2)
+        self.entry_y_from.grid(row = 4, column = 1, pady = 2, sticky = tk.W)
     
         label_dash_y = tk.Label(tw, text = ' - ')
-        label_dash_y.grid(row = 4, column = 2, pady = 2)
+        label_dash_y.grid(row = 4, column = 1, pady = 2)
         
         self.entry_y_to = tk.Entry(tw, width = 8)
-        self.entry_y_to.grid(row = 4, column = 3, pady = 2)
+        self.entry_y_to.grid(row = 4, column = 1, pady = 2, sticky = tk.E)
         
         checkbox_ylim = tk.Checkbutton(tw, command = lambda: self.set_ylim(ax))
-        checkbox_ylim.grid(row = 4, column = 4, pady = 2)
+        checkbox_ylim.grid(row = 4, column = 3, pady = 2)
+        CreateToolTip(checkbox_ylim, 'Set y autoscale off')
         
-        label_xlabel = tk.Label(tw, text = r'$x_{label} = $')
-        label_xlabel.grid(row = 5, column = 0)
+        label_xlabel = tk.Label(tw, text = 'x label = ')
+        label_xlabel.grid(row = 5, column = 0, pady = 2, sticky = tk.W)
         
         self.entry_xlabel = tk.Entry(tw)
         self.entry_xlabel.insert(index = 0, string = 'x')
         self.entry_xlabel.grid(row = 5, column = 1)
     
-        label_ylabel = tk.Label(tw, text = "$x_{label}$ = ")
-        label_ylabel.grid(row = 6, column = 0)
+        label_ylabel = tk.Label(tw, text = 'y label = ')
+        label_ylabel.grid(row = 6, column = 0, pady = 2, sticky = tk.W)
         
         self.entry_ylabel = tk.Entry(tw)
         self.entry_ylabel.insert(index = 0, string = 'y')
-        self.entry_ylabel.grid(row = 6, column = 1)
+        self.entry_ylabel.grid(row = 6, column = 1, pady = 2)
         
         label_x_transformation = tk.Label(tw, text = 'x = ')
-        label_x_transformation.grid(row = 7, column = 0)
+        label_x_transformation.grid(row = 7, column = 0, pady = 2, sticky = tk.W)
+        CreateToolTip(label_x_transformation, 'X transformation')
         
         self.entry_x_transformation = tk.Entry(tw)
         self.entry_x_transformation.insert(index = 0, string = globals()[f'x_transformation{var2str(ax)[len(var2str(ax)) - 1]}'])
-        self.entry_x_transformation.grid(row = 7, column = 1)
+        self.entry_x_transformation.grid(row = 7, column = 1, pady = 2)
         
         label_y_transformation = tk.Label(tw, text = 'y = ')
-        label_y_transformation.grid(row = 7, column = 0)
+        label_y_transformation.grid(row = 8, column = 0, pady = 2, sticky = tk.W)
+        CreateToolTip(label_y_transformation, 'Y transformation')
         
         self.entry_y_transformation = tk.Entry(tw)
         self.entry_y_transformation.insert(index = 0, string = globals()[f'y_transformation{var2str(ax)[len(var2str(ax)) - 1]}'])
-        self.entry_y_transformation.grid(row = 8, column = 1)
-    
-    def x_device_update(self, ax):
-        axes = var2str(ax)
-        globals()[f'x{axes[len(axes)]}_status'] = self.combo_x_device.current()
-
-    def y_device_update(self, ax):
-        axes = var2str(ax)
-        globals()[f'y{axes[len(axes)]}_status'] = self.combo_y_device.current()
+        self.entry_y_transformation.grid(row = 8, column = 1, pady = 2)
         
     def save_log_x_status(self, ax):
-        print(f'self.status_log_x = {self.status_log_x.get()}')
         if self.status_log_x.get() == 0:
             self.status_log_x.set(1)
-            print(f'X scale on {var2str(ax)} set to log')
             ax.set_xscale('log')
         elif self.status_log_x.get() == 1:
             self.status_log_x.set(0)
-            print(f'X scale on {var2str(ax)} set to linear')
             ax.set_xscale('linear')
         
     def save_log_y_status(self, ax):
-        print(f'self.status_log_y = {self.status_log_y.get()}')
         if self.status_log_y.get() == 0:
             self.status_log_y.set(1)
-            print(f'Y scale on {var2str(ax)} set to log')
             ax.set_yscale('log')
         elif self.status_log_y.get() == 1:
             self.status_log_y.set(0)
-            print(f'Y scale on {var2str(ax)} set to linear')
             ax.set_yscale('linear')
             
     def set_xlim(self, ax):
         if self.status_xlim.get() == 0:
             ax.autoscale(enable = False, axis = 'x')
+            globals()[f'x{var2str(ax)[len(var2str(ax)) - 1]}_autoscale'] = False
             self.status_xlim.set(1)
         elif self.status_xlim.get() == 1:
             ax.autoscale(enable = True, axis = 'x')
+            globals()[f'x{var2str(ax)[len(var2str(ax)) - 1]}_autoscale'] = True
             self.status_xlim.set(0)
         
     def set_ylim(self, ax):
         if self.status_ylim.get() == 0:
             ax.autoscale(enable = False, axis = 'y')
+            globals()[f'y{var2str(ax)[len(var2str(ax)) - 1]}_autoscale'] = False
             self.status_ylim.set(1)
         elif self.status_ylim.get() == 1:
             ax.autoscale(enable = True, axis = 'y')
+            globals()[f'y{var2str(ax)[len(var2str(ax)) - 1]}_autoscale'] = True
             self.status_ylim.set(0)
         
+    def ax_update(self, ax, event):
+        
+        order = var2str(ax)[len(var2str(ax)) - 1]
+        
+        globals()[f'x{order}_status'] = self.combo_x_device.current()
+        globals()[f'y{order}_status'] = self.combo_y_device.current()
+        
+        xscale_status = ax.get_xscale()
+        yscale_status = ax.get_yscale()
+        xlims = ax.get_xlim()
+        ylims = ax.get_ylim()
+        ax.clear()
+        ax.set_xscale(xscale_status)
+        ax.set_yscale(yscale_status)
+        getattr(Graph, 'axes_settings')(i, order)
+        ax.set_xlim(xlims)
+        ax.set_ylim(ylims)
+        ax.autoscale(enable = globals()[f'x{order}_autoscale'], axis = 'x')
+        ax.autoscale(enable = globals()[f'y{order}_autoscale'], axis = 'y')
+    
     def hidesettings(self, ax):
         global x_transformation
         global y_transformation
         
         tw = self.settings_window
-        self.settings_window = None
         if self.status_xlim.get() == 1:
             try:
                 ax.set_xlim(left = float(self.entry_x_from.get()), right = float(self.entry_x_to.get()))
@@ -4050,11 +4099,6 @@ class FigureSettings(object):
                 ax.set_ylim(bottom = float(self.entry_y_from.get()), top = float(self.entry_y_to.get()))
             except:
                 pass
-            
-        try:
-            ax.set_title(self.entry_title.get(), fontsize = 8, pad = -5)
-        except:
-            pass
         
         try:
             ax.set_xlabel(self.entry_xlabel.get(), fontsize = 8)
@@ -4084,114 +4128,151 @@ def CreateFigureSettings(widget, ax):
     def enter(event):
         settingsFigure.showsettings(ax)
     widget.bind('<Button-3>', enter)
+    widget.bind('<Double-1>', enter)
     
-class Graph(tk.Frame):
+class StartAnimation:
     
+    def start():
+        global cur_animation_num
+        i = cur_animation_num
+        globals()[f'animation{i}'] = blit_animation.FuncAnimation(
+            fig = globals()[f'fig{i}'], func = lambda x: my_animate(x, n = i), interval=interval, blit = False)
+        cur_animation_num += 1
 
-    def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent)
+class Graph():
+    
+    def __init__(self):
+        self.tw = tk.Toplevel(globals()['Sweeper_object'])
+        
+        self.tw.geometry("1920x1080")
+        self.tw.title("Graph")
+        
+        self.order = globals()['cur_animation_num'] 
 
-        label_x1 = tk.Label(self, text='x', font=LARGE_FONT)
-        label_x1.place(relx=0.02, rely=0.455)
+        self.create_fig(self.order, (2.5, 1.65))
+        self.create_fig(self.order + 1, (1.5, 0.8))
+        self.create_fig(self.order + 2, (1.5, 0.8))
 
-        label_y1 = tk.Label(self, text='y', font=LARGE_FONT)
-        label_y1.place(relx=0.15, rely=0.455)
+        label_x1 = tk.Label(self.tw, text='x', font=LARGE_FONT)
+        label_x1.place(relx=0.02, rely=0.76)
 
-        self.combo_x1 = ttk.Combobox(self, values=columns)
-        self.combo_x1.bind("<<ComboboxSelected>>", self.x1_update)
-        self.combo_x1.place(relx=0.035, rely=0.46)
+        label_y1 = tk.Label(self.tw, text='y', font=LARGE_FONT)
+        label_y1.place(relx=0.15, rely=0.76)
 
-        self.combo_y1 = ttk.Combobox(self, values=columns)
-        self.combo_y1.bind("<<ComboboxSelected>>", self.y1_update)
-        self.combo_y1.place(relx=0.165, rely=0.46)
+        self.combo_x1 = ttk.Combobox(self.tw, values=columns)
+        self.combo_x1.bind("<<ComboboxSelected>>", lambda event: self.ax_update(1, event))
+        self.combo_x1.place(relx=0.035, rely=0.76)
 
-        label_x2 = tk.Label(self, text='x', font=LARGE_FONT)
-        label_x2.place(relx=0.52, rely=0.455)
+        self.combo_y1 = ttk.Combobox(self.tw, values=columns)
+        self.combo_y1.bind("<<ComboboxSelected>>", lambda event: self.ax_update(1, event))
+        self.combo_y1.place(relx=0.165, rely=0.76)
 
-        label_y2 = tk.Label(self, text='y', font=LARGE_FONT)
-        label_y2.place(relx=0.65, rely=0.455)
+        globals()[f'self.plot{self.order}'] = FigureCanvasTkAgg(globals()[f'fig{self.order}'], self.tw)
+        globals()[f'self.plot{self.order}'].draw()
+        globals()[f'self.plot{self.order}'].get_tk_widget().place(relx=0, rely=0)
+        CreateFigureSettings(globals()[f'self.plot{self.order}'].get_tk_widget(), globals()[f'ax{self.order}'])
+        CreateToolTip(globals()[f'self.plot{self.order}'].get_tk_widget(), 'Right click to configure')
 
-        self.combo_x2 = ttk.Combobox(self, values=columns)
-        self.combo_x2.bind("<<ComboboxSelected>>", self.x2_update)
-        self.combo_x2.place(relx=0.535, rely=0.46)
+        globals()[f'self.toolbar{self.order}'] = VerticalNavigationToolbar2Tk(globals()[f'self.plot{self.order}'], self.tw)
+        globals()[f'self.toolbar{self.order}'].config(background = 'White')
+        globals()[f'self.toolbar{self.order}'].update()
+        globals()[f'self.toolbar{self.order}'].place(relx=0, rely=0)
+        globals()[f'self.plot{self.order}']._tkcanvas.place(relx=0, rely=0)
 
-        self.combo_y2 = ttk.Combobox(self, values=columns)
-        self.combo_y2.bind("<<ComboboxSelected>>", self.y2_update)
-        self.combo_y2.place(relx=0.665, rely=0.46)
+        globals()[f'self.plot{self.order + 1}'] = FigureCanvasTkAgg(globals()[f'fig{self.order + 1}'], self.tw)
+        globals()[f'self.plot{self.order + 1}'].draw()
+        globals()[f'self.plot{self.order + 1}'].get_tk_widget().place(relx=0.52, rely=0)
+        CreateFigureSettings(globals()[f'self.plot{self.order + 1}'].get_tk_widget(), globals()[f'ax{self.order + 1}'])
+        CreateToolTip(globals()[f'self.plot{self.order + 1}'].get_tk_widget(), 'Right click to configure')
+        globals()[f'self.plot{self.order + 1}']._tkcanvas.place(relx=0.62, rely=0)
 
-        label_x3 = tk.Label(self, text='x', font=LARGE_FONT)
-        label_x3.place(relx=0.02, rely=0.955)
+        globals()[f'self.plot{self.order + 2}'] = FigureCanvasTkAgg(globals()[f'fig{self.order + 2}'], self.tw)
+        globals()[f'self.plot{self.order + 2}'].draw()
+        globals()[f'self.plot{self.order + 2}'].get_tk_widget().place(relx=0.02, rely=0.50)
+        CreateFigureSettings(globals()[f'self.plot{self.order + 2}'].get_tk_widget(), globals()[f'ax{self.order + 2}'])
+        CreateToolTip(globals()[f'self.plot{self.order + 2}'].get_tk_widget(), 'Right click to configure')
+        globals()[f'self.plot{self.order + 2}']._tkcanvas.place(relx=0.62, rely=0.39)
+        
+        self.table_dataframe = ttk.Treeview(self.tw, columns = columns, show = 'headings', height = 1)
+        self.table_dataframe.place(relx = 0.28, rely = 0.76)
+        
+        self.initial_value = []
+        
+        for ind, heading in enumerate(columns):
+            self.table_dataframe.heading(ind, text = heading)
+            self.table_dataframe.column(ind,anchor=tk.CENTER, stretch=tk.NO, width=80)
+            self.initial_value.append(heading)
+                
+        self.table_dataframe.insert('', tk.END, 'Current dataframe', text = 'Current dataframe', values = self.initial_value)
+        
+        self.update_item('Current dataframe')
+        
+        self.button_pause = tk.Button(self.tw, text = '⏸️', font = LARGE_FONT, command = lambda: globals()['Sweeper_object'].pause())
+        self.button_pause.place(relx = 0.02, rely = 0.82)
+        CreateToolTip(self.button_pause, 'Pause\Continue sweep')
+        
+        self.button_stop = tk.Button(self.tw, text = '⏹️', font = LARGE_FONT, command = lambda: globals()['Sweeper_object'].stop())
+        self.button_stop.place(relx = 0.06, rely = 0.82)
+        CreateToolTip(self.button_stop, 'Stop sweep')
+        
+        self.button_tozero = tk.Button(self.tw, text = 'To zero', width = 11, command = lambda: globals()['Sweeper_object'].tozero())
+        self.button_tozero.place(relx = 0.1, rely = 0.82, width = 48, height = 32)
+        
+    def axes_settings(self, i, pad = 0, tick_size = 4, label_size = 6, x_pad =0, y_pad = 1, title_size = 8, title_pad = -5):
+        globals()[f'ax{i}'].tick_params(axis='y', which='major', length = 0, pad=pad, labelsize=tick_size)
+        globals()[f'ax{i}'].tick_params(axis='x', which='major', length = 0, pad=pad + 1, labelsize=tick_size)
+        globals()[f'ax{i}'].set_xlabel('x', fontsize = label_size, labelpad = x_pad)
+        globals()[f'ax{i}'].set_ylabel('y', fontsize = label_size, labelpad = y_pad)
+        globals()[f'ax{i}'].set_title(f'Plot {i}', fontsize = title_size, pad = title_pad)
+        
 
-        label_y3 = tk.Label(self, text='y', font=LARGE_FONT)
-        label_y3.place(relx=0.15, rely=0.955)
+    def create_fig(self, i, figsize, pad = 0, tick_size = 4, label_size = 6, x_pad =0, y_pad = 1, title_size = 8, title_pad = -5):
+        globals()[f'fig{i}'] = Figure(figsize, dpi=300)
+        globals()[f'ax{i}'] = globals()[f'fig{i}'].add_subplot(111)
+        globals()[f'x_transformation{i}'] = 'x'
+        globals()[f'y_transformation{i}'] = 'y'
+        globals()[f'x{i}_autoscale'] = True
+        globals()[f'y{i}_autoscale'] = True
+        ax = globals()[f'ax{i}']
+        ax.bbox.union([label.get_window_extent() for label in ax.get_xticklabels()])
+        self.axes_settings(i, pad, tick_size, label_size, x_pad, y_pad, title_size, title_pad)
 
-        self.combo_x3 = ttk.Combobox(self, values=columns)
-        self.combo_x3.bind("<<ComboboxSelected>>", self.x3_update)
-        self.combo_x3.place(relx=0.035, rely=0.96)
+    def update_idletasks(self):
+        self.tw.update_idletasks()
+        
+    def update(self):
+        self.tw.update()
 
-        self.combo_y3 = ttk.Combobox(self, values=columns)
-        self.combo_y3.bind("<<ComboboxSelected>>", self.y3_update)
-        self.combo_y3.place(relx=0.165, rely=0.96)
+    def ax_update(self, n, event):
+        '''n - order of figure'''
+        globals()[f'x{self.order}_status'] = self.combo_x1.current()
+        globals()[f'y{self.order}_status'] = self.combo_y1.current()
+        
+        ax = globals()[f'ax{self.order}']
+        order = self.order + n - 1
+        
+        xscale_status = ax.get_xscale()
+        yscale_status = ax.get_yscale()
+        xlims = ax.get_xlim()
+        ylims = ax.get_ylim()
+        ax.clear()
+        ax.set_xscale(xscale_status)
+        ax.set_yscale(yscale_status)
+        self.axes_settings(i = order)
+        ax.set_xlim(xlims)
+        ax.set_ylim(ylims)
+        ax.autoscale(enable = globals()[f'x{order}_autoscale'], axis = 'x')
+        ax.autoscale(enable = globals()[f'y{order}_autoscale'], axis = 'y')
+        
+    def update_item(self, item):
+        try:
+            dataframe = pd.read_csv(filename_sweep).tail(1).values.flatten().round(2)
+            self.table_dataframe.item(item, values=tuple(dataframe))
+            self.table_dataframe.after(500, self.update_item, item)
+        except FileNotFoundError:
+            self.table_dataframe.after(500, self.update_item, item)
 
-        plot221 = FigureCanvasTkAgg(globals()['fig1'], self)
-        plot221.draw()
-        plot221.get_tk_widget().place(relx=0.02, rely=0)
-        CreateFigureSettings(plot221.get_tk_widget(), globals()['ax1'])
-        CreateToolTip(plot221.get_tk_widget(), 'Right click to configure')
-
-        toolbar221 = VerticalNavigationToolbar2Tk(plot221, self)
-        toolbar221.update()
-        toolbar221.place(relx=0.45, rely=0)
-        plot221._tkcanvas.place(relx=0.02, rely=0)
-
-        plot222 = FigureCanvasTkAgg(globals()['fig2'], self)
-        plot222.draw()
-        plot222.get_tk_widget().place(relx=0.52, rely=0)
-        CreateFigureSettings(plot222.get_tk_widget(), globals()['ax2'])
-        CreateToolTip(plot222.get_tk_widget(), 'Right click to configure')
-
-        toolbar222 = VerticalNavigationToolbar2Tk(plot222, self)
-        toolbar222.update()
-        toolbar222.place(relx=0.95, rely=0)
-        plot222._tkcanvas.place(relx=0.52, rely=0)
-
-        plot223 = FigureCanvasTkAgg(globals()['fig3'], self)
-        plot223.draw()
-        plot223.get_tk_widget().place(relx=0.02, rely=0.50)
-        CreateFigureSettings(plot223.get_tk_widget(), globals()['ax3'])
-        CreateToolTip(plot223.get_tk_widget(), 'Right click to configure')
-
-        toolbar223 = VerticalNavigationToolbar2Tk(plot223, self)
-        toolbar223.update()
-        toolbar223.place(relx=0.45, rely=0.5)
-        plot223._tkcanvas.place(relx=0.02, rely=0.5)
-
-    def x1_update(self, event):
-        global x1_status
-        x1_status = self.combo_x1.current()
-
-    def y1_update(self, event):
-        global y1_status
-        y1_status = self.combo_y1.current()
-
-    def x2_update(self, event):
-        global x2_status
-        x2_status = self.combo_x2.current()
-
-    def y2_update(self, event):
-        global y2_status
-        y2_status = self.combo_y2.current()
-
-    def x3_update(self, event):
-        global x3_status
-        x3_status = self.combo_x3.current()
-
-    def y3_update(self, event):
-        global y3_status
-        y3_status = self.combo_y3.current()
-
-
-interval = 100
+interval = 200
 
 
 def main():
