@@ -8,7 +8,8 @@ import threading
 from tkinter import ttk
 import tkinter as tk
 from ToolTip import CreateToolTip
-import blit_animation
+import matplotlib.animation as animation
+#import blit_animation
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, 
                                                NavigationToolbar2Tk)
@@ -21,13 +22,15 @@ from datetime import datetime
 import pandas as pd
 import matplotlib
 import numpy as np
+from libximc import *
+from ctypes import *
 #import random
 
 matplotlib.use("TkAgg")
 plt.rcParams['animation.html'] = 'jshtml'
 LARGE_FONT = ('Verdana', 12)
 SUPER_LARGE = ('Verdana', 16)
-style.use('ggplot')
+style.use('seaborn-whitegrid')
 
 # Check if everything connected properly
 rm = visa.ResourceManager()
@@ -532,8 +535,175 @@ class TC300():
         # TMIN1 to 400°C, with a resolution of 1°C).
         self.tc.write('T1MAX=' + str(t2_to))
 
+class ZStage():
+    def __init__(self, adress = 'ASRL4::INSTR'):
+        self.open_name = b'xi-com:\\\\.\\COM' + bytes(adress[4], encoding = 'utf-8')
+        self.device_id = lib.open_device(self.open_name)
+        # Create engine settings structure
+        self.eng = engine_settings_t()
+        result_eng = lib.get_engine_settings(self.device_id, byref(self.eng))
 
-device_classes = (lock_in, TC300, SourceMeter)
+        # Create user unit settings structure
+        self.user_unit = calibration_t()
+        self.user_unit.MicrostepMode = self.eng.MicrostepMode
+        self.user_unit.A = 52623 / 10000000
+
+        BorderFlags.BORDER_IS_ENCODER = True #Borders are defined by encoder position
+        BorderFlags.BORDERS_SWAP_MISSET_DETECTION = True #Engine stops when reach both borders
+        self.edge = edges_settings_calb_t()
+        self.edge.LeftBorder = 0.1
+        self.edge.RightBorder = 12.725
+
+        result_edge = lib.set_edges_settings_calb(self.device_id, byref(self.edge), byref(self.user_unit))
+        
+        self.set_options = ['position', 'shift']
+        self.get_options = ['position', 'I_pwr', 'U_pwr', 'T_proc']
+        
+    def set_position(self, value):
+        try:
+            target = cfloat(target)
+            result = lib.command_move_calb(self.device_id, value, byref(self.user_unit))
+        except:
+            return None
+    
+    def set_shift(self, value):
+        try:
+            target = cfloat(value)
+            result = lib.command_movr_calb(self.device_id, value, byref(self.user_unit))
+        except:
+            return None
+        
+    def position(self):
+        """
+        Obtaining information about the position of the positioner.
+        
+        This function allows you to get information about the current positioner coordinates,
+        both in steps and in encoder counts, if it is set.
+        Also, depending on the state of the mode parameter, information can be obtained in user units.
+        
+        :param lib: structure for accessing the functionality of the libximc library.
+        :param device_id: device id.
+        :param mode: mode in feedback counts or in user units. (Default value = 1)
+        """
+        x_pos = get_position_calb_t()
+        result = lib.get_position_calb(self.device_id, byref(x_pos), byref(self.user_unit))
+        if result == Result.Ok:
+            return x_pos.Position
+        else:
+            return None
+        
+    def I_pwr(self):
+        '''
+        Consumable current on a power part, A
+        '''
+        status = status_t()
+        result_status = lib.get_status(self.device_id, byref(status))
+
+        return status.Ipwr * 1e3
+        
+    def U_pwr(self):
+        '''
+        Consumable voltage on a power part, V
+        '''
+        status = status_t()
+        result_status = lib.get_status(self.device_id, byref(status))
+
+        return status.Upwr * 1e3
+        
+    def T_proc(self):
+        '''
+        Current temperature of CPU
+        '''
+        status = status_t()
+        result_status = lib.get_status(self.device_id, byref(status))
+
+        return status.CurT * 10
+    
+class RotStage():
+    def __init__(self, adress = 'ASRL5::INSTR'):
+        self.open_name = b'xi-com:\\\\.\\COM' + bytes(adress[4], encoding = 'utf-8')
+        self.device_id = lib.open_device(self.open_name)
+        # Create engine settings structure
+        self.eng = engine_settings_t()
+        result_eng = lib.get_engine_settings(self.device_id, byref(self.eng))
+
+        # Create user unit settings structure
+        self.user_unit = calibration_t()
+        self.user_unit.MicrostepMode = self.eng.MicrostepMode
+        self.user_unit.A = 52623 / 10000000
+
+        BorderFlags.BORDER_IS_ENCODER = True #Borders are defined by encoder position
+        BorderFlags.BORDERS_SWAP_MISSET_DETECTION = True #Engine stops when reach both borders
+        self.edge = edges_settings_calb_t()
+        self.edge.LeftBorder = 0.1
+        self.edge.RightBorder = 12.725
+
+        result_edge = lib.set_edges_settings_calb(self.device_id, byref(self.edge), byref(self.user_unit))
+        
+        self.set_options = ['position', 'shift']
+        self.get_options = ['position', 'I_pwr', 'U_pwr', 'T_proc']
+        
+    def set_position(self, value):
+        try:
+            target = cfloat(target)
+            result = lib.command_move_calb(self.device_id, value, byref(self.user_unit))
+        except:
+            return None
+    
+    def set_shift(self, value):
+        try:
+            target = cfloat(target)
+            result = lib.command_movr_calb(self.device_id, value, byref(self.user_unit))
+        except:
+            return None
+        
+    def position(self):
+        """
+        Obtaining information about the position of the positioner.
+        
+        This function allows you to get information about the current positioner coordinates,
+        both in steps and in encoder counts, if it is set.
+        Also, depending on the state of the mode parameter, information can be obtained in user units.
+        
+        :param lib: structure for accessing the functionality of the libximc library.
+        :param device_id: device id.
+        :param mode: mode in feedback counts or in user units. (Default value = 1)
+        """
+        x_pos = get_position_calb_t()
+        result = lib.get_position_calb(self.device_id, byref(x_pos), byref(self.user_unit))
+        if result == Result.Ok:
+            return x_pos.Position
+        else:
+            return None
+        
+    def I_pwr(self):
+        '''
+        Consumable current on a power part, A
+        '''
+        status = status_t()
+        result_status = lib.get_status(self.device_id, byref(status))
+
+        return status.Ipwr * 1e3
+        
+    def U_pwr(self):
+        '''
+        Consumable voltage on a power part, V
+        '''
+        status = status_t()
+        result_status = lib.get_status(self.device_id, byref(status))
+
+        return status.Upwr * 1e3
+        
+    def T_proc(self):
+        '''
+        Current temperature of CPU
+        '''
+        status = status_t()
+        result_status = lib.get_status(self.device_id, byref(status))
+
+        return status.CurT * 10
+
+device_classes = (lock_in, TC300, SourceMeter, ZStage, RotStage)
 
 
 def devices_list():
@@ -1651,6 +1821,7 @@ class Sweeper2d(tk.Frame):
         self.entry_filename.after(1)
 
     def open_graph(self):
+        
         global cur_animation_num
         
         def return_range(x, n):
@@ -1661,7 +1832,7 @@ class Sweeper2d(tk.Frame):
             else:
                 return return_range(x + 1, n)
         
-        self.window = Universal_frontend(classes=(Graph,), start=Graph)
+        globals()[f'graph_object{globals()["cur_animation_num"]}'] = Graph()
         for i in return_range(cur_animation_num, 3):
             globals()[f'x{i + 1}'] = []
             globals()[f'x{i + 1}_status'] = 0
@@ -1669,7 +1840,6 @@ class Sweeper2d(tk.Frame):
             globals()[f'y{i + 1}_status'] = 0
             globals()[f'ani{i+1}'] = StartAnimation
             globals()[f'ani{i+1}'].start()
-        self.window.mainloop()
         
     def pause(self):
         global pause_flag
@@ -2459,6 +2629,7 @@ class Sweeper3d(tk.Frame):
         self.entry_filename.after(1)
 
     def open_graph(self):
+        
         global cur_animation_num
         
         def return_range(x, n):
@@ -2469,7 +2640,7 @@ class Sweeper3d(tk.Frame):
             else:
                 return return_range(x + 1, n)
         
-        self.window = Universal_frontend(classes=(Graph,), start=Graph)
+        globals()[f'graph_object{globals()["cur_animation_num"]}'] = Graph()
         for i in return_range(cur_animation_num, 3):
             globals()[f'x{i + 1}'] = []
             globals()[f'x{i + 1}_status'] = 0
@@ -2477,7 +2648,6 @@ class Sweeper3d(tk.Frame):
             globals()[f'y{i + 1}_status'] = 0
             globals()[f'ani{i+1}'] = StartAnimation
             globals()[f'ani{i+1}'].start()
-        self.window.mainloop()
         
     def pause(self):
         global pause_flag
@@ -3420,8 +3590,8 @@ class Sweeper_write(threading.Thread):
                 def try_go(axis, value):
                     axis = str(axis)
                     value = float(value)
-                    getattr(globals()[types_of_devices[list_of_devices.index(getattr(self, 'device_to_sweep' + axis))]](
-                        adress=getattr(self, 'device_to_sweep' + axis)), 'set_' + str(getattr(self, 'parameter_to_sweep' + axis)))(value=value)
+                    getattr(globals()[types_of_devices[list_of_devices.index(globals()[f'device_to_sweep{axis}'])]](
+                        adress=globals()[f'device_to_sweep{axis}']), 'set_' + str(globals()[f'parameter_to_sweep{axis}']))(value=value)
                 
                 try_go(1, 0)
                 try:
@@ -3447,8 +3617,8 @@ class Sweeper_write(threading.Thread):
             else:
                 dataframe[0] = [time.perf_counter() - zero_time][0]
                 
-            device_to_sweep = getattr(self, 'device_to_sweep' + str(axis))
-            parameter_to_sweep = getattr(self, 'parameter_to_sweep' + str(axis))
+            device_to_sweep = globals()[f'device_to_sweep{str(axis)}']
+            parameter_to_sweep = globals()[f'parameter_to_sweep{str(axis)}']
             
             if pause_flag == False:
                 if tozero_flag == False:
@@ -3821,11 +3991,13 @@ class Sweeper_write(threading.Thread):
             
             zero_time = time.perf_counter()
 
+            '''
             if self.time1 > self.time2 and master_lock == False:
                 self.transposition(1, 2)
                 manual_sweep_flags = manual_sweep_flags[::-1]
                 manual_filenames = manual_filenames[::-1]
                 columns[1:3] = columns[1:3][:-1]
+            '''
             
             update_filename()
 
@@ -3837,6 +4009,7 @@ class Sweeper_write(threading.Thread):
 
         if self.sweeper_flag3 == True:
 
+            '''
             if self.time1 > self.time2 and master_lock == False:
                 self.transposition(1, 2)
                 manual_sweep_flags[0:2] = manual_sweep_flags[0:2][::-1]
@@ -3852,6 +4025,7 @@ class Sweeper_write(threading.Thread):
                 manual_sweep_flags[1:3] = manual_sweep_flags[1:3][::-1]
                 manual_filenames[1:3] = manual_filenames[1:3][::-1]
                 columns[2:4] = columns[1:3][:-1]
+            '''
 
             update_filename()
 
@@ -3885,29 +4059,6 @@ class FigureSettings(object):
         self.widget = widget
         self.id = None
         self.x = self.y = 0
-            
-    def show_plot_settings(self, ax):
-        x, y, cx, cy = self.widget.bbox('all')
-        x = x + self.widget.winfo_rootx()
-        y = y + self.widget.winfo_rooty()
-        self.settings_window = tw = tk.Toplevel(self.widget)
-        tw.wm_overrideredirect(1)
-        tw.wm_geometry("+%d+%d" % (x, y))
-        self.entry_title = tk.Entry(tw)
-        self.entry_title.insert(index = 0, string = str(ax.get_title()))
-        self.entry_title.grid(row = 0, column = 0, pady = 2)
-        
-        button_close = tk.Button(tw, text = '❌', command = lambda: self.hide_title_settings(ax))
-        button_close.grid(row = 0, column = 1, pady = 2)
-        
-    def hide_title_settings(self, ax):
-    
-        try:
-            ax.set_title(self.entry_title.get(), fontsize = 8, pad = -5)
-        except:
-            pass
-        
-        self.settings_window.destroy()
     
     def showsettings(self, ax):
         x, y, cx, cy = self.widget.bbox('all')
@@ -3935,10 +4086,9 @@ class FigureSettings(object):
         label_log_x.grid(row = 1, column = 3, pady = 2)
         
         self.status_log_x = tk.IntVar()
+        self.status_log_x.set(0)
         self.checkbox_log_x = tk.Checkbutton(tw, 
-                                             command= lambda: self.save_log_x_status(ax), 
-                                             variable = self.status_log_x,
-                                             onvalue = 0, offvalue = 1)
+                                             command= lambda: self.save_log_x_status(ax))
         self.checkbox_log_x.grid(row = 1, column = 4, pady = 2)
         CreateToolTip(self.checkbox_log_x, 'Set x logscale')
         
@@ -3953,10 +4103,9 @@ class FigureSettings(object):
         label_log_y.grid(row = 2, column = 3, pady = 2)
         
         self.status_log_y = tk.IntVar()
+        self.status_log_y.set(0)
         self.checkbox_log_y = tk.Checkbutton(tw, 
-                                             command=lambda: self.save_log_y_status(ax), 
-                                             variable = self.status_log_y,
-                                             onvalue = 0, offvalue = 1)
+                                             command=lambda: self.save_log_y_status(ax))
         self.checkbox_log_y.grid(row = 2, column = 4, pady = 2)
         CreateToolTip(self.checkbox_log_y, 'Set y logscale')
         
@@ -4111,6 +4260,11 @@ class FigureSettings(object):
             pass
         
         try:
+            ax.set_title(self.entry_title.get(), fontsize = 8, pad = -5)
+        except:
+            pass
+        
+        try:
             globals()[f'x_transformation{var2str(ax)[len(var2str(ax)) - 1]}'] = self.entry_x_transformation.get()
         except:
             pass
@@ -4135,7 +4289,7 @@ class StartAnimation:
     def start():
         global cur_animation_num
         i = cur_animation_num
-        globals()[f'animation{i}'] = blit_animation.FuncAnimation(
+        globals()[f'animation{i}'] = animation.FuncAnimation(
             fig = globals()[f'fig{i}'], func = lambda x: my_animate(x, n = i), interval=interval, blit = False)
         cur_animation_num += 1
 
@@ -4272,7 +4426,7 @@ class Graph():
         except FileNotFoundError:
             self.table_dataframe.after(500, self.update_item, item)
 
-interval = 200
+interval = 100
 
 
 def main():
