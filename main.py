@@ -24,6 +24,7 @@ import matplotlib
 import numpy as np
 from libximc import *
 from ctypes import *
+
 #import random
 
 matplotlib.use("TkAgg")
@@ -536,93 +537,11 @@ class TC300():
         self.tc.write('T1MAX=' + str(t2_to))
 
 class ZStage():
-    def __init__(self, adress = 'ASRL4::INSTR'):
-        self.open_name = b'xi-com:\\\\.\\COM' + bytes(adress[4], encoding = 'utf-8')
-        self.device_id = lib.open_device(self.open_name)
-        # Create engine settings structure
-        self.eng = engine_settings_t()
-        result_eng = lib.get_engine_settings(self.device_id, byref(self.eng))
-
-        # Create user unit settings structure
-        self.user_unit = calibration_t()
-        self.user_unit.MicrostepMode = self.eng.MicrostepMode
-        self.user_unit.A = 52623 / 10000000
-
-        BorderFlags.BORDER_IS_ENCODER = True #Borders are defined by encoder position
-        BorderFlags.BORDERS_SWAP_MISSET_DETECTION = True #Engine stops when reach both borders
-        self.edge = edges_settings_calb_t()
-        self.edge.LeftBorder = 0.1
-        self.edge.RightBorder = 12.725
-
-        result_edge = lib.set_edges_settings_calb(self.device_id, byref(self.edge), byref(self.user_unit))
-        
-        self.set_options = ['position', 'shift']
-        self.get_options = ['position', 'I_pwr', 'U_pwr', 'T_proc']
-        
-    def set_position(self, value):
-        try:
-            target = cfloat(target)
-            result = lib.command_move_calb(self.device_id, value, byref(self.user_unit))
-        except:
-            return None
-    
-    def set_shift(self, value):
-        try:
-            target = cfloat(value)
-            result = lib.command_movr_calb(self.device_id, value, byref(self.user_unit))
-        except:
-            return None
-        
-    def position(self):
-        """
-        Obtaining information about the position of the positioner.
-        
-        This function allows you to get information about the current positioner coordinates,
-        both in steps and in encoder counts, if it is set.
-        Also, depending on the state of the mode parameter, information can be obtained in user units.
-        
-        :param lib: structure for accessing the functionality of the libximc library.
-        :param device_id: device id.
-        :param mode: mode in feedback counts or in user units. (Default value = 1)
-        """
-        x_pos = get_position_calb_t()
-        result = lib.get_position_calb(self.device_id, byref(x_pos), byref(self.user_unit))
-        if result == Result.Ok:
-            return x_pos.Position
-        else:
-            return None
-        
-    def I_pwr(self):
-        '''
-        Consumable current on a power part, A
-        '''
-        status = status_t()
-        result_status = lib.get_status(self.device_id, byref(status))
-
-        return status.Ipwr * 1e3
-        
-    def U_pwr(self):
-        '''
-        Consumable voltage on a power part, V
-        '''
-        status = status_t()
-        result_status = lib.get_status(self.device_id, byref(status))
-
-        return status.Upwr * 1e3
-        
-    def T_proc(self):
-        '''
-        Current temperature of CPU
-        '''
-        status = status_t()
-        result_status = lib.get_status(self.device_id, byref(status))
-
-        return status.CurT * 10
-    
-class RotStage():
     def __init__(self, adress = 'ASRL5::INSTR'):
         self.open_name = b'xi-com:\\\\.\\COM' + bytes(adress[4], encoding = 'utf-8')
         self.device_id = lib.open_device(self.open_name)
+        self.open_device()
+        
         # Create engine settings structure
         self.eng = engine_settings_t()
         result_eng = lib.get_engine_settings(self.device_id, byref(self.eng))
@@ -630,8 +549,9 @@ class RotStage():
         # Create user unit settings structure
         self.user_unit = calibration_t()
         self.user_unit.MicrostepMode = self.eng.MicrostepMode
-        self.user_unit.A = 52623 / 10000000
-
+        self.user_unit.A = 1 / 140
+        
+        '''
         BorderFlags.BORDER_IS_ENCODER = True #Borders are defined by encoder position
         BorderFlags.BORDERS_SWAP_MISSET_DETECTION = True #Engine stops when reach both borders
         self.edge = edges_settings_calb_t()
@@ -639,23 +559,50 @@ class RotStage():
         self.edge.RightBorder = 12.725
 
         result_edge = lib.set_edges_settings_calb(self.device_id, byref(self.edge), byref(self.user_unit))
+        '''
         
         self.set_options = ['position', 'shift']
         self.get_options = ['position', 'I_pwr', 'U_pwr', 'T_proc']
         
+    def open_device(self):
+        if self.device_id <= 0:
+            for device_id in [1, 2]:
+                lib.close_device(byref(cast(device_id, POINTER(c_int))))
+            self.device_id = lib.open_device(self.open_name)
+        
+    def status_running(self):
+        """
+    
+        Returns True if motor is running
+                False if motor is not running
+
+        """
+        def get_status():
+            """
+            A function of reading status information from the device
+            You can use this function to get basic information about the device status.
+            
+            :param lib: structure for accessing the functionality of the libximc library.
+            :param device_id:  device id.
+            """
+            
+            x_status = status_t()
+            result = lib.get_status(self.device_id, byref(x_status))
+            if result == Result.Ok:
+                return x_status
+            else:
+                return None
+        
+        currStatus = get_status()
+        return (currStatus.MvCmdSts & MvcmdStatus.MVCMD_RUNNING) # 0x80) # 
+    
     def set_position(self, value):
-        try:
-            target = cfloat(target)
-            result = lib.command_move_calb(self.device_id, value, byref(self.user_unit))
-        except:
-            return None
+        if  not self.status_running():
+            result = lib.command_move_calb(self.device_id, c_float(value), byref(self.user_unit))
     
     def set_shift(self, value):
-        try:
-            target = cfloat(target)
-            result = lib.command_movr_calb(self.device_id, value, byref(self.user_unit))
-        except:
-            return None
+        if  not self.status_MvCmdSts_MVCMD_RUNNING():
+            result = lib.command_movr_calb(self.device_id, c_float(value), byref(self.user_unit))
         
     def position(self):
         """
@@ -674,7 +621,7 @@ class RotStage():
         if result == Result.Ok:
             return x_pos.Position
         else:
-            return None
+            return 'Could not get a position'
         
     def I_pwr(self):
         '''
@@ -683,7 +630,7 @@ class RotStage():
         status = status_t()
         result_status = lib.get_status(self.device_id, byref(status))
 
-        return status.Ipwr * 1e3
+        return status.Ipwr * 1e-3
         
     def U_pwr(self):
         '''
@@ -692,7 +639,7 @@ class RotStage():
         status = status_t()
         result_status = lib.get_status(self.device_id, byref(status))
 
-        return status.Upwr * 1e3
+        return status.Upwr * 1e-3
         
     def T_proc(self):
         '''
@@ -701,7 +648,128 @@ class RotStage():
         status = status_t()
         result_status = lib.get_status(self.device_id, byref(status))
 
-        return status.CurT * 10
+        return status.CurT / 10
+
+    def close(self):
+        lib.close_device(byref(cast(self.device_id, POINTER(c_int))))
+    
+class RotStage():
+    def __init__(self, adress = 'ASRL6::INSTR'):
+        self.open_name = b'xi-com:\\\\.\\COM' + bytes(adress[4], encoding = 'utf-8')
+        self.device_id = lib.open_device(self.open_name)
+        self.open_device()
+        
+        # Create engine settings structure
+        self.eng = engine_settings_t()
+        result_eng = lib.get_engine_settings(self.device_id, byref(self.eng))
+
+        # Create user unit settings structure
+        self.user_unit = calibration_t()
+        self.user_unit.MicrostepMode = self.eng.MicrostepMode
+        self.user_unit.A = 1 / 2000
+
+        
+        '''
+        BorderFlags.BORDER_IS_ENCODER = True #Borders are defined by encoder position
+        BorderFlags.BORDERS_SWAP_MISSET_DETECTION = True #Engine stops when reach both borders
+        self.edge = edges_settings_calb_t()
+        self.edge.LeftBorder = 0.1
+        self.edge.RightBorder = 12.725
+
+        result_edge = lib.set_edges_settings_calb(self.device_id, byref(self.edge), byref(self.user_unit))
+        '''
+        
+        self.set_options = ['position', 'shift']
+        self.get_options = ['position', 'I_pwr', 'U_pwr', 'T_proc']
+        
+    def open_device(self):
+        if self.device_id <= 0:
+            for device_id in [1, 2]:
+                lib.close_device(byref(cast(device_id, POINTER(c_int))))
+            self.device_id = lib.open_device(self.open_name)
+        
+    def status_running(self):
+        """
+    
+        Returns True if motor is running
+                False if motor is not running
+
+        """
+        def get_status():
+            """
+            A function of reading status information from the device
+            You can use this function to get basic information about the device status.
+            
+            :param lib: structure for accessing the functionality of the libximc library.
+            :param device_id:  device id.
+            """
+            
+            x_status = status_t()
+            result = lib.get_status(self.device_id, byref(x_status))
+            if result == Result.Ok:
+                return x_status
+            else:
+                return None
+        
+        currStatus = get_status()
+        return (currStatus.MvCmdSts & MvcmdStatus.MVCMD_RUNNING) # 0x80) # 
+    
+    def set_position(self, value):
+        if  not self.status_running():
+            result = lib.command_move_calb(self.device_id, c_float(value), byref(self.user_unit))
+    
+    def set_shift(self, value):
+        if  not self.status_MvCmdSts_MVCMD_RUNNING():
+            result = lib.command_movr_calb(self.device_id, c_float(value), byref(self.user_unit))
+        
+    def position(self):
+        """
+        Obtaining information about the position of the positioner.
+        
+        This function allows you to get information about the current positioner coordinates,
+        both in steps and in encoder counts, if it is set.
+        Also, depending on the state of the mode parameter, information can be obtained in user units.
+        
+        :param lib: structure for accessing the functionality of the libximc library.
+        :param device_id: device id.
+        :param mode: mode in feedback counts or in user units. (Default value = 1)
+        """
+        x_pos = get_position_calb_t()
+        result = lib.get_position_calb(self.device_id, byref(x_pos), byref(self.user_unit))
+        if result == Result.Ok:
+            return x_pos.Position
+        else:
+            return 'Could not get a position'
+        
+    def I_pwr(self):
+        '''
+        Consumable current on a power part, A
+        '''
+        status = status_t()
+        result_status = lib.get_status(self.device_id, byref(status))
+
+        return status.Ipwr * 1e-3
+        
+    def U_pwr(self):
+        '''
+        Consumable voltage on a power part, V
+        '''
+        status = status_t()
+        result_status = lib.get_status(self.device_id, byref(status))
+
+        return status.Upwr * 1e-3
+        
+    def T_proc(self):
+        '''
+        Current temperature of CPU
+        '''
+        status = status_t()
+        result_status = lib.get_status(self.device_id, byref(status))
+
+        return status.CurT / 10
+
+    def close(self):
+        lib.close_device(byref(cast(self.device_id, POINTER(c_int))))
 
 device_classes = (lock_in, TC300, SourceMeter, ZStage, RotStage)
 
@@ -3535,8 +3603,12 @@ class Sweeper_write(threading.Thread):
                 index_dot = parameter.find('.')
                 adress = parameter[:index_dot]
                 option = parameter[index_dot + 1:]
-                dataframe.append(getattr(globals()[
-                                 types_of_devices[list_of_devices.index(str(adress))]](adress=adress), option)())
+                try:
+                    parameter_value = getattr(globals()[
+                                 types_of_devices[list_of_devices.index(str(adress))]](adress=adress), option)()
+                    dataframe.append(round(float(parameter_value), 4))
+                except:
+                    dataframe.append(None)
         
         def tofile():
             '''appends file with new row - dataframe'''
@@ -3629,7 +3701,7 @@ class Sweeper_write(threading.Thread):
                         value = getattr(self, 'value' + str(axis))
                         getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
                             adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value)
-                        dataframe.append(getattr(self, 'value' + str(axis)))
+                        dataframe.append(round(getattr(self, 'value' + str(axis)), 4))
                         if back == False:
                             setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) + getattr(self, 'step' + str(axis)))
                         else:
@@ -3637,7 +3709,7 @@ class Sweeper_write(threading.Thread):
                     else:
                         getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
                             adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value)
-                        dataframe.append(value)
+                        dataframe.append(round(value, 4))
                     
                     delay_factor = globals()['delay_factor' + str(axis)]
                     time.sleep(delay_factor)
@@ -4096,7 +4168,7 @@ class FigureSettings(object):
         label_y_device.grid(row = 2, column = 0, pady = 2, sticky = tk.W)
         
         self.combo_y_device = ttk.Combobox(tw, values=globals()['columns'])
-        self.combo_y_device.bind("<<ComboboxSelected>>", lambda event: self.ax_device_update(ax, event))
+        self.combo_y_device.bind("<<ComboboxSelected>>", lambda event: self.ax_update(ax, event))
         self.combo_y_device.grid(row = 2, column = 1, pady = 2)
         
         label_log_y = tk.Label(tw, text = 'log')
@@ -4215,7 +4287,9 @@ class FigureSettings(object):
         
     def ax_update(self, ax, event):
         
-        order = var2str(ax)[len(var2str(ax)) - 1]
+        ax_str = var2str(ax)
+        
+        order = ax_str[2:]
         
         globals()[f'x{order}_status'] = self.combo_x_device.current()
         globals()[f'y{order}_status'] = self.combo_y_device.current()
@@ -4265,12 +4339,12 @@ class FigureSettings(object):
             pass
         
         try:
-            globals()[f'x_transformation{var2str(ax)[len(var2str(ax)) - 1]}'] = self.entry_x_transformation.get()
+            globals()[f'x_transformation{var2str(ax)[2:]}'] = self.entry_x_transformation.get()
         except:
             pass
     
         try:
-            globals()[f'y_transformation{var2str(ax)[len(var2str(ax)) - 1]}'] = self.entry_y_transformation.get()
+            globals()[f'y_transformation{var2str(ax)[2:]}'] = self.entry_y_transformation.get()
         except:
             pass
         
@@ -4278,9 +4352,9 @@ class FigureSettings(object):
             tw.destroy()
         
 def CreateFigureSettings(widget, ax):
-    settingsFigure = FigureSettings(widget)
+    globals()[f'settingsFigure{var2str(ax)[2:]}'] = FigureSettings(widget)
     def enter(event):
-        settingsFigure.showsettings(ax)
+        globals()[f'settingsFigure{var2str(ax)[2:]}'].showsettings(ax)
     widget.bind('<Button-3>', enter)
     widget.bind('<Double-1>', enter)
     
