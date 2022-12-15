@@ -557,7 +557,6 @@ class ZStage():
         self.edge = edges_settings_calb_t()
         self.edge.LeftBorder = 0.1
         self.edge.RightBorder = 12.725
-
         result_edge = lib.set_edges_settings_calb(self.device_id, byref(self.edge), byref(self.user_unit))
         '''
         
@@ -575,7 +574,6 @@ class ZStage():
     
         Returns True if motor is running
                 False if motor is not running
-
         """
         def get_status():
             """
@@ -675,7 +673,6 @@ class RotStage():
         self.edge = edges_settings_calb_t()
         self.edge.LeftBorder = 0.1
         self.edge.RightBorder = 12.725
-
         result_edge = lib.set_edges_settings_calb(self.device_id, byref(self.edge), byref(self.user_unit))
         '''
         
@@ -693,7 +690,6 @@ class RotStage():
     
         Returns True if motor is running
                 False if motor is not running
-
         """
         def get_status():
             """
@@ -989,6 +985,14 @@ class StartPage(tk.Frame):
         global settings_flag
         settings_flag = True
         self.controller.show_frame(Sweeper3d)
+
+class SetGet(tk.Frame):
+    
+    def __init__(self, parent, controller):       
+
+        tk.Frame.__init__(self, parent)
+        
+        
 
 class Sweeper1d(tk.Frame):
 
@@ -1366,7 +1370,9 @@ class Sweeper1d(tk.Frame):
         device_to_sweep1 = list_of_devices[self.combo_to_sweep1.current()]
         parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](), 'set_options')
         parameter_to_sweep1 = parameters[self.sweep_options1.current()]
-        columns = ['time', device_to_sweep1 + '.' + parameter_to_sweep1]
+        columns_device = self.combo_to_sweep1['values'][self.combo_to_sweep1.current()]
+        columns_parameters = self.sweep_options1['values'][self.sweep_options1.current()]
+        columns = ['time', columns_device + '.' + columns_parameters]
         for option in parameters_to_read:
             columns.append(option)
 
@@ -2005,8 +2011,14 @@ class Sweeper2d(tk.Frame):
             
             back_and_forth_slave, back_and_forth_master = back_and_forth_master, back_and_forth_slave
         
-        columns = ['Time', device_to_sweep1 + '.' + parameter_to_sweep1,
-                   device_to_sweep2 + '.' + parameter_to_sweep2]
+        columns_device1 = self.combo_to_sweep1['values'][self.combo_to_sweep1.current()]
+        columns_parameters1 = self.sweep_options1['values'][self.sweep_options1.current()]
+        
+        columns_device2 = self.combo_to_sweep2['values'][self.combo_to_sweep2.current()]
+        columns_parameters2 = self.sweep_options2['values'][self.sweep_options2.current()]
+        
+        columns = ['Time', columns_device1 + '.' + columns_parameters1,
+                   columns_device2 + '.' + columns_parameters2]
         
         if self.combo_master1['value'][self.combo_master1.current()] == 'Master' and self.combo_master2['value'][self.combo_master2.current()] == 'Slave':
             master_lock = True
@@ -2856,9 +2868,19 @@ class Sweeper3d(tk.Frame):
             manual_sweep_flags[1], manual_sweep_flags[2] = manual_sweep_flags[2], manual_sweep_flags[1]
             manual_filenames[1], manual_filenames[2] = manual_filenames[2], manual_filenames[1]
         
-        columns = ['Time', device_to_sweep1 + '.' + parameter_to_sweep1,
-                   device_to_sweep2 + '.' + parameter_to_sweep2,
-                   device_to_sweep3 + '.' + parameter_to_sweep3]
+        columns_device1 = self.combo_to_sweep1['values'][self.combo_to_sweep1.current()]
+        columns_parameters1 = self.sweep_options1['values'][self.sweep_options1.current()]
+        
+        columns_device2 = self.combo_to_sweep2['values'][self.combo_to_sweep2.current()]
+        columns_parameters2 = self.sweep_options2['values'][self.sweep_options2.current()]
+        
+        columns_device3 = self.combo_to_sweep3['values'][self.combo_to_sweep3.current()]
+        columns_parameters3 = self.sweep_options3['values'][self.sweep_options3.current()]
+        
+        columns = ['Time', columns_device1 + '.' + columns_parameters1,
+                   columns_device2 + '.' + columns_parameters2,
+                   columns_device3 + '.' + columns_parameters3]
+        
         for option in parameters_to_read:
             columns.append(option)
 
@@ -2937,14 +2959,25 @@ class Settings(tk.Frame):
         label_names = tk.Label(self, text = 'Change names:', font = LARGE_FONT)
         label_names.place(relx = 0.05, rely = 0.15)
             
-        self.combo_devices = ttk.Combobox(self, value = list_of_devices)
+        self.combo_devices = ttk.Combobox(self, value = parent.combo_to_sweep1['values'])
         self.combo_devices.current(0)
         self.combo_devices.bind(
             "<<ComboboxSelected>>", self.update_combo_set_parameters)
         self.combo_devices.place(relx=0.05, rely=0.2)
         
         self.combo_set_parameters = ttk.Combobox(self, value = [''])
-        self.combo_set_parameters.current(0)
+        device_class = types_of_devices[0]
+        if device_class != 'Not a class':
+            try:
+                self.combo_set_parameters['values'] = parent.sweep_options1['values']
+            except: 
+                self.combo_set_parameters['values'] = getattr(globals()[device_class](), 'set_options')
+            self.combo_set_parameters.current(0)
+            self.combo_set_parameters.bind(
+                "<<ComboboxSelected>>", self.select_set_option)
+        else:
+            self.combo_set_parameters['values'] = ['']
+            self.combo_set_parameters.current(0)
         self.combo_set_parameters.place(relx=0.05, rely=0.25)
         
         parameters = list(parent.lstbox_to_read.get(0, tk.END))
@@ -2954,10 +2987,16 @@ class Settings(tk.Frame):
         
         self.combo_get_parameters = ttk.Combobox(self, value = parameters)
         self.combo_get_parameters.current(0)
+        self.combo_get_parameters.bind(
+            "<<ComboboxSelected>>", self.select_get_option)
         self.combo_get_parameters.place(relx=0.05, rely=0.3)
         
         button_change_name_device = tk.Button(self, text = 'Change device name', command = lambda: self.update_names_devices(parent))
         button_change_name_device.place(relx = 0.2, rely = 0.19)
+        
+        self.selected_device = 0
+        self.selected_set_option = 0
+        self.selected_get_option = 0
         
         button_change_name_set_parameters = tk.Button(self, text = 'Change set name', command = lambda: self.update_names_set_parameters(parent))
         button_change_name_set_parameters.place(relx = 0.2, rely = 0.24)
@@ -3085,7 +3124,9 @@ class Settings(tk.Frame):
             new_parameters_to_read()
         
     
-    def update_combo_set_parameters(self, event, interval = 1000):
+    def update_combo_set_parameters(self, event, interval = 100):
+        if self.combo_devices.current() != -1:
+            self.selected_device = self.combo_devices.current()
         device_class = types_of_devices[self.combo_devices.current()]
         if device_class != 'Not a class':
             self.combo_set_parameters['values'] = getattr(globals()[device_class](), 'set_options')
@@ -3095,52 +3136,57 @@ class Settings(tk.Frame):
             self.combo_set_parameters.current(0)
             self.combo_set_parameters.after(interval)
 
-    def update_names_devices(self, parent, interval = 1000):
+    def update_names_devices(self, parent):
         new_device_name = self.combo_devices.get()
         new_device_values = list(self.combo_devices['values'])
-        new_device_values[self.combo_devices.current()] = new_device_name
+        new_device_values[self.selected_device] = new_device_name
         self.combo_devices['values'] = new_device_values
+        self.combo_devices.after(1)
+        
         try:
             parent.combo_to_sweep1['values'] = new_device_values
-            parent.combo_to_sweep1.after(interval)
+            parent.combo_to_sweep1.current(self.selected_device)
         except:
             pass
         try:
             parent.combo_to_sweep2['values'] = new_device_values
-            parent.combo_to_sweep2.after(interval)
+            parent.combo_to_sweep2.current(self.selected_device)
         except:
             pass
         try:
             parent.combo_to_sweep3['values'] = new_device_values
-            parent.combo_to_sweep3.after(interval)
+            parent.combo_to_sweep3.current(self.selected_device)
         except:
             pass
         
-    def update_names_set_parameters(self, parent, interval = 1000):
+        parent.after(1)
+        
+    def update_names_set_parameters(self, parent):
         new_set_parameter_name = self.combo_set_parameters.get()
         new_set_parameters_values = list(self.combo_set_parameters['values'])
-        new_set_parameters_values[self.combo_set_parameters.current()] = new_set_parameter_name
+        new_set_parameters_values[self.selected_set_option] = new_set_parameter_name
         self.combo_set_parameters['values'] = new_set_parameters_values
         try:
             parent.sweep_options1['values'] = new_set_parameters_values
-            parent.sweep_options1.after(interval)
+            parent.sweep_options1.current(self.selected_set_options)
         except:
             pass
         try:
             parent.sweep_options2['values'] = new_set_parameters_values
-            parent.sweep_options2.after(interval)
+            parent.sweep_options2.current(self.selected_set_options)
         except:
             pass
         try:
             parent.sweep_options3['values'] = new_set_parameters_values
-            parent.sweep_options3.after(interval)
+            parent.sweep_options3.current(self.selected_set_options)
         except:
             pass
+        parent.after(1)
         
     def update_names_get_parameters(self, parent, interval = 1000):
         new_get_parameter_name = self.combo_get_parameters.get()
         new_get_parameters_values = list(self.combo_get_parameters['values'])
-        new_get_parameters_values[self.combo_get_parameters.current()] = new_get_parameter_name
+        new_get_parameters_values[self.selected_get_option] = new_get_parameter_name
         
         parent.dict_lstbox[self.combo_get_parameters['values'][self.combo_get_parameters.current()]] = new_get_parameter_name
         
@@ -3148,6 +3194,14 @@ class Settings(tk.Frame):
         
         parent.devices.set(value=new_get_parameters_values)
         parent.lstbox_to_read.after(interval)
+        
+    def select_set_option(self, event):
+        if self.combo_set_parameters.current() != -1:
+            self.selected_set_option = self.combo_set_parameters.current()
+            
+    def select_get_option(self, event):
+        if self.combo_get_parameters.current() != -1:
+            self.selected_get_option = self.combo_get_parameters.current()
        
     def update_back_and_forth_master_count(self, parent):
         if self.combo_back_and_forth_master.current() == 0:
