@@ -142,6 +142,11 @@ def create_preset(dimension):
              dic['to' + str(i+1)] = ['']
              dic['ratio' + str(i+1)] = ['']
              dic['delay_factor' + str(i+1)] = ['']
+             dic['status_back_and_forth' + str(i+1)] = [0]
+             dic['status_manual' + str(i+1)] = [0]
+             dic['manual_filename' + str(i+1)] = ''
+             dic['master_option' + str(i+1)] = 0
+        dic['condition'] = ''
         dataframe = pd.DataFrame(dic)
         dataframe.to_csv(globals()['sweeper' + dimension + 'd_path'], index = False)
 
@@ -156,8 +161,7 @@ class Time():
         self.get_options = []
         
     def set_Time(self, value = None):
-        print(value)
-        pass
+        return
 
 class lock_in():
 
@@ -1008,7 +1012,9 @@ class Sweeper1d(tk.Frame):
         self.to1_init = self.preset['to1'].values[0]
         self.ratio1_init = self.preset['ratio1'].values[0]
         self.delay_factor1_init = self.preset['delay_factor1'].values[0]
-        
+        self.status_back_and_forth_master = tk.IntVar(value = int(self.preset['status_back_and_forth1'].values[0]))
+        self.status_manual = tk.IntVar(value = int(self.preset['status_manual1'].values[0]))
+        self.manual_filenames = [self.preset['manual_filename1'].values[0]]
 
         label = tk.Label(self, text='1dSweeper', font=LARGE_FONT)
         label.pack(pady=10, padx=10)
@@ -1031,8 +1037,6 @@ class Sweeper1d(tk.Frame):
         self.combo_to_sweep1.bind(
             "<<ComboboxSelected>>", self.update_sweep_parameters)
         self.combo_to_sweep1.place(relx=0.15, rely=0.16)
-
-        self.status_back_and_forth_master = tk.IntVar(value = 0)
         
         global back_and_forth_master
         
@@ -1076,7 +1080,7 @@ class Sweeper1d(tk.Frame):
         
         button_start_sweeping = tk.Button(
             self, text="▶", command=lambda: self.start_sweeping(), font = LARGE_FONT)
-        button_start_sweeping.place(relx=0.375, rely=0.21, height= 90, width=30)
+        button_start_sweeping.place(relx=0.375, rely=0.21 + lstbox_height, height= 90, width=30)
         CreateToolTip(button_start_sweeping, 'Start sweeping')
         
         self.button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero())
@@ -1127,14 +1131,9 @@ class Sweeper1d(tk.Frame):
         self.entry_delay_factor = tk.Entry(self)
         self.entry_delay_factor.insert(0, self.delay_factor1_init)
         self.entry_delay_factor.place(relx=0.12, rely=0.46)
-
-        # section of manual sweep points selection
-        self.status_manual = tk.IntVar()
-        self.filename = filename_sweep[:-4] + '_manual' + '.csv'
             
         # initials
         self.manual_sweep_flags = [0]
-        self.manual_filenames = [self.filename]
 
         self.checkbox_manual1 = ttk.Checkbutton(self, text='Maunal sweep select',
                                           variable=self.status_manual, onvalue=1,
@@ -1142,7 +1141,7 @@ class Sweeper1d(tk.Frame):
         self.checkbox_manual1.place(relx=0.12, rely=0.52)
 
         button_new_manual = tk.Button(self, text = '🖊', font = LARGE_FONT, command=lambda: self.open_blank(
-            filename=self.manual_filenames[0]))
+            filename=filename_sweep[:-4] + '_manual' + '.csv'))
         button_new_manual.place(relx=0.12, rely=0.56)
         CreateToolTip(button_new_manual, 'Create new sweep instruction')
 
@@ -1240,22 +1239,42 @@ class Sweeper1d(tk.Frame):
         self.rewrite_preset()
     
     def save_manual_status(self):
+        global filename_sweep
         if self.manual_sweep_flags[0] != self.status_manual.get():
             self.manual_sweep_flags[0] = self.status_manual.get()
+        
+        if self.status_manual.get() == 1:
+            self.manual_filenames = [filename_sweep[:-4] + '_manual' + '.csv']
+
+        if self.status_manual.get() == 0:
+            self.manual_filenames = ['']
+            
+        #update preset
+        self.preset.loc[0, 'manual_filename1'] = str(self.manual_filenames[0])
+        self.preset.to_csv(globals()['sweeper1d_path'], index = False)
+            
+        self.preset.loc[0, 'status_manual1'] = self.status_manual.get()
+        self.preset.to_csv(globals()['sweeper1d_path'], index = False)
 
     def save_back_and_forth_master_status(self):
         global back_and_forth_master
         
-        if self.status_back_and_forth_master == 0:
+        if self.status_back_and_forth_master.get() == 0:
             back_and_forth_master = 1
         else:
             back_and_forth_master = self.back_and_forth_master_count
+            
+        self.preset.loc[0, 'status_back_and_forth1'] = self.status_back_and_forth_master.get()
+        self.preset.to_csv(globals()['sweeper1d_path'], index = False)
 
     def open_blank(self, filename):
         df = pd.DataFrame(columns=['steps'])
         df.to_csv(filename, index=False)
         self.manual_filenames[0] = filename
         os.startfile(filename)
+        #update preset
+        self.preset.loc[0, 'manual_filename1'] = str(self.manual_filenames[0])
+        self.preset.to_csv(globals()['sweeper1d_path'], index = False)
 
     def explore_files(self):
         self.manual_filenames[0] = tk.filedialog.askopenfilename(initialdir=cur_dir + '',
@@ -1392,6 +1411,7 @@ class Sweeper1d(tk.Frame):
         sweeper_flag1 = True
         sweeper_flag2 = False
         sweeper_flag3 = False
+        self.save_manual_status()
         manual_filenames = self.manual_filenames
         manual_sweep_flags = self.manual_sweep_flags
         script = self.script
@@ -1422,8 +1442,15 @@ class Sweeper2d(tk.Frame):
         self.to2_init = self.preset['to2'].values[0]
         self.ratio2_init = self.preset['ratio2'].values[0]
         self.delay_factor2_init = self.preset['delay_factor2'].values[0]
-        
-        
+        self.manual_filenames = [self.preset['manual_filename1'].values[0], self.preset['manual_filename2'].values[0]]
+        self.status_back_and_forth_master = tk.IntVar(value = int(self.preset['status_back_and_forth1'].values[0]))
+        self.status_manual1 = tk.IntVar(value = int(self.preset['status_manual1'].values[0]))
+        self.master_option1 = int(self.preset['master_option1'].values[0])
+        self.status_back_and_forth_slave = tk.IntVar(value = int(self.preset['status_back_and_forth2'].values[0]))
+        self.status_manual2 = tk.IntVar(value = int(self.preset['status_manual2'].values[0]))
+        self.master_option2 = int(self.preset['master_option2'].values[0])
+        self.condition = str(self.preset['condition'].values[0])
+
         label = tk.Label(self, text='2dSweeper', font=LARGE_FONT)
         label.pack(pady=10, padx=10)
 
@@ -1448,11 +1475,13 @@ class Sweeper2d(tk.Frame):
         self.combo_master1 = ttk.Combobox(self, value = self.master_option)
         self.combo_master1.bind(
             "<<ComboboxSelected>>", self.update_master2_combo)
+        self.combo_master1.current(self.master_option1)
         self.combo_master1.place(relx = 0.15, rely = 0.17)
         
         self.combo_master2 = ttk.Combobox(self, value = self.master_option)
         self.combo_master2.bind(
             "<<ComboboxSelected>>", self.update_master1_combo)
+        self.combo_master2.current(self.master_option2)
         self.combo_master2.place(relx = 0.3, rely = 0.17)
 
         label_devices = tk.Label(self, text = 'Devices:', font=LARGE_FONT)
@@ -1489,9 +1518,6 @@ class Sweeper2d(tk.Frame):
             self.combo_to_sweep2.current(0)
             if self.combo_to_sweep2['values'][0] != '':
                 self.update_sweep_parameters2(event = None)
-        
-        self.status_back_and_forth_slave = tk.IntVar(value = 0)
-        self.status_back_and_forth_master = tk.IntVar(value = 0)
         
         global back_and_forth_master
         global back_and_forth_slave
@@ -1619,15 +1645,11 @@ class Sweeper2d(tk.Frame):
         self.entry_delay_factor2.place(relx=0.27, rely=0.51)
 
         # section of manual sweep points selection
-        self.status_manual1 = tk.IntVar()
-        self.status_manual2 = tk.IntVar()
         self.filename = filename_sweep[:-4] + '_manual' + '.csv'
 
         # initials
 
         self.manual_sweep_flags = [0, 0]
-        self.manual_filenames = [self.filename[:-4] +
-                                 '1.csv', self.filename[:-4] + '2.csv']
 
         self.checkbox_manual1 = ttk.Checkbutton(self, text='Maunal sweep select',
                                            variable=self.status_manual1, onvalue=1,
@@ -1664,6 +1686,8 @@ class Sweeper2d(tk.Frame):
         CreateToolTip(label_condition, 'Master sweep: x\nSlave sweep: y\nSet condition for a sweep map')
         
         self.text_condition = tk.Text(self, width = 40, height = 7)
+        self.text_condition.delete('1.0', tk.END)
+        self.text_condition.insert(tk.END, self.condition)
         self.text_condition.place(relx = 0.12, rely = 0.7)
 
         self.filename_textvariable = tk.StringVar(self, value = filename_sweep)
@@ -1697,6 +1721,9 @@ class Sweeper2d(tk.Frame):
         if self.combo_master1['value'][self.combo_master1.current()] == 'Slave':
             self.combo_master2['value'] = ['', 'Master']
             self.combo_master2.after(interval)
+        if self.combo_master1.current() != self.master_option1:
+            self.preset.loc[0, 'master_option1'] = self.combo_master1.current()
+            self.preset.to_csv(globals()['sweeper2d_path'], index = False)
             
     def update_master1_combo(self, event, interval = 100):
         if self.combo_master2['value'][self.combo_master1.current()] == '':
@@ -1708,6 +1735,9 @@ class Sweeper2d(tk.Frame):
         if self.combo_master2['value'][self.combo_master1.current()] == 'Slave':
             self.combo_master1['value'] = ['', 'Master']
             self.combo_master1.after(interval)
+        if self.combo_master2.current() != self.master_option2:
+            self.preset.loc[0, 'master_option2'] = self.combo_master2.current()
+            self.preset.to_csv(globals()['sweeper2d_path'], index = False)
 
     def update_sweep_parameters1(self, event, interval=100):
         global types_of_devices
@@ -1724,7 +1754,7 @@ class Sweeper2d(tk.Frame):
             
         if self.combo_to_sweep1.current() != self.combo_to_sweep1_current:
             self.preset.loc[0, 'combo_to_sweep1'] = self.combo_to_sweep1.current()
-            self.preset.to_csv(globals()['sweeper1d_path'], index = False)
+            self.preset.to_csv(globals()['sweeper2d_path'], index = False)
             
     def update_sweep_options1(self):
         if self.sweep_options1.current() != self.sweep_options1_current:
@@ -1778,6 +1808,8 @@ class Sweeper2d(tk.Frame):
         if self.entry_delay_factor2.get() != self.delay_factor2_init:
             self.preset.loc[0, 'delay_factor2'] = self.entry_delay_factor2.get()
             self.preset.to_csv(globals()['sweeper2d_path'], index = False)
+        self.preset.loc[0, 'condition'] = self.text_condition.get(1.0, tk.END)[:-1]
+        self.preset.to_csv(globals()['sweeper2d_path'], index = False)
 
     def update_sweep_configuration(self):
         global from_sweep1
@@ -1842,13 +1874,29 @@ class Sweeper2d(tk.Frame):
             self.manual_sweep_flags[i -
                                     1] = getattr(self, 'status_manual' + str(i)).get()
             
+        if getattr(self, f'status_manual{i}').get() == 1:
+            self.manual_filenames[i - 1] = filename_sweep[:-4] + f'_manual{i}.csv'
+
+        if getattr(self, f'status_manual{i}').get() == 0:
+            self.manual_filenames[i - 1] = ''
+            
+        #update preset
+        self.preset.loc[0, f'manual_filename{i}'] = str(self.manual_filenames[i - 1])
+        self.preset.to_csv(globals()['sweeper2d_path'], index = False)
+            
+        self.preset.loc[0, f'status_manual{i}'] = self.status_manual1.get()
+        self.preset.to_csv(globals()['sweeper2d_path'], index = False)
+            
     def save_back_and_forth_master_status(self):
         global back_and_forth_master
         
-        if self.status_back_and_forth_slave == 0:
+        if self.status_back_and_forth_master == 0:
             back_and_forth_master = 1
         else:
             back_and_forth_master = self.back_and_forth_master_count
+            
+        self.preset.loc[0, 'status_back_and_forth1'] = self.status_back_and_forth_master.get()
+        self.preset.to_csv(globals()['sweeper2d_path'], index = False)
             
     def save_back_and_forth_slave_status(self):
         global back_and_forth_slave
@@ -1858,19 +1906,17 @@ class Sweeper2d(tk.Frame):
         else:
             back_and_forth_slave = self.back_and_forth_slave_count
             
-    def save_back_and_forth_slave_slave_status(self):
-        global back_and_forth_slave_slave
-        
-        if self.status_back_and_forth_slave_slave == 0:
-            back_and_forth_slave_slave = 1
-        else:
-            back_and_forth_slave_slave = self.back_and_forth_slave_slave_count
+        self.preset.loc[0, 'status_back_and_forth2'] = self.status_back_and_forth_slave.get()
+        self.preset.to_csv(globals()['sweeper2d_path'], index = False)
     
     def open_blank(self, filename, i):
         df = pd.DataFrame(columns=['steps'])
         df.to_csv(filename, index=False)
         self.manual_filenames[i] = filename
         os.startfile(filename)
+        #update preset
+        self.preset.loc[0, f'manual_filename{i}'] = str(self.manual_filenames[i - 1])
+        self.preset.to_csv(globals()['sweeper2d_path'], index = False)
 
     def open_settings(self):        
         self.window_settings = Universal_frontend((Settings,), Settings)
@@ -2089,6 +2135,17 @@ class Sweeper3d(tk.Frame):
         self.to3_init = self.preset['to3'].values[0]
         self.ratio3_init = self.preset['ratio3'].values[0]
         self.delay_factor3_init = self.preset['delay_factor3'].values[0]
+        self.manual_filenames = [self.preset['manual_filename1'].values[0], self.preset['manual_filename2'].values[0], self.preset['manual_filename3'].values[0]]
+        self.status_back_and_forth_master = tk.IntVar(value = int(self.preset['status_back_and_forth1'].values[0]))
+        self.status_manual1 = tk.IntVar(value = int(self.preset['status_manual1'].values[0]))
+        self.master_option1 = int(self.preset['master_option1'].values[0])
+        self.status_back_and_forth_slave = tk.IntVar(value = int(self.preset['status_back_and_forth2'].values[0]))
+        self.status_manual2 = tk.IntVar(value = int(self.preset['status_manual2'].values[0]))
+        self.master_option2 = int(self.preset['master_option2'].values[0])
+        self.status_back_and_forth_slave_slave = tk.IntVar(value = int(self.preset['status_back_and_forth3'].values[0]))
+        self.status_manual3 = tk.IntVar(value = int(self.preset['status_manual3'].values[0]))
+        self.master_option3 = int(self.preset['master_option3'].values[0])
+        self.condition = str(self.preset['condition'].values[0])
         
         label = tk.Label(self, text='3dSweeper', font=LARGE_FONT)
         label.pack(pady=10, padx=10)
@@ -2112,13 +2169,22 @@ class Sweeper3d(tk.Frame):
         label_hierarchy = tk.Label(self, text = 'Hierarchy:', font=LARGE_FONT)
         label_hierarchy.place(relx = 0.05, rely = 0.17)
 
-        self.combo_master1 = ttk.Combobox(self, value = ['Master', 'Slave', 'Slave-slave'])
+        self.combo_master1 = ttk.Combobox(self, value = ['', 'Master', 'Slave', 'Slave-slave'])
+        self.combo_master1.bind(
+            "<<ComboboxSelected>>", self.update_master23_combo)
+        self.combo_master1.current(self.master_option1)
         self.combo_master1.place(relx = 0.15, rely = 0.17)
         
-        self.combo_master2 = ttk.Combobox(self, value = ['Master', 'Slave', 'Slave-slave'])
+        self.combo_master2 = ttk.Combobox(self, value = ['', 'Master', 'Slave', 'Slave-slave'])
+        self.combo_master2.bind(
+            "<<ComboboxSelected>>", self.update_master13_combo)
+        self.combo_master2.current(self.master_option2)
         self.combo_master2.place(relx = 0.3, rely = 0.17)
         
-        self.combo_master3 = ttk.Combobox(self, value = ['Master', 'Slave', 'Slave-slave'])
+        self.combo_master3 = ttk.Combobox(self, value = ['', 'Master', 'Slave', 'Slave-slave'])
+        self.combo_master3.bind(
+            "<<ComboboxSelected>>", self.update_master12_combo)
+        self.combo_master3.current(self.master_option3)
         self.combo_master3.place(relx = 0.45, rely = 0.17)
         
         label_devices = tk.Label(self, text = 'Devices:', font=LARGE_FONT)
@@ -2171,8 +2237,6 @@ class Sweeper3d(tk.Frame):
         global back_and_forth_slave
         global back_and_forth_slave_slave
     
-        self.status_back_and_forth_master = tk.IntVar(value = 0)
-    
         self.back_and_forth_master_count = 2
     
         self.checkbox_back_and_forth_master = ttk.Checkbutton(self,
@@ -2196,8 +2260,6 @@ class Sweeper3d(tk.Frame):
             self.combo_to_sweep2.current(0)
             if self.combo_to_sweep2['values'][0] != '':
                 self.update_sweep_parameters2(event = None)
-        
-        self.status_back_and_forth_slave = tk.IntVar(value = 0)
     
         self.back_and_forth_slave_count = 2
     
@@ -2223,8 +2285,6 @@ class Sweeper3d(tk.Frame):
             self.combo_to_sweep3.current(0)
             if self.combo_to_sweep3['values'][0] != '':
                 self.update_sweep_parameters3(event = None)
-        
-        self.status_back_and_forth_slave_slave = tk.IntVar(value = 0)
         
         self.back_and_forth_slave_slave_count = 2
     
@@ -2347,16 +2407,8 @@ class Sweeper3d(tk.Frame):
         self.entry_delay_factor3.insert(0, self.delay_factor3_init)
         self.entry_delay_factor3.place(relx=0.42, rely=0.51)
 
-        # section of manual sweep points selection
-        self.status_manual1 = tk.IntVar()
-        self.status_manual2 = tk.IntVar()
-        self.status_manual3 = tk.IntVar()
-        self.filename = filename_sweep[:-4] + '_manual' + '.csv'
-
         # initials
         self.manual_sweep_flags = [0, 0, 0]
-        self.manual_filenames = [self.filename[:-4] + '1.csv',
-                                 self.filename[:-4] + '2.csv', self.filename[:-4] + '3.csv']
 
         self.checkbox_manual1 = ttk.Checkbutton(self, text='Maunal sweep select',
                                            variable=self.status_manual1, onvalue=1,
@@ -2408,6 +2460,8 @@ class Sweeper3d(tk.Frame):
         CreateToolTip(label_condition, 'Master sweep: x\nSlave sweep: y\nSlave-slave sweep: z\nSet condition for a sweep map')
         
         self.text_condition = tk.Text(self, width = 60, height = 7)
+        self.text_condition.delete('1.0', tk.END)
+        self.text_condition.insert(tk.END, self.condition)
         self.text_condition.place(relx = 0.12, rely = 0.7)
 
         self.filename_textvariable = tk.StringVar(self, value = filename_sweep)
@@ -2431,7 +2485,7 @@ class Sweeper3d(tk.Frame):
         graph_button.place(relx=0.75, rely=0.8)
         CreateToolTip(graph_button, 'Graph')
 
-    def update_master23_combo(self, event, interval = 1000):
+    def update_master23_combo(self, event, interval = 100):
         if self.combo_master1['value'][self.combo_master1.current()] == '':
             self.combo_master2['value'] = self.master_option
             self.combo_master2.after(interval)
@@ -2452,8 +2506,11 @@ class Sweeper3d(tk.Frame):
             self.combo_master2.after(interval)
             self.combo_master3['value'] = ['', 'Master', 'Slave']
             self.combo_master3.after(interval)
+        if self.combo_master1.current() != self.master_option1:
+            self.preset.loc[0, 'master_option1'] = self.combo_master1.current()
+            self.preset.to_csv(globals()['sweeper3d_path'], index = False)
         
-    def update_master13_combo(self, event, interval = 1000):
+    def update_master13_combo(self, event, interval = 100):
         if self.combo_master2['value'][self.combo_master2.current()] == '':
             self.combo_master1['value'] = self.master_option
             self.combo_master1.after(interval)
@@ -2474,8 +2531,11 @@ class Sweeper3d(tk.Frame):
             self.combo_master1.after(interval)
             self.combo_master3['value'] = ['', 'Master', 'Slave']
             self.combo_master3.after(interval)
+        if self.combo_master2.current() != self.master_option2:
+            self.preset.loc[0, 'master_option2'] = self.combo_master2.current()
+            self.preset.to_csv(globals()['sweeper3d_path'], index = False)
 
-    def update_master12_combo(self, event, interval = 1000):
+    def update_master12_combo(self, event, interval = 100):
         if self.combo_master3['value'][self.combo_master3.current()] == '':
             self.combo_master1['value'] = self.master_option
             self.combo_master1.after(interval)
@@ -2496,6 +2556,9 @@ class Sweeper3d(tk.Frame):
             self.combo_master1.after(interval)
             self.combo_master2['value'] = ['', 'Master', 'Slave']
             self.combo_master2.after(interval)
+        if self.combo_master3.current() != self.master_option3:
+            self.preset.loc[0, 'master_option3'] = self.combo_master3.current()
+            self.preset.to_csv(globals()['sweeper3d_path'], index = False)
 
     def update_sweep_parameters1(self, event, interval=100):
         class_of_sweeper_device1 = types_of_devices[self.combo_to_sweep1.current(
@@ -2573,6 +2636,8 @@ class Sweeper3d(tk.Frame):
         if self.entry_delay_factor3.get() != self.delay_factor3_init:
             self.preset.loc[0, 'delay_factor3'] = self.entry_delay_factor3.get()
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
+        self.preset.loc[0, 'condition'] = self.text_condition.get(1.0, tk.END)[:-1]
+        self.preset.to_csv(globals()['sweeper3d_path'], index = False)
             
     def update_sweep_configuration(self):
         global from_sweep1
@@ -2663,6 +2728,19 @@ class Sweeper3d(tk.Frame):
         if self.manual_sweep_flags[i - 1] != getattr(self, 'status_manual' + str(i)).get():
             self.manual_sweep_flags[i -
                                     1] = getattr(self, 'status_manual' + str(i)).get()
+            
+        if getattr(self, f'status_manual{i}').get() == 1:
+            self.manual_filenames[i - 1] = filename_sweep[:-4] + f'_manual{i}.csv'
+
+        if getattr(self, f'status_manual{i}').get() == 0:
+            self.manual_filenames[i - 1] = ''
+            
+        #update preset
+        self.preset.loc[0, f'manual_filename{i}'] = str(self.manual_filenames[i - 1])
+        self.preset.to_csv(globals()['sweeper3d_path'], index = False)
+            
+        self.preset.loc[0, f'status_manual{i}'] = getattr(self, 'status_manual' + str(i)).get()
+        self.preset.to_csv(globals()['sweeper3d_path'], index = False)
 
     def save_back_and_forth_master_status(self):
         global back_and_forth_master
@@ -2672,6 +2750,9 @@ class Sweeper3d(tk.Frame):
         else:
             back_and_forth_master = self.back_and_forth_master_count
             
+        self.preset.loc[0, 'status_back_and_forth1'] = self.status_back_and_forth_master.get()
+        self.preset.to_csv(globals()['sweeper3d_path'], index = False)
+            
     def save_back_and_forth_slave_status(self):
         global back_and_forth_slave
         
@@ -2679,6 +2760,20 @@ class Sweeper3d(tk.Frame):
             back_and_forth_slave = 1
         else:
             back_and_forth_slave = self.back_and_forth_slave_count
+            
+        self.preset.loc[0, 'status_back_and_forth2'] = self.status_back_and_forth_slave.get()
+        self.preset.to_csv(globals()['sweeper3d_path'], index = False)
+        
+    def save_back_and_forth_slave_slave_status(self):
+        global back_and_forth_slave_slave
+        
+        if self.status_back_and_forth_slave_slave == 0:
+            back_and_forth_slave_slave = 1
+        else:
+            back_and_forth_slave_slave = self.back_and_forth_slave_slave_count
+            
+        self.preset.loc[0, 'status_back_and_forth3'] = self.status_back_and_forth_slave_slave.get()
+        self.preset.to_csv(globals()['sweeper3d_path'], index = False)
     
     def open_blank(self, filename, i):
         df = pd.DataFrame(columns=['steps'])
@@ -3282,7 +3377,15 @@ class Sweeper_write(threading.Thread):
         self.time1 = (float(from_sweep1) - float(to_sweep1)) / float(ratio_sweep1)
         self.filename_sweep = filename_sweep
         self.columns = columns
+        
         globals()['dataframe'] = []
+        
+        try:
+            self.nstep1 = (float(to_sweep1) - float(from_sweep1)) / self.ratio_sweep1 / self.delay_factor1
+            self.nstep1 = int(abs(self.nstep1))
+        except ValueError:
+            self.nstep1 = 1
+        
         if self.sweeper_flag2 == True:
             self.device_to_sweep2 = device_to_sweep2
             self.parameter_to_sweep2 = parameter_to_sweep2
@@ -3298,7 +3401,7 @@ class Sweeper_write(threading.Thread):
             
             try:
                 self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
-                self.nstep2 = int(self.nstep2)
+                self.nstep2 = int(abs(self.nstep2))
             except ValueError:
                 self.nstep2 = 1
             
@@ -3326,13 +3429,13 @@ class Sweeper_write(threading.Thread):
             
             try:
                 self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
-                self.nstep2 = int(self.nstep2)
+                self.nstep2 = int(abs(self.nstep2))
             except ValueError:
                 self.nstep2 = 1
                 
             try:
                 self.nstep3 = (float(to_sweep3) - float(from_sweep3)) / self.ratio_sweep3 / self.delay_factor3
-                self.nstep3 = int(self.nstep3)
+                self.nstep3 = int(abs(self.nstep3))
             except ValueError:
                 self.nstep3 = 1
             
@@ -3362,11 +3465,11 @@ class Sweeper_write(threading.Thread):
                 xnans = []
                 ynans = []
 
-                for index, elem in enumerate(space.T[0]):
+                for index, elem in enumerate(np.array(space).T[0]):
                     if np.isnan(elem):
                         xnans.append(index)
                         
-                for index, elem in enumerate(space.T[1]):
+                for index, elem in enumerate(np.array(space).T[1]):
                     if np.isnan(elem):
                         ynans.append(index)
                         
@@ -3387,21 +3490,21 @@ class Sweeper_write(threading.Thread):
                 for i in range(AX1.shape[0]):
                     for j in range(AX1.shape[1]):
                         for k in range(AX1.shape[2]):
-                            space[i][j][k] = tuple((AX1[i][j][k], AX2[i][j][k], AX3[i][j][k])) * self.func(tup = tuple((AX1[i][j][k], AX2[i][j][k], AX3[i][j][k])), dtup = tuple((self.step1 / 2, self.step2 / 2, self.step3 / 3)), condition_str = self.condition, sweep_dimension = 3)
+                            space[i][j][k] = (np.array((AX1[i][j][k], AX2[i][j][k], AX3[i][j][k]))) * self.func(tup = tuple((AX1[i][j][k], AX2[i][j][k], AX3[i][j][k])), dtup = tuple((self.step1 / 2, self.step2 / 2, self.step3 / 3)), condition_str = self.condition, sweep_dimension = 3)
 
                 xnans = []
                 ynans = []
                 znans = []
 
-                for index, elem in enumerate(space.T[0]):
+                for index, elem in enumerate(np.array(space).T[0]):
                     if np.isnan(elem):
                         xnans.append(index)
                         
-                for index, elem in enumerate(space.T[1]):
+                for index, elem in enumerate(np.array(space).T[1]):
                     if np.isnan(elem):
                         ynans.append(index)
                         
-                for index, elem in enumerate(space.T[2]):
+                for index, elem in enumerate(np.array(space).T[2]):
                     if np.isnan(elem):
                         znans.append(index)
                         
