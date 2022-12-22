@@ -22,8 +22,9 @@ from datetime import datetime
 import pandas as pd
 import matplotlib
 import numpy as np
-from libximc import *
-from ctypes import *
+
+from ZStage import ZStage
+from RotStage import RotStage
 
 #import random
 
@@ -540,237 +541,6 @@ class TC300():
         # TMIN1 to 400°C, with a resolution of 1°C).
         self.tc.write('T1MAX=' + str(t2_to))
 
-class ZStage():
-    def __init__(self, adress = 'ASRL5::INSTR'):
-        self.open_name = b'xi-com:\\\\.\\COM' + bytes(adress[4], encoding = 'utf-8')
-        self.device_id = lib.open_device(self.open_name)
-        self.open_device()
-        
-        # Create engine settings structure
-        self.eng = engine_settings_t()
-        result_eng = lib.get_engine_settings(self.device_id, byref(self.eng))
-
-        # Create user unit settings structure
-        self.user_unit = calibration_t()
-        self.user_unit.MicrostepMode = self.eng.MicrostepMode
-        self.user_unit.A = 1 / 140
-        
-        '''
-        BorderFlags.BORDER_IS_ENCODER = True #Borders are defined by encoder position
-        BorderFlags.BORDERS_SWAP_MISSET_DETECTION = True #Engine stops when reach both borders
-        self.edge = edges_settings_calb_t()
-        self.edge.LeftBorder = 0.1
-        self.edge.RightBorder = 12.725
-        result_edge = lib.set_edges_settings_calb(self.device_id, byref(self.edge), byref(self.user_unit))
-        '''
-        
-        self.set_options = ['position', 'shift']
-        self.get_options = ['position', 'I_pwr', 'U_pwr', 'T_proc']
-        
-    def open_device(self):
-        if self.device_id <= 0:
-            for device_id in [1, 2]:
-                lib.close_device(byref(cast(device_id, POINTER(c_int))))
-            self.device_id = lib.open_device(self.open_name)
-        
-    def status_running(self):
-        """
-    
-        Returns True if motor is running
-                False if motor is not running
-        """
-        def get_status():
-            """
-            A function of reading status information from the device
-            You can use this function to get basic information about the device status.
-            
-            :param lib: structure for accessing the functionality of the libximc library.
-            :param device_id:  device id.
-            """
-            
-            x_status = status_t()
-            result = lib.get_status(self.device_id, byref(x_status))
-            if result == Result.Ok:
-                return x_status
-            else:
-                return None
-        
-        currStatus = get_status()
-        return (currStatus.MvCmdSts & MvcmdStatus.MVCMD_RUNNING) # 0x80) # 
-    
-    def set_position(self, value):
-        if  not self.status_running():
-            result = lib.command_move_calb(self.device_id, c_float(value), byref(self.user_unit))
-    
-    def set_shift(self, value):
-        if  not self.status_MvCmdSts_MVCMD_RUNNING():
-            result = lib.command_movr_calb(self.device_id, c_float(value), byref(self.user_unit))
-        
-    def position(self):
-        """
-        Obtaining information about the position of the positioner.
-        
-        This function allows you to get information about the current positioner coordinates,
-        both in steps and in encoder counts, if it is set.
-        Also, depending on the state of the mode parameter, information can be obtained in user units.
-        
-        :param lib: structure for accessing the functionality of the libximc library.
-        :param device_id: device id.
-        :param mode: mode in feedback counts or in user units. (Default value = 1)
-        """
-        x_pos = get_position_calb_t()
-        result = lib.get_position_calb(self.device_id, byref(x_pos), byref(self.user_unit))
-        if result == Result.Ok:
-            return x_pos.Position
-        else:
-            return 'Could not get a position'
-        
-    def I_pwr(self):
-        '''
-        Consumable current on a power part, A
-        '''
-        status = status_t()
-        result_status = lib.get_status(self.device_id, byref(status))
-
-        return status.Ipwr * 1e-3
-        
-    def U_pwr(self):
-        '''
-        Consumable voltage on a power part, V
-        '''
-        status = status_t()
-        result_status = lib.get_status(self.device_id, byref(status))
-
-        return status.Upwr * 1e-3
-        
-    def T_proc(self):
-        '''
-        Current temperature of CPU
-        '''
-        status = status_t()
-        result_status = lib.get_status(self.device_id, byref(status))
-
-        return status.CurT / 10
-
-    def close(self):
-        lib.close_device(byref(cast(self.device_id, POINTER(c_int))))
-    
-class RotStage():
-    def __init__(self, adress = 'ASRL6::INSTR'):
-        self.open_name = b'xi-com:\\\\.\\COM' + bytes(adress[4], encoding = 'utf-8')
-        self.device_id = lib.open_device(self.open_name)
-        self.open_device()
-        
-        # Create engine settings structure
-        self.eng = engine_settings_t()
-        result_eng = lib.get_engine_settings(self.device_id, byref(self.eng))
-
-        # Create user unit settings structure
-        self.user_unit = calibration_t()
-        self.user_unit.MicrostepMode = self.eng.MicrostepMode
-        self.user_unit.A = 1 / 2000
-
-        
-        '''
-        BorderFlags.BORDER_IS_ENCODER = True #Borders are defined by encoder position
-        BorderFlags.BORDERS_SWAP_MISSET_DETECTION = True #Engine stops when reach both borders
-        self.edge = edges_settings_calb_t()
-        self.edge.LeftBorder = 0.1
-        self.edge.RightBorder = 12.725
-        result_edge = lib.set_edges_settings_calb(self.device_id, byref(self.edge), byref(self.user_unit))
-        '''
-        
-        self.set_options = ['position', 'shift']
-        self.get_options = ['position', 'I_pwr', 'U_pwr', 'T_proc']
-        
-    def open_device(self):
-        if self.device_id <= 0:
-            for device_id in [1, 2]:
-                lib.close_device(byref(cast(device_id, POINTER(c_int))))
-            self.device_id = lib.open_device(self.open_name)
-        
-    def status_running(self):
-        """
-    
-        Returns True if motor is running
-                False if motor is not running
-        """
-        def get_status():
-            """
-            A function of reading status information from the device
-            You can use this function to get basic information about the device status.
-            
-            :param lib: structure for accessing the functionality of the libximc library.
-            :param device_id:  device id.
-            """
-            
-            x_status = status_t()
-            result = lib.get_status(self.device_id, byref(x_status))
-            if result == Result.Ok:
-                return x_status
-            else:
-                return None
-        
-        currStatus = get_status()
-        return (currStatus.MvCmdSts & MvcmdStatus.MVCMD_RUNNING) # 0x80) # 
-    
-    def set_position(self, value):
-        if  not self.status_running():
-            result = lib.command_move_calb(self.device_id, c_float(value), byref(self.user_unit))
-    
-    def set_shift(self, value):
-        if  not self.status_MvCmdSts_MVCMD_RUNNING():
-            result = lib.command_movr_calb(self.device_id, c_float(value), byref(self.user_unit))
-        
-    def position(self):
-        """
-        Obtaining information about the position of the positioner.
-        
-        This function allows you to get information about the current positioner coordinates,
-        both in steps and in encoder counts, if it is set.
-        Also, depending on the state of the mode parameter, information can be obtained in user units.
-        
-        :param lib: structure for accessing the functionality of the libximc library.
-        :param device_id: device id.
-        :param mode: mode in feedback counts or in user units. (Default value = 1)
-        """
-        x_pos = get_position_calb_t()
-        result = lib.get_position_calb(self.device_id, byref(x_pos), byref(self.user_unit))
-        if result == Result.Ok:
-            return x_pos.Position
-        else:
-            return 'Could not get a position'
-        
-    def I_pwr(self):
-        '''
-        Consumable current on a power part, A
-        '''
-        status = status_t()
-        result_status = lib.get_status(self.device_id, byref(status))
-
-        return status.Ipwr * 1e-3
-        
-    def U_pwr(self):
-        '''
-        Consumable voltage on a power part, V
-        '''
-        status = status_t()
-        result_status = lib.get_status(self.device_id, byref(status))
-
-        return status.Upwr * 1e-3
-        
-    def T_proc(self):
-        '''
-        Current temperature of CPU
-        '''
-        status = status_t()
-        result_status = lib.get_status(self.device_id, byref(status))
-
-        return status.CurT / 10
-
-    def close(self):
-        lib.close_device(byref(cast(self.device_id, POINTER(c_int))))
-
 device_classes = (lock_in, TC300, SourceMeter, ZStage, RotStage)
 
 
@@ -881,9 +651,12 @@ def my_animate(i, n):
     else:
         color = 'black'
 
-    data = pd.read_csv(filename_sweep)
-    globals()[f'x{n}'] = data[columns[globals()[f'x{n}_status']]].values
-    globals()[f'y{n}'] = data[columns[globals()[f'y{n}_status']]].values
+    try:
+        data = pd.read_csv(filename_sweep)
+        globals()[f'x{n}'] = data[columns[globals()[f'x{n}_status']]].values
+        globals()[f'y{n}'] = data[columns[globals()[f'y{n}_status']]].values
+    except:
+        pass
     x = globals()[f'x{n}']
     y = globals()[f'y{n}']
     
@@ -3377,6 +3150,15 @@ class Sweeper_write(threading.Thread):
         self.time1 = (float(from_sweep1) - float(to_sweep1)) / float(ratio_sweep1)
         self.filename_sweep = filename_sweep
         self.columns = columns
+        self.sweepable1 = False
+        
+        if hasattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](
+            adress=device_to_sweep1), 'sweepable'):
+            if getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](
+                adress=device_to_sweep1), 'sweepable')[getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](
+                    adress=device_to_sweep1), 'set_options').find(parameter_to_sweep1)]:
+                        self.sweepable1 = True
+                        globals()['value1'] = self.value1
         
         globals()['dataframe'] = []
         
@@ -3404,6 +3186,16 @@ class Sweeper_write(threading.Thread):
                 self.nstep2 = int(abs(self.nstep2))
             except ValueError:
                 self.nstep2 = 1
+                
+            self.sweepable2 = False
+                
+            if hasattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
+                adress=device_to_sweep2), 'sweepable'):
+                if getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
+                    adress=device_to_sweep2), 'sweepable')[getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
+                        adress=device_to_sweep2), 'set_options').find(parameter_to_sweep2)]:
+                            self.sweepable2 = True
+                            globals()['value2'] = self.value2
             
         if self.sweeper_flag3 == True:
             self.device_to_sweep2 = device_to_sweep2
@@ -3438,6 +3230,26 @@ class Sweeper_write(threading.Thread):
                 self.nstep3 = int(abs(self.nstep3))
             except ValueError:
                 self.nstep3 = 1
+                
+            self.sweepable2 = False
+            
+            self.sweepable3 = False
+                
+            if hasattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
+                adress=device_to_sweep2), 'sweepable'):
+                if getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
+                    adress=device_to_sweep2), 'sweepable')[getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
+                        adress=device_to_sweep2), 'set_options').find(parameter_to_sweep2)]:
+                            self.sweepable2 = True
+                            globals()['value2'] = self.value2
+                            
+            if hasattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep3)]](
+                adress=device_to_sweep3), 'sweepable'):
+                if getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep3)]](
+                    adress=device_to_sweep3), 'sweepable')[getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep3)]](
+                        adress=device_to_sweep3), 'set_options').find(parameter_to_sweep3)]:
+                            self.sweepable3 = True
+                            globals()['value3'] = self.value3
             
         print(f'Manual_sweep_flags are {manual_sweep_flags}\nrange1 = [{from_sweep1}:{to_sweep1}), ratio_sweep1 = {ratio_sweep1}\nrange2 = [{from_sweep2}:{to_sweep2}), ratio_sweep2 = {ratio_sweep2}\nrange3 = [{from_sweep3}:{to_sweep3}), ratio_sweep3 = {ratio_sweep3}')
 
@@ -3457,29 +3269,13 @@ class Sweeper_write(threading.Thread):
                 ax2 = np.linspace(self.from_sweep2, self.to_sweep2, self.nstep2)
                 AX1, AX2 = np.meshgrid(ax1, ax2)
                 space = AX1.tolist().copy()
+                self.grid_space = []
                 for i in range(AX1.shape[0]):
                     for j in range(AX1.shape[1]):
                         space[i][j] = (np.array([AX1[i][j], AX2[i][j]]) * self.func(tup = tuple((AX1[i][j], AX2[i][j])), dtup = tuple((self.step1 / 2, self.step2 / 2)), condition_str = self.condition, sweep_dimension = 2)).tolist()
-                space = np.array(space).reshape(-1, 2)
+                        if not np.isnan(space[i][j][0]):
+                            self.grid_space.append(space[i][j])
                 
-                xnans = []
-                ynans = []
-
-                for index, elem in enumerate(np.array(space).T[0]):
-                    if np.isnan(elem):
-                        xnans.append(index)
-                        
-                for index, elem in enumerate(np.array(space).T[1]):
-                    if np.isnan(elem):
-                        ynans.append(index)
-                        
-                x = np.delete(space.T[0], xnans)
-                y = np.delete(space.T[1], ynans)
-                
-                self.grid_space = []
-                
-                for i in range(x.shape[0]):
-                    self.grid_space.append([x[i], y[i]])
                         
             if self.sweeper_flag3 == True: 
                 ax1 = np.linspace(self.from_sweep1, self.to_sweep1, self.nstep1)
@@ -3487,36 +3283,14 @@ class Sweeper_write(threading.Thread):
                 ax3 = np.linspace(self.from_sweep3, self.to_sweep3, self.nstep3)
                 AX1, AX2, AX3 = np.meshgrid(ax1, ax2, ax3)
                 space = AX1.tolist().copy()
+                self.grid_space = []
                 for i in range(AX1.shape[0]):
                     for j in range(AX1.shape[1]):
                         for k in range(AX1.shape[2]):
                             space[i][j][k] = (np.array((AX1[i][j][k], AX2[i][j][k], AX3[i][j][k]))) * self.func(tup = tuple((AX1[i][j][k], AX2[i][j][k], AX3[i][j][k])), dtup = tuple((self.step1 / 2, self.step2 / 2, self.step3 / 3)), condition_str = self.condition, sweep_dimension = 3)
 
-                xnans = []
-                ynans = []
-                znans = []
-
-                for index, elem in enumerate(np.array(space).T[0]):
-                    if np.isnan(elem):
-                        xnans.append(index)
-                        
-                for index, elem in enumerate(np.array(space).T[1]):
-                    if np.isnan(elem):
-                        ynans.append(index)
-                        
-                for index, elem in enumerate(np.array(space).T[2]):
-                    if np.isnan(elem):
-                        znans.append(index)
-                        
-                x = np.delete(space.T[0], xnans)
-                y = np.delete(space.T[1], ynans)
-                z = np.delete(space.T[2], ynans)
-                
-                self.grid_space = []
-                
-                for i in range(x.shape[0]):
-                    self.grid_space.append([x[i], y[i], z[i]])
-
+                            if not np.isnan(space[i][j][k][0]):
+                                self.grid_space.append(space[i][j][k])
 
     def func(self, tup, dtup, condition_str, sweep_dimension):
         '''input: tup - tuple, contains coordinates of phase space of sweep parameters,
@@ -3588,7 +3362,7 @@ class Sweeper_write(threading.Thread):
                         break
                 lhs = condition_str[rows_end:][:indexes[0][0]]
                 rhs = condition_str[rows_end:][indexes[0][0] + len(indexes[0][1]):]
-     
+                
             if sweep_dimension == 2:
                 
                 x_in_lhs = []
@@ -3854,26 +3628,62 @@ class Sweeper_write(threading.Thread):
                     # sweep process here
                     ###################
                     # set 'parameter_to_sweep' to 'value'
-                    if manual_sweep_flags[axis - 1] == 0:
-                        value = getattr(self, 'value' + str(axis))
-                        getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
-                            adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value)
-                        dataframe.append(round(getattr(self, 'value' + str(axis)), 4))
-                        if back == False:
-                            setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) + getattr(self, 'step' + str(axis)))
+                    if getattr(self, f'sweepable{str(axis)}') == False and manual_sweep_flags[axis - 1] == 0:
+                        if manual_sweep_flags[axis - 1] == 0:
+                            value = getattr(self, 'value' + str(axis))
+                            getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
+                                adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value)
+                            dataframe.append(round(getattr(self, 'value' + str(axis)), 4))
+                            if back == False:
+                                setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) + getattr(self, 'step' + str(axis)))
+                            else:
+                                setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) - getattr(self, 'step' + str(axis)))
                         else:
-                            setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) - getattr(self, 'step' + str(axis)))
-                    else:
-                        getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
-                            adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value)
-                        dataframe.append(round(value, 4))
-                    
-                    delay_factor = globals()['delay_factor' + str(axis)]
-                    time.sleep(delay_factor)
-                    ###################
-                    globals()['self'] = self
-                    exec(script, globals())
-                    return 
+                            value = getattr(self, 'value' + str(axis))
+                            getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
+                                adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value)
+                            dataframe.append(round(value, 4))
+                        
+                        delay_factor = globals()['delay_factor' + str(axis)]
+                        time.sleep(delay_factor)
+                        ###################
+                        globals()['self'] = self
+                        exec(script, globals())
+                        return 
+                    elif getattr(self, f'sweepable{str(axis)}') == True and manual_sweep_flags[axis - 1] == 0:
+                        if manual_sweep_flags[axis - 1] == 0:
+                            value = globals()['value' + str(axis)]
+                            if value - getattr(self, 'value' + str(axis)) > getattr(self, 'step' + str(axis)):
+                                if hasattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
+                                    adress=device_to_sweep), 'maxsweep'):
+                                    speed = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
+                                        adress=device_to_sweep), 'maxspeed')[getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
+                                            adress=device_to_sweep), 'set_options').find(parameter_to_sweep)]
+                                else:
+                                    speed = float(globals()['ratio_to_sweep' + str(axis)])
+                                            
+                            else:
+                                speed = float(globals()['ratio_to_sweep' + str(axis)])
+                                
+                            getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
+                                adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
+                            dataframe.append(round(getattr(self, 'value' + str(axis)), 4))
+                            if back == False:
+                                setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) + getattr(self, 'step' + str(axis)))
+                            else:
+                                setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) - getattr(self, 'step' + str(axis)))
+                            
+                            globals()['value' + str(axis)] = getattr(self, 'value' + str(axis))
+                        else:
+                            value = getattr(self, 'value' + str(axis))
+                            speed = float(globals()['ratio_to_sweep' + str(axis)])
+                            getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
+                                adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
+                            dataframe.append(round(value, 4))
+                        globals()['self'] = self
+                        exec(script, globals())
+                        return 
+                        
                 else:
                     try_tozero()
                     
@@ -4614,6 +4424,7 @@ class Graph():
     def create_fig(self, i, figsize, pad = 0, tick_size = 4, label_size = 6, x_pad =0, y_pad = 1, title_size = 8, title_pad = -5):
         globals()[f'fig{i}'] = Figure(figsize, dpi=300)
         globals()[f'ax{i}'] = globals()[f'fig{i}'].add_subplot(111)
+        globals()[f'fig{i}'].subplots_adjust(left = 0.25, bottom = 0.25)
         globals()[f'x_transformation{i}'] = 'x'
         globals()[f'y_transformation{i}'] = 'y'
         globals()[f'x{i}_autoscale'] = True
@@ -4653,9 +4464,9 @@ class Graph():
         try:
             dataframe = pd.read_csv(filename_sweep).tail(1).values.flatten().round(2)
             self.table_dataframe.item(item, values=tuple(dataframe))
-            self.table_dataframe.after(500, self.update_item, item)
+            self.table_dataframe.after(250, self.update_item, item)
         except FileNotFoundError:
-            self.table_dataframe.after(500, self.update_item, item)
+            self.table_dataframe.after(250, self.update_item, item)
 
 interval = 100
 
