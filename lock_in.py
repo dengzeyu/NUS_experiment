@@ -1,13 +1,16 @@
 import pandas as pd
-import time
 import pyvisa as visa
+import numpy as np
+import time
 
 rm = visa.ResourceManager()
 
 # Write command to a device and get it's output
 def get(device, command):
-    # return np.round(np.random.random(1), 1)
-    return device.query(command)
+    '''device = rm.open_resource() where this function gets all devices initiaals such as adress, baud_rate, data_bits and so on; 
+    command = string Standart Commands for Programmable Instruments (SCPI)'''
+    return np.round(np.random.random(1), 1) #to test the program without device it would return random numbers
+    #return device.query(command)
 
 class lock_in():
 
@@ -45,8 +48,7 @@ class lock_in():
 
         self.remote_status_options = ['lock', 'Unlock']
 
-        self.set_options = ['amplitude', 'frequency', 'phase',
-                            'AUX1_output', 'AUX2_output', 'AUX3_output', 'AUX4_output']
+        self.set_options = ['amplitude', 'frequency', 'phase', 'AUX1_output', 'AUX2_output', 'AUX3_output', 'AUX4_output']
 
         self.get_options = ['x', 'y', 'r', 'Θ', 'ch1', 'ch2',
                             'AUX1_input', 'AUX2_input', 'AUX3_input', 'AUX4_input']
@@ -180,10 +182,10 @@ class lock_in():
 
     def data(self):
         try:
-            return [self.x, self.y]
+            return [time.perf_counter(), self.x, self.y]
         except:
             pass
-        # return [time.process_time() - zero_time, float(np.random.randint(10)), float(np.random.randint(10))]
+        # return [time.perf_counter() - zero_time, float(np.random.randint(10)), float(np.random.randint(10))]
 
     def AUX1_input(self):
         try:
@@ -222,6 +224,8 @@ class lock_in():
         self.sr830.write(line)
 
     def set_frequency(self, value=30.0):
+        if value < 1e-3:
+            value = 1e-3
         line = 'FREQ' + str(value)
         self.sr830.write(line)
 
@@ -230,23 +234,57 @@ class lock_in():
         self.sr830.write(line)
 
     def set_amplitude(self, value=0.5):
+        if value < 4e-3:
+            value = 4e-3
         line = 'SLVL' + str(value)
         self.sr830.write(line)
 
-    def set_sensitivity(self, mode=24):
-        line = 'SENS' + str(mode)
+    def set_sensitivity(self, value=24):
+        try: 
+            value = int(value)
+        except:
+            try:
+                value = self.sensitivity_options.index(value)
+            except:
+                value = 24
+        
+        line = 'SENS' + str(value)
         self.sr830.write(line)
 
-    def set_time_constant(self, mode=19):
-        line = 'OFLT' + str(mode)
+    def set_time_constant(self, value=19):
+        try: 
+            value = int(value)
+        except:
+            try:
+                value = self.time_constant_options.index(value)
+            except:
+                value = 219
+        
+        line = 'OFLT' + str(value)
         self.sr830.write(line)
 
-    def set_low_pass_filter_slope(self, mode=3):
-        line = 'OFSL' + str(mode)
+    def set_low_pass_filter_slope(self, value=3):
+        try: 
+            value = int(value)
+        except:
+            try:
+                value = self.low_pass_filter_slope_options.index(value)
+            except:
+                value = 3
+        
+        line = 'OFSL' + str(value)
         self.sr830.write(line)
 
-    def set_synchronous_filter_status(self, mode=0):
-        line = 'SYNC' + str(mode)
+    def set_synchronous_filter_status(self, value=0):
+        try: 
+            value = int(value)
+        except:
+            try:
+                value = self.synchronous_filter_status_options.index(value)
+            except:
+                value = 0
+        
+        line = 'SYNC' + str(value)
         self.sr830.write(line)
 
     def set_remote(self, mode=1):

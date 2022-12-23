@@ -23,6 +23,8 @@ import pandas as pd
 import matplotlib
 import numpy as np
 
+from lock_in import lock_in
+from TC300 import TC300
 from ZStage import ZStage
 from RotStage import RotStage
 
@@ -191,269 +193,6 @@ class Time():
     def set_Time(self, value = None):
         return
 
-class lock_in():
-
-    def __init__(self, adress='GPIB0::3::INSTR'):
-
-        self.sr830 = rm.open_resource(
-            adress, write_termination='\n', read_termination='\n')
-
-        self.modes_ch1_options = ['X', 'R', 'X noise', 'AUX in 1', 'AUX in 2']
-
-        self.modes_ch2_options = ['Y', 'Θ', 'Y noise', 'AUX in 3', 'AUX in 4']
-
-        self.sensitivity_options = ['2 nV/fA', '5 nV/fA', '10 nV/fA',
-                                    '20 nV/fA', '50 nV/fA', '100 nV/fA',
-                                    '200 nV/fA', '500 nV/fA', '1 μV/pA',
-                                    '2 μV/pA', '5 μV/pA', '10 μV/pA',
-                                    '20 μV/pA', '50 μV/pA', '100 μV/pA',
-                                    '200 μV/pA', '500 μV/pA',
-                                    '1 mV/nA', '2 mV/nA', '5 mV/nA', '10 mV/nA',
-                                    '20 mV/nA', '50 mV/nA', '100 mV/nA',
-                                    '200 mV/nA', '500 mV/nA', '1 V/μA']
-
-        self.time_constant_options = ['10 μs', '30 μs', '100 μs',
-                                      '300 μs', '1 ms', '3 ms',
-                                      '10 ms', '30 ms', '100 ms',
-                                      '300 ms', '1 s', '3 s',
-                                      '10 s', '30 s', '100 s',
-                                      '300 s', '1 ks', '3 ks',
-                                      '10 ks', '30 ks']
-
-        self.low_pass_filter_slope_options = ['6 dB/oct', '12 dB/oct',
-                                              '18 dB/oct', '24 dB/oct']
-
-        self.synchronous_filter_status_options = ['On', 'Off']
-
-        self.remote_status_options = ['lock', 'Unlock']
-
-        self.set_options = ['amplitude', 'frequency', 'phase', 'AUX1_output', 'AUX2_output', 'AUX3_output', 'AUX4_output']
-
-        self.get_options = ['x', 'y', 'r', 'Θ', 'ch1', 'ch2',
-                            'AUX1_input', 'AUX2_input', 'AUX3_input', 'AUX4_input']
-
-    def IDN(self):
-        answer = get(self.sr830, '*IDN?')
-        return answer
-
-    def x(self):
-        try:
-            answer = float(get(self.sr830, 'OUTP?1'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OUTP?1'))
-        if str(answer)[-4:] == 'e-00' or str(answer)[-4:] == 'e+00':
-            answer = float(get(self.sr830, 'OUTP?1'))
-        return answer
-
-    def y(self):
-        try:
-            answer = float(get(self.sr830, 'OUTP?2'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OUTP?2'))
-        if str(answer)[-4:] == 'e-00' or str(answer)[-4:] == 'e+00':
-            answer = float(get(self.sr830, 'OUTP?2'))
-        return answer
-
-    def r(self):
-        try:
-            answer = float(get(self.sr830, 'OUTP?3'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OUTP?3'))
-        if str(answer)[-4:] == 'e-00' or str(answer)[-4:] == 'e+00':
-            answer = float(get(self.sr830, 'OUTP?3'))
-        return answer
-
-    def Θ(self):
-        try:
-            answer = float(get(self.sr830, 'OUTP?4'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OUTP?4'))
-        return answer
-
-    def frequency(self):
-        try:
-            answer = float(get(self.sr830, 'FREQ?'))
-        except ValueError:
-            answer = float(get(self.sr830, 'FREQ?'))
-        return answer
-
-    def phase(self):
-        try:
-            answer = float(get(self.sr830, 'PHAS?'))
-        except ValueError:
-            answer = float(get(self.sr830, 'PHAS?'))
-        return answer
-
-    def amplitude(self):
-        try:
-            answer = float(get(self.sr830, 'SLVL?'))
-        except ValueError:
-            answer = float(get(self.sr830, 'SLVL?'))
-        return answer
-
-    def sensitivity(self):
-        try:
-            answer = float(get(self.sr830, 'SENS?'))
-        except ValueError:
-            answer = float(get(self.sr830, 'SENS?'))
-        return answer
-
-    def time_constant(self):
-        try:
-            answer = int(get(self.sr830, 'OFLT?'))
-        except ValueError:
-            answer = int(get(self.sr830, 'OFLT?'))
-        return answer
-
-    def low_pass_filter_slope(self):
-        try:
-            answer = int(get(self.sr830, 'OFSL?'))
-        except ValueError:
-            answer = int(get(self.sr830, 'OFSL?'))
-        return answer
-
-    def synchronous_filter_status(self):
-        try:
-            answer = int(get(self.sr830, 'SYNC?'))
-        except ValueError:
-            answer = int(get(self.sr830, 'SYNC?'))
-        return answer
-
-    def remote(self):
-        try:
-            answer = int(get(self.sr830, 'OVRM?'))
-        except ValueError:
-            answer = int(get(self.sr830, 'OVRM?'))
-        return answer
-
-    def ch1(self):
-        try:
-            answer = float(get(self.sr830, 'OUTR?1'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OUTR?1'))
-        if str(answer)[-4:] == 'e-00' or str(answer)[-4:] == 'e+00':
-            answer = float(get(self.sr830, 'OUTR?1'))
-        return answer
-
-    def ch2(self):
-        try:
-            answer = float(get(self.sr830, 'OUTR?2'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OUTR?2'))
-        if str(answer)[-4:] == 'e-00' or str(answer)[-4:] == 'e+00':
-            answer = float(get(self.sr830, 'OUTR?2'))
-        return answer
-
-    def parameter(self):
-        dataframe = pd.DataFrame({'Sensitivity': [self.sensitivity()],
-                                  'Time_constant': [self.time_constant()],
-                                  'Low_pass_filter_slope': [self.low_pass_filter_slope()],
-                                  'Synchronous_filter_status': [self.synchronous_filter_status()],
-                                  'Remote': [self.remote()],
-                                  'Amplitude': [self.amplitude()],
-                                  'Frequency': [self.frequency()],
-                                  'Phase': [self.phase()]})
-        return dataframe
-
-    def channels(self):
-        dataframe = pd.DataFrame({'Ch1': [self.ch1()], 'Ch2': [self.ch2()]})
-        return dataframe
-
-    def data(self):
-        try:
-            return [time.perf_counter() - zero_time, self.x, self.y]
-        except:
-            pass
-        # return [time.perf_counter() - zero_time, float(np.random.randint(10)), float(np.random.randint(10))]
-
-    def AUX1_input(self):
-        try:
-            answer = float(get(self.sr830, 'OAUX?1'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OAUX?1'))
-        return answer
-
-    def AUX2_input(self):
-        try:
-            answer = float(get(self.sr830, 'OAUX?2'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OAUX?2'))
-        return answer
-
-    def AUX3_input(self):
-        try:
-            answer = float(get(self.sr830, 'OAUX?3'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OAUX?3'))
-        return answer
-
-    def AUX4_input(self):
-        try:
-            answer = float(get(self.sr830, 'OAUX?4'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OAUX?4'))
-        return answer
-
-    def set_ch1_mode(self, mode=0):
-        line = 'DDEF1,' + str(mode) + ',0'
-        self.sr830.write(line)
-
-    def set_ch2_mode(self, mode=0):
-        line = 'DDEF2,' + str(mode) + ',0'
-        self.sr830.write(line)
-
-    def set_frequency(self, value=30.0):
-        if value < 1e-3:
-            value = 1e-3
-        line = 'FREQ' + str(value)
-        self.sr830.write(line)
-
-    def set_phase(self, value=0.0):
-        line = 'PHAS' + str(value)
-        self.sr830.write(line)
-
-    def set_amplitude(self, value=0.5):
-        if value < 4e-3:
-            value = 4e-3
-        line = 'SLVL' + str(value)
-        self.sr830.write(line)
-
-    def set_sensitivity(self, mode=24):
-        line = 'SENS' + str(mode)
-        self.sr830.write(line)
-
-    def set_time_constant(self, mode=19):
-        line = 'OFLT' + str(mode)
-        self.sr830.write(line)
-
-    def set_low_pass_filter_slope(self, mode=3):
-        line = 'OFSL' + str(mode)
-        self.sr830.write(line)
-
-    def set_synchronous_filter_status(self, mode=0):
-        line = 'SYNC' + str(mode)
-        self.sr830.write(line)
-
-    def set_remote(self, mode=1):
-        line = 'OVRM' + str(mode)
-        self.sr830.write(line)
-
-    def set_AUX1_output(self, value=0):
-        line = 'AUXV1,' + str(value)
-        self.sr830.write(line)
-
-    def set_AUX2_output(self, value=0):
-        line = 'AUXV2,' + str(value)
-        self.sr830.write(line)
-
-    def set_AUX3_output(self, value=0):
-        line = 'AUXV3,' + str(value)
-        self.sr830.write(line)
-
-    def set_AUX4_output(self, value=0):
-        line = 'AUXV4,' + str(value)
-        self.sr830.write(line)
-
 class SourceMeter():
     
     def __init__(self, adress = 'GPIB0::4::INSTR'):
@@ -494,79 +233,7 @@ class SourceMeter():
         self.sm.write(':SOUR:CURR ' + str(value))
         
     def set_V(self, value = 0):
-        self.sm.write(':SOUR:VOLT ' + str(value))
-
-class TC300():
-
-    def __init__(self, adress='ASRL3::INSTR'):
-        self.tc = rm.open_resource(adress, baud_rate=115200,
-                                   data_bits=8, parity=constants.VI_ASRL_PAR_NONE,
-                                   stop_bits=constants.VI_ASRL_STOP_ONE,
-                                   flow_control=constants.VI_ASRL_FLOW_NONE,
-                                   write_termination='\r', read_termination='\r')
-
-        self.set_options = {'T1', 'T2'}
-
-        self.get_options = {'t1', 't2'}
-        
-    def IDN(self):
-        return(get(self.tc, 'IDN?')[2:])
-
-    def t1(self):
-        # Get the CH1 target temperature; returned value is the actual temperature in °C
-        value_str = get(self.tc, 'TACT1?')
-        value_float = re.findall(r'\d*\.\d+|\d+', value_str)
-        try:
-            value_float = [float(i) for i in value_float][0]
-        except IndexError:
-            try:
-                value_str = get(self.tc, 'TACT1?')
-                value_float = re.findall(r'\d*\.\d+|\d+', value_str)
-                value_float = [float(i) for i in value_float][0]
-            except IndexError:
-                value_float = np.nan
-        return value_float
-
-    def set_T1(self, value=20):
-        # Set the CH1 target temperature to value/10 °C, the range is defined by
-        # TMIN1 and TMAX1, the setting resolution of value is 1.
-        self.tc.write('EN1=1')
-        self.tc.write('TSET1=' + str(int(value * 10)))
-
-    def set_T1_from(self, t1_from=0):
-        # Set the CH1 Target Temperature Min value,
-        # (Range: -200 to TMAX1°C, with a resolution of 1°C).
-        self.tc.write('TMIN1=' + str(t1_from))
-
-    def set_T1_to(self, t1_to=30):
-        # Set the CH1 Target Temperature Max value, n equals value
-        # TMIN1 to 400°C, with a resolution of 1°C).
-        self.tc.write('T1MAX=' + str(t1_to))
-
-    def t2(self):
-        # Get the CH2 target temperature; returned value is the actual temperature in °C
-        value_str = get(self.tc, 'TACT2?')
-        if value_str == '':
-            value_str = get(self.tc, 'TACT2?')
-        value_float = re.findall(r'\d*\.\d+|\d+', value_str)
-        value_float = [float(i) for i in value_float]
-        return(value_float[0])
-
-    def set_T2(self, value=20):
-        # Set the CH2 target temperature to value/10 °C, the range is defined by
-        # TMIN1 and TMAX1, the setting resolution of value is 1.
-        self.tc.write('EN2=1')
-        self.tc.write('TSET2=' + str(int(value * 10)))
-
-    def set_T2_from(self, t2_from=0):
-        # Set the CH2 Target Temperature Min value,
-        # (Range: -200 to TMAX2°C, with a resolution of 1°C).
-        self.tc.write('TMIN1=' + str(t2_from))
-
-    def set_T2_to(self, t2_to=20):
-        # Set the CH2 Target Temperature Max value, n equals value
-        # TMIN1 to 400°C, with a resolution of 1°C).
-        self.tc.write('T1MAX=' + str(t2_to))
+        self.sm.write(':SOUR:VOLT ' + str(value)) 
 
 device_classes = (lock_in, TC300, SourceMeter, ZStage, RotStage)
 
@@ -923,10 +590,15 @@ class SetGet(tk.Frame):
         i = 1
         class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
         if class_of_sweeper_device != 'Not a class':
-            globals()[f'self.sweep_options{i}']['value'] = getattr(
-                globals()[class_of_sweeper_device](), 'set_options')
-            globals()[f'self.sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
-            globals()[f'self.sweep_options{i}'].after(interval)
+            try:
+                globals()[f'self.sweep_options{i}']['value'] = getattr(
+                    globals()[class_of_sweeper_device](), 'set_options')
+                globals()[f'self.sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
+                globals()[f'self.sweep_options{i}'].after(interval)
+            except:
+                globals()[f'self.sweep_options{i}'].current(0)
+                globals()[f'self.sweep_options{i}'].after(interval)
+                
         else:
             globals()[f'self.sweep_options{i}']['value'] = ['']
             globals()[f'self.sweep_options{i}'].current(0)
@@ -965,10 +637,14 @@ class SetGet(tk.Frame):
         i = 2
         class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
         if class_of_sweeper_device != 'Not a class':
-            globals()[f'self.sweep_options{i}']['value'] = getattr(
-                globals()[class_of_sweeper_device](), 'set_options')
-            globals()[f'self.sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
-            globals()[f'self.sweep_options{i}'].after(interval)
+            try:
+                globals()[f'self.sweep_options{i}']['value'] = getattr(
+                    globals()[class_of_sweeper_device](), 'set_options')
+                globals()[f'self.sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
+                globals()[f'self.sweep_options{i}'].after(interval)
+            except:
+                globals()[f'self.sweep_options{i}'].current(0)
+                globals()[f'self.sweep_options{i}'].after(interval)
         else:
             globals()[f'self.sweep_options{i}']['value'] = ['']
             globals()[f'self.sweep_options{i}'].current(0)
@@ -1007,10 +683,14 @@ class SetGet(tk.Frame):
         i = 3
         class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
         if class_of_sweeper_device != 'Not a class':
-            globals()[f'self.sweep_options{i}']['value'] = getattr(
-                globals()[class_of_sweeper_device](), 'set_options')
-            globals()[f'self.sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
-            globals()[f'self.sweep_options{i}'].after(interval)
+            try:
+                globals()[f'self.sweep_options{i}']['value'] = getattr(
+                    globals()[class_of_sweeper_device](), 'set_options')
+                globals()[f'self.sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
+                globals()[f'self.sweep_options{i}'].after(interval)
+            except:
+                globals()[f'self.sweep_options{i}'].current(0)
+                globals()[f'self.sweep_options{i}'].after(interval)
         else:
             globals()[f'self.sweep_options{i}']['value'] = ['']
             globals()[f'self.sweep_options{i}'].current(0)
@@ -1049,10 +729,14 @@ class SetGet(tk.Frame):
         i = 4
         class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
         if class_of_sweeper_device != 'Not a class':
-            globals()[f'self.sweep_options{i}']['value'] = getattr(
-                globals()[class_of_sweeper_device](), 'set_options')
-            globals()[f'self.sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
-            globals()[f'self.sweep_options{i}'].after(interval)
+            try:
+                globals()[f'self.sweep_options{i}']['value'] = getattr(
+                    globals()[class_of_sweeper_device](), 'set_options')
+                globals()[f'self.sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
+                globals()[f'self.sweep_options{i}'].after(interval)
+            except:
+                globals()[f'self.sweep_options{i}'].current(0)
+                globals()[f'self.sweep_options{i}'].after(interval)
         else:
             globals()[f'self.sweep_options{i}']['value'] = ['']
             globals()[f'self.sweep_options{i}'].current(0)
@@ -1091,10 +775,14 @@ class SetGet(tk.Frame):
         i = 5
         class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
         if class_of_sweeper_device != 'Not a class':
-            globals()[f'self.sweep_options{i}']['value'] = getattr(
-                globals()[class_of_sweeper_device](), 'set_options')
-            globals()[f'self.sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
-            globals()[f'self.sweep_options{i}'].after(interval)
+            try:
+                globals()[f'self.sweep_options{i}']['value'] = getattr(
+                    globals()[class_of_sweeper_device](), 'set_options')
+                globals()[f'self.sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
+                globals()[f'self.sweep_options{i}'].after(interval)
+            except:
+                globals()[f'self.sweep_options{i}'].current(0)
+                globals()[f'self.sweep_options{i}'].after(interval)
         else:
             globals()[f'self.sweep_options{i}']['value'] = ['']
             globals()[f'self.sweep_options{i}'].current(0)
@@ -1133,10 +821,14 @@ class SetGet(tk.Frame):
         i = 6
         class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
         if class_of_sweeper_device != 'Not a class':
-            globals()[f'self.sweep_options{i}']['value'] = getattr(
-                globals()[class_of_sweeper_device](), 'set_options')
-            globals()[f'self.sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
-            globals()[f'self.sweep_options{i}'].after(interval)
+            try:
+                globals()[f'self.sweep_options{i}']['value'] = getattr(
+                    globals()[class_of_sweeper_device](), 'set_options')
+                globals()[f'self.sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
+                globals()[f'self.sweep_options{i}'].after(interval)
+            except:
+                globals()[f'self.sweep_options{i}'].current(0)
+                globals()[f'self.sweep_options{i}'].after(interval)
         else:
             globals()[f'self.sweep_options{i}']['value'] = ['']
             globals()[f'self.sweep_options{i}'].current(0)
@@ -1263,7 +955,35 @@ class SetGet(tk.Frame):
             
             self.preset.loc[0, 'num_widgets'] = self.num_widgets
             self.preset.to_csv(globals()['setget_path'], index = False)
+          
+    def animate(self, i):
+        
+        global filename_setget
+        
+        if hasattr(self, 'cur_heading'):
+        
+            color = 'darkblue'
             
+            ax = globals()[f'ani_setget{self.num_tw}']
+            
+            data = pd.read_csv(filename_setget)
+            data = data.tail(len(data))        
+            t = data['Time'].values
+            if len(t) == 0:
+                t = []
+            y = data[self.cur_heading].values
+            if len(y) == 0:
+                y = []
+            xlabel = ax.get_xlabel()
+            ylabel = ax.get_ylabel()
+            title = ax.get_title()
+            ax.clear()
+            ax.set_xlabel(xlabel, fontsize = 8)
+            ax.set_ylabel(ylabel, fontsize = 8)
+            ax.tick_params(axis='both', which='major', labelsize=8)
+            ax.set_title(title, fontsize = 8, pad = -5)
+            ax.plot(t, y, '-', color = color, lw = 1)
+          
     def get_read_parameters(self):
         global setget_flag
         global filename_setget
@@ -1274,30 +994,6 @@ class SetGet(tk.Frame):
                     return key
                 
         def heading_chosed(heading):
-            
-            def animate(i, ax):
-                
-                global filename_setget
-                
-                color = 'darkblue'
-                
-                data = pd.read_csv(filename_setget)
-                data = data.tail(len(data))        
-                t = data['Time'].values
-                if len(t) == 0:
-                    t = []
-                y = data[heading].values
-                if len(y) == 0:
-                    y = []
-                xlabel = ax.get_xlabel()
-                ylabel = ax.get_ylabel()
-                title = ax.get_title()
-                ax.clear()
-                ax.set_xlabel(xlabel, fontsize = 8)
-                ax.set_ylabel(ylabel, fontsize = 8)
-                ax.tick_params(axis='both', which='major', labelsize=8)
-                ax.set_title(title, fontsize = 8, pad = -5)
-                ax.plot(t, y, '-', color = color, lw = 1)
             
             self.cur_heading = heading
             globals()[f'self.tw{self.num_tw}'] = tw = tk.Toplevel(self)
@@ -1316,7 +1012,7 @@ class SetGet(tk.Frame):
             globals()[f'self.plot_setget{self.num_tw}'].get_tk_widget().place(relx=0, rely=0)
             
             globals()[f'ani_setget{self.num_tw}'] = animation.FuncAnimation(
-                fig = globals()[f'fig_setget{self.num_tw}'], func = lambda i: animate(i, globals()[f'ax_setget{self.num_tw - 1}']), 
+                fig = globals()[f'fig_setget{self.num_tw}'], func = self.animate, 
                 interval=100, blit = False)
             
             self.num_tw += 1
@@ -4206,7 +3902,7 @@ class Sweeper_write(threading.Thread):
                     except:
                         dataframe.append(None)
                         
-                time.sleep(0.1)
+                time.sleep(0.2)
                 
                 with open(filename_setget, 'a') as f_object:
                     try:
