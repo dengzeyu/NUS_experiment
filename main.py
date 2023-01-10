@@ -24,6 +24,7 @@ import matplotlib
 import numpy as np
 
 from lock_in import lock_in
+from SourceMeter import SourceMeter
 from TC300 import TC300
 from ZStage import ZStage
 from RotStage import RotStage
@@ -193,51 +194,9 @@ class Time():
     def set_Time(self, value = None):
         return
 
-class SourceMeter():
-    
-    def __init__(self, adress = 'GPIB0::4::INSTR'):
-        self.sm = rm.open_resource(
-            adress, write_termination='\n', read_termination='\n')
-        
-        self.sm.write(':SOUR:CLE:AUTO OFF') # auto on/off
-        
-        self.set_options = {'V', 'I'}
-        
-        self.get_options = {'v', 'i', 'r'}
-        
-    def IDN(self):
-        return get(self.sm, '*IDN?')
-    
-    def v(self):
-        try:
-            answer = get(self.sm, ':MEAS:VOLT?').split(',')[0]
-        except ValueError:
-            answer = get(self.sm, ':MEAS:VOLT?').split(',')[0]
-        return answer
-        
-    def i(self):
-        try:
-            answer = get(self.sm, ':MEAS:CURR?').split(',')[1]
-        except ValueError:
-            answer = get(self.sm, ':MEAS:CURR?').split(',')[1]
-        return answer
-        
-    def r(self):
-        try:
-            answer = get(self.sm, ':MEAS:RES?').split(',')[2]
-        except ValueError:
-            answer = get(self.sm, ':MEAS:RES?').split(',')[2]
-        return answer
-    
-    def set_I(self, value = 0):
-        self.sm.write(':SOUR:CURR ' + str(value))
-        
-    def set_V(self, value = 0):
-        self.sm.write(':SOUR:VOLT ' + str(value)) 
-
 device_classes = (lock_in, TC300, SourceMeter, ZStage, RotStage)
 
-
+'''
 def devices_list():
     # queries each device IDN?
     list_of_devices = []
@@ -279,16 +238,13 @@ def devices_list():
 
     return list_of_devices, types_of_devices
 
+'''
 if len(list_of_devices) == 0:
     list_of_devices = ['']
     
-try:
-    names_of_devices, types_of_devices = devices_list()
-    print(names_of_devices, types_of_devices)
-except:
-    types_of_devices = []
-    for i in range (len(list_of_devices)):
-        types_of_devices.append('Not a class')
+types_of_devices = []
+for i in range (len(list_of_devices)):
+    types_of_devices.append('Not a class')
         
 list_of_devices.insert(0, 'Time')
 types_of_devices.insert(0, 'Time')
@@ -3515,9 +3471,9 @@ class Sweeper_write(threading.Thread):
             adress=device_to_sweep1), 'sweepable'):
             if getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](
                 adress=device_to_sweep1), 'sweepable')[getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](
-                    adress=device_to_sweep1), 'set_options').find(parameter_to_sweep1)]:
+                    adress=device_to_sweep1), 'set_options').index(parameter_to_sweep1)]:
                         self.sweepable1 = True
-                        globals()['value1'] = self.value1
+                        globals()['upcoming_value1'] = self.value1
         
         globals()['dataframe'] = []
         
@@ -3552,9 +3508,9 @@ class Sweeper_write(threading.Thread):
                 adress=device_to_sweep2), 'sweepable'):
                 if getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
                     adress=device_to_sweep2), 'sweepable')[getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
-                        adress=device_to_sweep2), 'set_options').find(parameter_to_sweep2)]:
+                        adress=device_to_sweep2), 'set_options').index(parameter_to_sweep2)]:
                             self.sweepable2 = True
-                            globals()['value2'] = self.value2
+                            globals()['upcoming_value2'] = self.value2
             
         if self.sweeper_flag3 == True:
             self.device_to_sweep2 = device_to_sweep2
@@ -3598,17 +3554,17 @@ class Sweeper_write(threading.Thread):
                 adress=device_to_sweep2), 'sweepable'):
                 if getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
                     adress=device_to_sweep2), 'sweepable')[getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
-                        adress=device_to_sweep2), 'set_options').find(parameter_to_sweep2)]:
+                        adress=device_to_sweep2), 'set_options').index(parameter_to_sweep2)]:
                             self.sweepable2 = True
-                            globals()['value2'] = self.value2
+                            globals()['upcoming_value2'] = self.value2
                             
             if hasattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep3)]](
                 adress=device_to_sweep3), 'sweepable'):
                 if getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep3)]](
                     adress=device_to_sweep3), 'sweepable')[getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep3)]](
-                        adress=device_to_sweep3), 'set_options').find(parameter_to_sweep3)]:
+                        adress=device_to_sweep3), 'set_options').index(parameter_to_sweep3)]:
                             self.sweepable3 = True
-                            globals()['value3'] = self.value3
+                            globals()['upcoming_value3'] = self.value3
             
         print(f'Manual_sweep_flags are {manual_sweep_flags}\nrange1 = [{from_sweep1}:{to_sweep1}), ratio_sweep1 = {ratio_sweep1}\nrange2 = [{from_sweep2}:{to_sweep2}), ratio_sweep2 = {ratio_sweep2}\nrange3 = [{from_sweep3}:{to_sweep3}), ratio_sweep3 = {ratio_sweep3}')
 
@@ -3650,6 +3606,7 @@ class Sweeper_write(threading.Thread):
 
                             if not np.isnan(space[i][j][k][0]):
                                 self.grid_space.append(space[i][j][k])
+                                
 
     def func(self, tup, dtup, condition_str, sweep_dimension):
         '''input: tup - tuple, contains coordinates of phase space of sweep parameters,
@@ -3845,14 +3802,17 @@ class Sweeper_write(threading.Thread):
         Grid size defined by dgrid_area which is tuple'''
         
         if grid_area == True:
+            print('Grid area is True')
             return True
         else:
             def includance(point, reference, dgrid_area, sweep_dimension = 2):
                 '''equity with tolerance'''
                 if sweep_dimension == 2:
-                    return abs(point[0] - reference[0]) <= np.sqrt(dgrid_area[0]**2 + dgrid_area[1]**2) and abs(point[1] - reference[1]) <= np.sqrt(dgrid_area[0]**2 + dgrid_area[1]**2)
+                    return abs(point[0] - reference[0]) <= dgrid_area[0] and abs(point[1] - reference[1]) <= dgrid_area[1]
                 if sweep_dimension == 3:
-                    return abs(point[0] - reference[0]) <= np.sqrt(dgrid_area[0]**2 + dgrid_area[1]**2 + dgrid_area[2]**2) and abs(point[1] - reference[1]) <= np.sqrt(dgrid_area[0]**2 + dgrid_area[1]**2 + dgrid_area[2]**2) and abs(point[2] - reference[2]) <= np.sqrt(dgrid_area[0]**2 + dgrid_area[1]**2 + dgrid_area[2]**2)
+                    print(f'Point - {point}')
+                    print(f'Reference - {reference}')
+                    return abs(point[0] - reference[0]) <= dgrid_area[0] and abs(point[1] - reference[1]) <= dgrid_area[1] and abs(point[2] - reference[2]) <= dgrid_area[2]
             
             if sweep_dimension == 2:
                 for reference in grid_area:
@@ -4019,7 +3979,7 @@ class Sweeper_write(threading.Thread):
                     # sweep process here
                     ###################
                     # set 'parameter_to_sweep' to 'value'
-                    if getattr(self, f'sweepable{str(axis)}') == False and manual_sweep_flags[axis - 1] == 0:
+                    if getattr(self, f'sweepable{str(axis)}') == False:
                         if manual_sweep_flags[axis - 1] == 0:
                             value = getattr(self, 'value' + str(axis))
                             getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
@@ -4041,9 +4001,9 @@ class Sweeper_write(threading.Thread):
                         globals()['self'] = self
                         exec(script, globals())
                         return 
-                    elif getattr(self, f'sweepable{str(axis)}') == True and manual_sweep_flags[axis - 1] == 0:
+                    elif getattr(self, f'sweepable{str(axis)}') == True:
                         if manual_sweep_flags[axis - 1] == 0:
-                            value = globals()['value' + str(axis)]
+                            value = globals()['upcoming_value' + str(axis)]
                             if value - getattr(self, 'value' + str(axis)) > getattr(self, 'step' + str(axis)):
                                 if hasattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
                                     adress=device_to_sweep), 'maxsweep'):
@@ -4051,10 +4011,10 @@ class Sweeper_write(threading.Thread):
                                         adress=device_to_sweep), 'maxspeed')[getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
                                             adress=device_to_sweep), 'set_options').find(parameter_to_sweep)]
                                 else:
-                                    speed = float(globals()['ratio_to_sweep' + str(axis)])
+                                    speed = float(globals()['ratio_sweep' + str(axis)])
                                             
                             else:
-                                speed = float(globals()['ratio_to_sweep' + str(axis)])
+                                speed = float(globals()['ratio_sweep' + str(axis)])
                                 
                             getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
                                 adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
@@ -4064,10 +4024,10 @@ class Sweeper_write(threading.Thread):
                             else:
                                 setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) - getattr(self, 'step' + str(axis)))
                             
-                            globals()['value' + str(axis)] = getattr(self, 'value' + str(axis))
+                            globals()['upcoming_value' + str(axis)] = getattr(self, 'value' + str(axis))
                         else:
                             value = getattr(self, 'value' + str(axis))
-                            speed = float(globals()['ratio_to_sweep' + str(axis)])
+                            speed = float(globals()['ratio_sweep' + str(axis)])
                             getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
                                 adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
                             dataframe.append(round(value, 4))
@@ -4217,7 +4177,7 @@ class Sweeper_write(threading.Thread):
                 tofile() 
             else:
                 point, dgrid_area = current_point()
-                if self.isinarea(point = point, grid_area = self.grid_space, dgrid_area = dgrid_area):
+                if self.isinarea(point = point, grid_area = self.grid_space, dgrid_area = dgrid_area, sweep_dimension = len(manual_sweep_flags)):
                     if len(manual_sweep_flags) == 2:
                         update_dataframe()
                         step(2, value2)
