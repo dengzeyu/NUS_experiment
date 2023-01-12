@@ -507,6 +507,8 @@ class SetGet(tk.Frame):
         self.sweep_options6_current = int(self.preset['sweep_options6'].values[0])
         self.set6_current = str(self.preset['set6'].values[0])
         
+        self.dict_num_heading = {}
+        
         button_home = tk.Button(self, text='Back to Home',
                                  command=lambda: self.go_home(controller))
         button_home.pack()
@@ -968,33 +970,58 @@ class SetGet(tk.Frame):
             self.preset.loc[0, 'num_widgets'] = self.num_widgets
             self.preset.to_csv(globals()['setget_path'], index = False)
           
-    def animate(self, i):
+    def animate(self, i, heading):
         
         global filename_setget
         
-        if hasattr(self, 'cur_heading'):
+        color = 'darkblue'
         
-            color = 'darkblue'
-            
-            ax = globals()[f'ani_setget{self.num_tw}']
-            
-            data = pd.read_csv(filename_setget)
-            data = data.tail(len(data))        
-            t = data['Time'].values
-            if len(t) == 0:
-                t = []
-            y = data[self.cur_heading].values
-            if len(y) == 0:
-                y = []
-            xlabel = ax.get_xlabel()
-            ylabel = ax.get_ylabel()
-            title = ax.get_title()
-            ax.clear()
-            ax.set_xlabel(xlabel, fontsize = 8)
-            ax.set_ylabel(ylabel, fontsize = 8)
-            ax.tick_params(axis='both', which='major', labelsize=8)
-            ax.set_title(title, fontsize = 8, pad = -5)
-            ax.plot(t, y, '-', color = color, lw = 1)
+        ax = globals()[f'ax_setget{self.dict_num_heading[heading]}']
+        
+        data = pd.read_csv(filename_setget)
+        data = data.tail(len(data))        
+        t = data['Time'].values
+        if len(t) == 0:
+            t = []
+        y = data[heading].values
+        if len(y) == 0:
+            y = []
+        xlabel = ax.get_xlabel()
+        ylabel = ax.get_ylabel()
+        title = ax.get_title()
+        ax.clear()
+        ax.set_xlabel(xlabel, fontsize = 8)
+        ax.set_ylabel(ylabel, fontsize = 8)
+        ax.tick_params(axis='both', which='major', labelsize=8)
+        ax.set_title(title, fontsize = 8, pad = -5)
+        ax.plot(t, y, '-', color = color, lw = 1)
+          
+    def heading_chosed(self, event):
+        global parameters_to_read 
+        
+        self.current_heading = parameters_to_read[int(self.table_dataframe.identify_column(event.x)[1:]) - 2]
+        
+        globals()[f'self.tw{self.num_tw}'] = tw = tk.Toplevel(self)
+        
+        tw.geometry("800x400")
+        tw.title("Graph")
+        
+        globals()[f'fig_setget{self.num_tw}'] = Figure((2.4, 1.4), dpi=300)
+        globals()[f'ax_setget{self.num_tw}'] = globals()[f'fig_setget{self.num_tw}'].add_subplot(111)
+        globals()[f'fig_setget{self.num_tw}'].subplots_adjust(left = 0.25, bottom = 0.3)
+        globals()[f'ax_setget{self.num_tw}'].set_xlabel('t, s')
+        globals()[f'ax_setget{self.num_tw}'].set_title(self.current_heading)
+        
+        globals()[f'self.plot_setget{self.num_tw}'] = FigureCanvasTkAgg(globals()[f'fig_setget{self.num_tw}'], tw)
+        globals()[f'self.plot_setget{self.num_tw}'].draw()
+        globals()[f'self.plot_setget{self.num_tw}'].get_tk_widget().place(relx=0, rely=0)
+        
+        globals()[f'ani_setget{self.num_tw}'] = animation.FuncAnimation(
+            fig = globals()[f'fig_setget{self.num_tw}'], func = lambda x: self.animate(x, self.current_heading), 
+            interval=100, blit = False)
+        
+        self.dict_num_heading[self.current_heading] = self.num_tw
+        self.num_tw += 1
           
     def get_read_parameters(self):
         global setget_flag
@@ -1004,30 +1031,6 @@ class SetGet(tk.Frame):
             for key, value in my_dict.items():
                 if val == value:
                     return key
-                
-        def heading_chosed(heading):
-            
-            self.cur_heading = heading
-            globals()[f'self.tw{self.num_tw}'] = tw = tk.Toplevel(self)
-            
-            tw.geometry("800x400")
-            tw.title("Graph")
-            
-            globals()[f'fig_setget{self.num_tw}'] = Figure((2.4, 1.4), dpi=300)
-            globals()[f'ax_setget{self.num_tw}'] = globals()[f'fig_setget{self.num_tw}'].add_subplot(111)
-            globals()[f'fig_setget{self.num_tw}'].subplots_adjust(left = 0.25, bottom = 0.3)
-            globals()[f'ax_setget{self.num_tw}'].set_xlabel('t, s')
-            globals()[f'ax_setget{self.num_tw}'].set_title(heading)
-            
-            globals()[f'self.plot_setget{self.num_tw}'] = FigureCanvasTkAgg(globals()[f'fig_setget{self.num_tw}'], tw)
-            globals()[f'self.plot_setget{self.num_tw}'].draw()
-            globals()[f'self.plot_setget{self.num_tw}'].get_tk_widget().place(relx=0, rely=0)
-            
-            globals()[f'ani_setget{self.num_tw}'] = animation.FuncAnimation(
-                fig = globals()[f'fig_setget{self.num_tw}'], func = self.animate, 
-                interval=100, blit = False)
-            
-            self.num_tw += 1
         
         self.list_to_read = []
         # asking multichoise to get parameters to read
@@ -1053,8 +1056,8 @@ class SetGet(tk.Frame):
             self.initial_value = []
             
             for ind, heading in enumerate(columns):
-                self.table_dataframe.heading(ind, text = heading, command = lambda: heading_chosed(heading))
-                self.table_dataframe.column(ind,anchor=tk.CENTER, stretch=tk.YES, width=120)
+                self.table_dataframe.heading(ind, text = heading)
+                self.table_dataframe.column(ind, anchor=tk.CENTER, stretch=tk.YES, width=120)
                 self.initial_value.append(heading)
                     
             self.table_dataframe.insert('', tk.END, 'Current dataframe', text = 'Current dataframe', values = self.initial_value)
@@ -1066,6 +1069,7 @@ class SetGet(tk.Frame):
             
             self.scrollbar_table.config(command=self.table_dataframe.xview)
             self.table_dataframe.config(xscrollcommand=self.scrollbar_table.set)
+            self.table_dataframe.bind ('<ButtonRelease-1>', self.heading_chosed)
             
             self.num_tw = 1
         
@@ -1081,7 +1085,7 @@ class SetGet(tk.Frame):
             self.initial_value = []
             
             for ind, heading in enumerate(columns):
-                self.table_dataframe.heading(ind, text = heading, command = lambda: heading_chosed(heading))
+                self.table_dataframe.heading(ind, text = heading)
                 self.table_dataframe.column(ind,anchor=tk.CENTER, stretch=tk.YES, width=120)
                 self.initial_value.append(heading)
                     
@@ -1199,7 +1203,7 @@ class Sweeper1d(tk.Frame):
         self.button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero())
         self.button_tozero.place(relx = 0.3, rely = 0.3 + lstbox_height)
         
-        self.update_listbox()
+        #self.update_listbox()
 
         label_options = tk.Label(self, text = 'Options:', font = LARGE_FONT)
         label_options.place(relx = 0.05, rely = 0.2)
@@ -1739,8 +1743,8 @@ class Sweeper2d(tk.Frame):
             
         lstbox_height = len(parameters_to_read) / 47
         
-        button_update_sweep = tk.Button(self, text = 'Update sweep', command = lambda: self.update_sweep_configuration())
-        button_update_sweep.place(relx = 0.45, rely = 0.21 +  lstbox_height)
+        self.button_update_sweep = tk.Button(self, text = 'Update sweep', command = lambda: self.update_sweep_configuration())
+        self.button_update_sweep.place(relx = 0.45, rely = 0.21 +  lstbox_height)
 
         self.button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause())
         self.button_pause.place(relx = 0.45, rely = 0.25 + lstbox_height)
@@ -1753,10 +1757,10 @@ class Sweeper2d(tk.Frame):
         self.button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero())
         self.button_tozero.place(relx = 0.45, rely = 0.3 + lstbox_height)
         
-        button_start_sweeping = tk.Button(
+        self.button_start_sweeping = tk.Button(
             self, text="▶", command=lambda: self.start_sweeping(), font = LARGE_FONT)
-        button_start_sweeping.place(relx=0.525, rely=0.21 + lstbox_height, height= 90, width=30)
-        CreateToolTip(button_start_sweeping, 'Start sweeping')
+        self.button_start_sweeping.place(relx=0.525, rely=0.21 + lstbox_height, height= 90, width=30)
+        CreateToolTip(self.button_start_sweeping, 'Start sweeping')
 
         label_options = tk.Label(self, text = 'Options:', font=LARGE_FONT)
         label_options.place(relx = 0.05, rely = 0.25)
@@ -1906,7 +1910,7 @@ class Sweeper2d(tk.Frame):
         graph_button.place(relx=0.7, rely=0.8)
         CreateToolTip(graph_button, 'Graph')
         
-        self.update_listbox()
+        #self.update_listbox()
         
     def update_master2_combo(self, event, interval = 100):
         if self.combo_master1['value'][self.combo_master1.current()] == '':
@@ -2007,7 +2011,7 @@ class Sweeper2d(tk.Frame):
             self.label_ratio2.configure(text = 'Step, Δ')
             self.update()
         
-        if self.count_option2 == 'ratio' and self.label_rati2['text'].startswith('Step'):
+        if self.count_option2 == 'ratio' and self.label_ratio2['text'].startswith('Step'):
             self.label_ratio2.configure(text = 'Ratio, \n Δ/s')
             self.update()
         
@@ -2118,7 +2122,7 @@ class Sweeper2d(tk.Frame):
         
         self.button_pause.place(relx = 0.45, rely = 0.25 + lstbox_height)
         self.button_stop.place(relx = 0.4875, rely = 0.25 + lstbox_height)
-        self.button_start_sweeping.place(relx = 0.425, rely = 0.21 + lstbox_height)
+        self.button_start_sweeping.place(relx = 0.525, rely = 0.21 + lstbox_height)
         self.button_tozero.place(relx = 0.45, rely = 0.3 + lstbox_height)
         self.button_update_sweep.place(relx = 0.45, rely = 0.21 + lstbox_height)
 
@@ -2454,8 +2458,8 @@ class Sweeper3d(tk.Frame):
         
         lstbox_height = len(parameters_to_read) / 47
         
-        button_update_sweep = tk.Button(self, text = 'Update sweep', command = lambda: self.update_sweep_configuration)
-        button_update_sweep.place(relx = 0.6, rely = 0.21 + lstbox_height)
+        self.button_update_sweep = tk.Button(self, text = 'Update sweep', command = lambda: self.update_sweep_configuration)
+        self.button_update_sweep.place(relx = 0.6, rely = 0.21 + lstbox_height)
         
         self.button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause())
         self.button_pause.place(relx = 0.6, rely = 0.25 + lstbox_height)
@@ -2468,10 +2472,10 @@ class Sweeper3d(tk.Frame):
         self.button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero())
         self.button_tozero.place(relx = 0.6, rely = 0.3 + lstbox_height)
         
-        button_start_sweeping = tk.Button(
+        self.button_start_sweeping = tk.Button(
             self, text="▶", command=lambda: self.start_sweeping(), font = LARGE_FONT)
-        button_start_sweeping.place(relx=0.675, rely=0.21 + lstbox_height, height= 90, width=30)
-        CreateToolTip(button_start_sweeping, 'Start sweeping')
+        self.button_start_sweeping.place(relx=0.675, rely=0.21 + lstbox_height, height= 90, width=30)
+        CreateToolTip(self.button_start_sweeping, 'Start sweeping')
 
         self.combo_to_sweep1 = ttk.Combobox(self, value=list_of_devices)
         self.combo_to_sweep1.bind(
@@ -3765,6 +3769,10 @@ class Sweeper_write(threading.Thread):
         self.ratio_sweep1 = float(ratio_sweep1)
         self.delay_factor1 = float(delay_factor1)
         self.value1 = float(from_sweep1)
+        if parameter_to_sweep1 in getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](
+            adress=device_to_sweep1), 'get_options'):
+            self.value1 = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](
+                adress=device_to_sweep1), parameter_to_sweep1)()
         self.condition = condition
         self.step1 = float(delay_factor1) * float(ratio_sweep1)
         self.time1 = (float(from_sweep1) - float(to_sweep1)) / float(ratio_sweep1)
@@ -3797,6 +3805,10 @@ class Sweeper_write(threading.Thread):
             self.delay_factor2 = float(delay_factor2)
             self.filename_sweep = filename_sweep
             self.value2 = float(from_sweep2)
+            if parameter_to_sweep2 in getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
+                adress=device_to_sweep2), 'get_options'):
+                self.value2 = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
+                    adress=device_to_sweep2), parameter_to_sweep2)()
             self.columns = columns
             self.step2 = float(delay_factor2) * float(ratio_sweep2)
             self.time2 = (float(from_sweep2) - float(to_sweep2)) / float(ratio_sweep2)
@@ -3804,6 +3816,8 @@ class Sweeper_write(threading.Thread):
             try:
                 self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
                 self.nstep2 = int(abs(self.nstep2))
+                globals()['nstep1'] = self.nstep1
+                globals()['nstep2'] = self.nstep2
             except ValueError:
                 self.nstep2 = 1
                 
@@ -3832,7 +3846,15 @@ class Sweeper_write(threading.Thread):
             self.delay_factor3 = float(delay_factor3)
             self.filename_sweep = filename_sweep
             self.value2 = float(from_sweep2)
+            if parameter_to_sweep2 in getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
+                adress=device_to_sweep2), 'get_options'):
+                self.value2 = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
+                    adress=device_to_sweep2), parameter_to_sweep2)()
             self.value3 = float(from_sweep3)
+            if parameter_to_sweep3 in getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep3)]](
+                adress=device_to_sweep3), 'get_options'):
+                self.value3 = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep3)]](
+                    adress=device_to_sweep3), parameter_to_sweep3)()
             self.columns = columns
             self.step2 = float(delay_factor2) * float(ratio_sweep2)
             self.step3 = float(delay_factor3) * float(ratio_sweep3)
@@ -3885,35 +3907,38 @@ class Sweeper_write(threading.Thread):
         if self.condition != '':
             #creating grid space for sweep parameters
             if self.sweeper_flag2 == True:
-                ax1 = np.linspace(self.from_sweep1, self.to_sweep1, self.nstep1)
-                ax2 = np.linspace(self.from_sweep2, self.to_sweep2, self.nstep2)
+                ax1 = np.linspace(self.from_sweep1, self.to_sweep1, self.nstep1 + 1)
+                ax2 = np.linspace(self.from_sweep2, self.to_sweep2, self.nstep2 + 1)
                 AX1, AX2 = np.meshgrid(ax1, ax2)
                 space = AX1.tolist().copy()
                 self.grid_space = []
                 for i in range(AX1.shape[0]):
                     for j in range(AX1.shape[1]):
-                        space[i][j] = (np.array([AX1[i][j], AX2[i][j]]) * self.func(tup = tuple((AX1[i][j], AX2[i][j])), dtup = tuple((self.step1 / 2, self.step2 / 2)), condition_str = self.condition, sweep_dimension = 2)).tolist()
+                        space[i][j] = (np.array([AX1[i][j], AX2[i][j]]) * self.func(tup = tuple((AX1[i][j], AX2[i][j])), condition_str = self.condition, sweep_dimension = 2)).tolist()
+                        
                         if not np.isnan(space[i][j][0]):
                             self.grid_space.append(space[i][j])
+                            globals()['griid'] = self.grid_space
                 
                         
             if self.sweeper_flag3 == True: 
-                ax1 = np.linspace(self.from_sweep1, self.to_sweep1, self.nstep1)
-                ax2 = np.linspace(self.from_sweep2, self.to_sweep2, self.nstep2)
-                ax3 = np.linspace(self.from_sweep3, self.to_sweep3, self.nstep3)
+                ax1 = np.linspace(self.from_sweep1, self.to_sweep1, self.nstep1 + 1)
+                ax2 = np.linspace(self.from_sweep2, self.to_sweep2, self.nstep2 + 1)
+                ax3 = np.linspace(self.from_sweep3, self.to_sweep3, self.nstep3 + 1)
                 AX1, AX2, AX3 = np.meshgrid(ax1, ax2, ax3)
                 space = AX1.tolist().copy()
                 self.grid_space = []
                 for i in range(AX1.shape[0]):
                     for j in range(AX1.shape[1]):
                         for k in range(AX1.shape[2]):
-                            space[i][j][k] = (np.array((AX1[i][j][k], AX2[i][j][k], AX3[i][j][k]))) * self.func(tup = tuple((AX1[i][j][k], AX2[i][j][k], AX3[i][j][k])), dtup = tuple((self.step1 / 2, self.step2 / 2, self.step3 / 3)), condition_str = self.condition, sweep_dimension = 3)
+                            space[i][j][k] = (np.array((AX1[i][j][k], AX2[i][j][k], AX3[i][j][k]))) * self.func(tup = tuple((AX1[i][j][k], AX2[i][j][k], AX3[i][j][k])), condition_str = self.condition, sweep_dimension = 3)
 
                             if not np.isnan(space[i][j][k][0]):
                                 self.grid_space.append(space[i][j][k])
+                                globals()['griiid'] = self.grid_space
                                 
 
-    def func(self, tup, dtup, condition_str, sweep_dimension):
+    def func(self, tup, condition_str, sweep_dimension):
         '''input: tup - tuple, contains coordinates of phase space of sweep parameters,
         dtup: tuple of steps along sweep axis
         condition_str - python-like condition, written by user in a form of string
@@ -3922,29 +3947,29 @@ class Sweeper_write(threading.Thread):
         return 1 if point in fase space with coordinates in tup included in condition
         np.nan if not included'''
         
-        def isequal(a, b, abs_tol):
+        def isequal(a, b):
             '''equality with tolerance'''
-            return abs(a-b) <= abs_tol
+            return abs(a-b) <= 0
 
-        def notequal(a, b, abs_tol):
+        def notequal(a, b):
             '''not equality with tolerance'''
-            return abs(a-b) > abs_tol
+            return abs(a-b) > 0
 
-        def ismore(a, b, abs_tol):
+        def ismore(a, b):
             '''if one lement is more than other with tolerance'''
             return (a-b) > 0
 
-        def ismoreequal(a, b, abs_tol):
+        def ismoreequal(a, b):
             '''if one element is more or equal than other with tolerance'''
-            return (a-b) >= abs_tol
+            return (a-b) >= 0
 
-        def isless(a, b, abs_tol):
+        def isless(a, b):
             '''if one lement is less than other with tolerance'''
             return (a-b) < 0
 
-        def islessequal(a, b, abs_tol):
+        def islessequal(a, b):
             '''if one lement is less or equal than other with tolerance'''
-            return (a-b) <= abs_tol
+            return (a-b) <= 0
         
         def insert(string, index, ins):
             A_l = string[:index]
@@ -4014,7 +4039,7 @@ class Sweeper_write(threading.Thread):
                 
                 if lhs != '' and rhs != '':
                 
-                    if dict_operations[indexes[0][1]](eval(lhs, locals()), eval(rhs, locals()), np.sqrt(dtup[0]**2 + dtup[1]**2)):
+                    if dict_operations[indexes[0][1]](eval(lhs, locals()), eval(rhs, locals())):
                         result *= 1
                     else:
                         result *= np.nan
@@ -4062,7 +4087,7 @@ class Sweeper_write(threading.Thread):
                     rhs = insert(rhs, i, 'tup[2]')
                 
                 if lhs != '' and rhs != '':
-                    if dict_operations[indexes[0][1]](eval(lhs, locals()), eval(rhs, locals()), np.sqrt(dtup[0]**2 + dtup[1]**2 + dtup[2]**2)):
+                    if dict_operations[indexes[0][1]](eval(lhs, locals()), eval(rhs, locals())):
                         result *= 1
                     else:
                         result *= np.nan
@@ -4102,7 +4127,7 @@ class Sweeper_write(threading.Thread):
             globals()[f'time{a}'] = (float(getattr(self, f'from_sweep{b}')) - float(getattr(self, f'to_sweep{b}')) / float(getattr(self, f'ratio_sweep{b}')))
             globals()[f'time{b}'] = (float(getattr(self, f'from_sweep{a}')) - float(getattr(self, f'to_sweep{a}')) / float(getattr(self, f'ratio_sweep{a}')))
 
-    def isinarea(self, point, grid_area, dgrid_area, sweep_dimension = 2):
+    def isinarea(self, point, grid_area, sweep_dimension = 2):
         '''if point is in grid_area return True. 
         Grid size defined by dgrid_area which is tuple'''
         
@@ -4110,23 +4135,21 @@ class Sweeper_write(threading.Thread):
             print('Grid area is True')
             return True
         else:
-            def includance(point, reference, dgrid_area, sweep_dimension = 2):
+            def includance(point, reference,sweep_dimension = 2):
                 '''equity with tolerance'''
                 if sweep_dimension == 2:
-                    return abs(point[0] - reference[0]) <= dgrid_area[0] and abs(point[1] - reference[1]) <= dgrid_area[1]
+                    return np.isclose(point[0], reference[0]) and np.isclose(point[1], reference[1])
                 if sweep_dimension == 3:
-                    print(f'Point - {point}')
-                    print(f'Reference - {reference}')
-                    return abs(point[0] - reference[0]) <= dgrid_area[0] and abs(point[1] - reference[1]) <= dgrid_area[1] and abs(point[2] - reference[2]) <= dgrid_area[2]
+                    return np.isclose(point[0], reference[0]) and np.isclose(point[1], reference[1]) and np.isclose(point[2], reference[2])
             
             if sweep_dimension == 2:
                 for reference in grid_area:
-                    if includance(point = point, reference = reference, dgrid_area = dgrid_area):
+                    if includance(point = point, reference = reference):
                         return True
 
             if sweep_dimension == 3:
                 for reference in grid_area:
-                    if includance(point = point, reference = reference, dgrid_area = dgrid_area, 
+                    if includance(point = point, reference = reference,
                                   sweep_dimension = 3):
                         return True
 
@@ -4363,9 +4386,9 @@ class Sweeper_write(threading.Thread):
             global sweeper_flag2
             global sweeper_flag3
             
-            files = os.listdir(os.path.join(cur_dir, 'data_files'))
+            files = os.listdir(cur_dir +  '\data_files')
             ind = [0]
-            basic_name = filename_sweep[len(os.path.join(cur_dir + 'data_files'))+ 1:-4]
+            basic_name = filename_sweep[len(cur_dir + '\data_files')+ 1:-4]
             if '-' in basic_name:
                 basic_name = basic_name[:basic_name.find('-')]
             if '_' in basic_name:
@@ -4455,17 +4478,14 @@ class Sweeper_write(threading.Thread):
             '''Determines current point in sweep space and its boundaries'''
             
             point = []
-            dgrid_area = []
             for ind, flag in enumerate(manual_sweep_flags):
                 if flag == 0:
                     point.append(getattr(self, 'value' + str(ind + 1)))
-                    dgrid_area.append(getattr(self, 'step' + str(ind + 1)) / 2)
                 else:
                     point.append(globals()['value' + str(ind + 1)])
-                    dgrid_area.append(getattr(self, 'step' + str(ind + 1)) / 2)
                     
             print('Current point was determined')
-            return point, dgrid_area
+            return point
 
         def inner_step(value1 = None, value2 = None, value3 = None):
             global manual_sweep_flags
@@ -4481,8 +4501,8 @@ class Sweeper_write(threading.Thread):
                 append_read_parameters()
                 tofile() 
             else:
-                point, dgrid_area = current_point()
-                if self.isinarea(point = point, grid_area = self.grid_space, dgrid_area = dgrid_area, sweep_dimension = len(manual_sweep_flags)):
+                point = current_point()
+                if self.isinarea(point = point, grid_area = self.grid_space, sweep_dimension = len(manual_sweep_flags)):
                     if len(manual_sweep_flags) == 2:
                         update_dataframe()
                         step(2, value2)
@@ -4612,7 +4632,7 @@ class Sweeper_write(threading.Thread):
             elif walks > 1:
                 for i in range(1, walks + 1):
                     external_loop_single(round(2 * (i % 2) - 1))
-                    step(axis = len(manual_sweep_flags), back = True)
+                    step(axis = len(manual_sweep_flags) - 1, back = True)
                     back_and_forth_transposition(len(manual_sweep_flags) - 1)
                     
                 if back_and_forth_master % 2 == 1:
