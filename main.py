@@ -28,6 +28,8 @@ from SourceMeter import SourceMeter
 from TC300 import TC300
 from ZStage import ZStage
 from RotStage import RotStage
+from lakeshore336 import LakeShore336
+from AMI430 import AMI430
 
 #import random
 
@@ -146,6 +148,7 @@ def create_preset(dimension):
              dic['sweep_options' + str(i+1)] = [0]
              dic['from' + str(i+1)] = ['']
              dic['to' + str(i+1)] = ['']
+             dic['count_option' + str(i+1)] = ['ratio']
              dic['ratio' + str(i+1)] = ['']
              dic['delay_factor' + str(i+1)] = ['']
              dic['status_back_and_forth' + str(i+1)] = [0]
@@ -229,15 +232,12 @@ def devices_list():
                 if name.startswith('\n'):
                     name = name[2:]
         list_of_devices.append(name)
-
         for class_of_device in device_classes:
             if globals()[var2str(class_of_device)]().IDN() == name:
                 types_of_devices.append(var2str(class_of_device))
         if len(types_of_devices) != len(list_of_devices):
             types_of_devices.append('Not a class')
-
     return list_of_devices, types_of_devices
-
 '''
 if len(list_of_devices) == 0:
     list_of_devices = ['']
@@ -262,11 +262,11 @@ for ind_, type_ in enumerate(types_of_devices):
 def new_parameters_to_read(types_of_devices = types_of_devices):
     global list_of_devices
     parameters_to_read = []
-    for device_type in types_of_devices:
+    for ind, device_type in enumerate(types_of_devices):
         if device_type == 'Not a class':
             pass
         else:
-            adress = list_of_devices[types_of_devices.index(device_type)]
+            adress = list_of_devices[ind]
             get_options = getattr(globals()[device_type](
                 adress=adress), 'get_options')
             for option in get_options:
@@ -1065,6 +1065,7 @@ class Sweeper1d(tk.Frame):
         self.from1_init = self.preset['from1'].values[0]
         self.to1_init = self.preset['to1'].values[0]
         self.ratio1_init = self.preset['ratio1'].values[0]
+        self.count_option1 = self.preset['count_option1'][0]
         self.delay_factor1_init = self.preset['delay_factor1'].values[0]
         self.status_back_and_forth_master = tk.IntVar(value = int(self.preset['status_back_and_forth1'].values[0]))
         self.status_manual = tk.IntVar(value = int(self.preset['status_manual1'].values[0]))
@@ -1165,9 +1166,13 @@ class Sweeper1d(tk.Frame):
         label_to = tk.Label(self, text='To', font=LARGE_FONT)
         label_to.place(relx=0.12, rely=0.28)
 
-        label_step = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
-        label_step.place(relx=0.12, rely=0.32)
-        CreateToolTip(label_step, 'Speed of 1d-sweep')
+        if self.count_option1 == 'ratio':
+            self.label_ratio = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
+            CreateToolTip(self.label_ratio, 'Speed of 1d-sweep')
+        elif self.count_option1 == 'step':
+            self.label_ratio = tk.Label(self, text='Step, Δ', font=LARGE_FONT)
+            CreateToolTip(self.label_ratio, 'Step of 1d-sweep')
+        self.label_ratio.place(relx=0.12, rely=0.32)
 
         self.entry_from = tk.Entry(self)
         self.entry_from.insert(0, self.from1_init)
@@ -1180,6 +1185,10 @@ class Sweeper1d(tk.Frame):
         self.entry_ratio = tk.Entry(self)
         self.entry_ratio.insert(0, self.ratio1_init)
         self.entry_ratio.place(relx=0.17, rely=0.32)
+        
+        button_swap = tk.Button(self, text = r'🆚', font = ('Verdana', 8), command = self.swap_ratio_step1)
+        button_swap.place(relx = 0.1, rely = 0.32)
+        CreateToolTip(button_swap, 'Change Ratio/Step')
 
         label_delay_factor = tk.Label(
             self, text='Delay factor, s', justify=tk.LEFT, font=LARGE_FONT)
@@ -1246,6 +1255,26 @@ class Sweeper1d(tk.Frame):
             self.preset.loc[0, 'combo_to_sweep1'] = self.combo_to_sweep1.current()
             self.preset.to_csv(globals()['sweeper1d_path'], index = False)
             
+    def swap_ratio_step1(self):
+        if self.count_option1 == 'step':
+            self.count_option1 = 'ratio'
+        elif self.count_option1 == 'ratio':
+            self.count_option1 = 'step'
+            
+        if self.count_option1 == 'step' and self.label_ratio['text'].startswith('Ratio'):
+            self.label_ratio.configure(text = 'Step, Δ')
+            self.update()
+        
+        if self.count_option1 == 'ratio' and self.label_ratio['text'].startswith('Step'):
+            self.label_ratio.configure(text = 'Ratio, \n Δ/s')
+            self.update()
+            
+        print('Im executed')
+        
+        self.preset.loc[0, 'count_option1'] = self.count_option1
+        self.preset.to_csv(globals()['sweeper1d_path'], index = False)
+        
+            
     def update_sweep_options(self, event):
         if self.sweep_options1.current() != self.sweep_options1_current:
             self.preset.loc[0, 'sweep_options1'] = self.sweep_options1.current()
@@ -1290,6 +1319,9 @@ class Sweeper1d(tk.Frame):
             delay_factor1 = float(self.entry_delay_factor.get())
         except ValueError:
             pass
+        
+        if self.count_option1 == 'step':
+            ratio_sweep1 = ratio_sweep1 / delay_factor1
         
         if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
             ratio_sweep1 = -ratio_sweep1
@@ -1382,9 +1414,9 @@ class Sweeper1d(tk.Frame):
         
         def update_button_text():
             if self.button_pause['text'] == '⏸️':
-                self.button_pause['text'] = '▶️'
-            if self.button_pause['text'] == '▶️':
-                self.button_pause['text'] = '⏸️'
+                self.button_pause.configure(text = '▶️')
+            elif self.button_pause['text'] == '▶️':
+                self.button_pause.configure(text = '⏸️')
         
         pause_flag = not(pause_flag)
         
@@ -1456,14 +1488,21 @@ class Sweeper1d(tk.Frame):
         # fixing sweeper parmeters
         if self.entry_from.get() != '':
             from_sweep1 = float(self.entry_from.get())
+            
         if self.entry_to.get() != '':
             to_sweep1 = float(self.entry_to.get())
-        if self.entry_ratio.get() != '':
-            ratio_sweep1 = float(self.entry_ratio.get())
-        if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
-            ratio_sweep1 = - ratio_sweep1
+            
         if self.entry_delay_factor.get() != '':
             delay_factor1 = float(self.entry_delay_factor.get())
+            
+        if self.entry_ratio.get() != '':
+            ratio_sweep1 = float(self.entry_ratio.get())
+            if self.count_option1 == 'step':
+                ratio_sweep1 = ratio_sweep1 / delay_factor1
+                
+        if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
+            ratio_sweep1 = - ratio_sweep1
+
         if self.entry_filename.get() != '':
             filename_sweep = self.entry_filename.get()
         sweeper_flag1 = True
@@ -1495,10 +1534,12 @@ class Sweeper2d(tk.Frame):
         self.from1_init = self.preset['from1'].values[0]
         self.to1_init = self.preset['to1'].values[0]
         self.ratio1_init = self.preset['ratio1'].values[0]
+        self.count_option1 = self.preset['count_option1'][0]
         self.delay_factor1_init = self.preset['delay_factor1'].values[0]
         self.from2_init = self.preset['from2'].values[0]
         self.to2_init = self.preset['to2'].values[0]
         self.ratio2_init = self.preset['ratio2'].values[0]
+        self.count_option2 = self.preset['count_option2'][0]
         self.delay_factor2_init = self.preset['delay_factor2'].values[0]
         self.manual_filenames = [self.preset['manual_filename1'].values[0], self.preset['manual_filename2'].values[0]]
         self.status_back_and_forth_master = tk.IntVar(value = int(self.preset['status_back_and_forth1'].values[0]))
@@ -1652,9 +1693,13 @@ class Sweeper2d(tk.Frame):
         label_to1 = tk.Label(self, text='To', font=LARGE_FONT)
         label_to1.place(relx=0.12, rely=0.33)
 
-        label_step1 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
-        label_step1.place(relx=0.12, rely=0.37)
-        CreateToolTip(label_step1, 'Speed of 1d-sweep')
+        if self.count_option1 == 'ratio':
+            self.label_ratio1 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
+            CreateToolTip(self.label_ratio1, 'Speed of 1d-sweep')
+        elif self.count_option1 == 'step':
+            self.label_ratio1 = tk.Label(self, text='Step, Δ', font=LARGE_FONT)
+            CreateToolTip(self.label_ratio1, 'Step of 1d-sweep')
+        self.label_ratio1.place(relx=0.12, rely=0.37)
 
         self.entry_from1 = tk.Entry(self)
         self.entry_from1.insert(0, self.from1_init)
@@ -1667,6 +1712,10 @@ class Sweeper2d(tk.Frame):
         self.entry_ratio1 = tk.Entry(self)
         self.entry_ratio1.insert(0, self.ratio1_init)
         self.entry_ratio1.place(relx=0.17, rely=0.37)
+        
+        button_swap1 = tk.Button(self, text = r'🆚', font = ('Verdana', 8), command = self.swap_ratio_step1)
+        button_swap1.place(relx = 0.1, rely = 0.4)
+        CreateToolTip(button_swap1, 'Change Ratio/Step')
 
         label_delay_factor1 = tk.Label(
             self, text='Delay factor, s', justify=tk.LEFT, font=LARGE_FONT)
@@ -1683,9 +1732,13 @@ class Sweeper2d(tk.Frame):
         label_to2 = tk.Label(self, text='To', font=LARGE_FONT)
         label_to2.place(relx=0.27, rely=0.33)
 
-        label_step2 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
-        label_step2.place(relx=0.27, rely=0.37)
-        CreateToolTip(label_step2, 'Speed of 1d-sweep')
+        if self.count_option2 == 'ratio':
+            self.label_ratio2 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
+            CreateToolTip(self.label_ratio2, 'Speed of 1d-sweep')
+        elif self.count_option2 == 'step':
+            self.label_ratio2 = tk.Label(self, text='Step, Δ', font=LARGE_FONT)
+            CreateToolTip(self.label_ratio2, 'Step of 1d-sweep')
+        self.label_ratio2.place(relx=0.27, rely=0.37)
 
         self.entry_from2 = tk.Entry(self)
         self.entry_from2.insert(0, self.from2_init)
@@ -1698,6 +1751,10 @@ class Sweeper2d(tk.Frame):
         self.entry_ratio2 = tk.Entry(self)
         self.entry_ratio2.insert(0, self.ratio2_init)
         self.entry_ratio2.place(relx=0.32, rely=0.37)
+        
+        button_swap2 = tk.Button(self, text = r'🆚', font = ('Verdana', 8), command = self.swap_ratio_step2)
+        button_swap2.place(relx = 0.25, rely = 0.4)
+        CreateToolTip(button_swap2, 'Change Ratio/Step')
 
         label_delay_factor2 = tk.Label(
             self, text='Delay factor, s', justify=tk.LEFT, font=LARGE_FONT)
@@ -1847,6 +1904,40 @@ class Sweeper2d(tk.Frame):
             self.preset.loc[0, 'sweep_options2'] = self.sweep_options2.current()
             self.preset.to_csv(globals()['sweeper2d_path'], index = False)
             
+    def swap_ratio_step1(self):
+        if self.count_option1 == 'step':
+            self.count_option1 = 'ratio'
+        elif self.count_option1 == 'ratio':
+            self.count_option1 = 'step'
+            
+        if self.count_option1 == 'step' and self.label_ratio1['text'].startswith('Ratio'):
+            self.label_ratio1.configure(text = 'Step, Δ')
+            self.update()
+        
+        if self.count_option1 == 'ratio' and self.label_ratio1['text'].startswith('Step'):
+            self.label_ratio1.configure(text = 'Ratio, \n Δ/s')
+            self.update()
+        
+        self.preset.loc[0, 'count_option1'] = self.count_option1
+        self.preset.to_csv(globals()['sweeper1d_path'], index = False)
+        
+    def swap_ratio_step2(self):
+        if self.count_option2 == 'step':
+            self.count_option2 = 'ratio'
+        elif self.count_option2 == 'ratio':
+            self.count_option2 = 'step'
+            
+        if self.count_option2 == 'step' and self.label_ratio2['text'].startswith('Ratio'):
+            self.label_ratio2.configure(text = 'Step, Δ')
+            self.update()
+        
+        if self.count_option2 == 'ratio' and self.label_rati2['text'].startswith('Step'):
+            self.label_ratio2.configure(text = 'Ratio, \n Δ/s')
+            self.update()
+        
+        self.preset.loc[0, 'count_option2'] = self.count_option2
+        self.preset.to_csv(globals()['sweeper2d_path'], index = False)
+            
     def rewrite_preset(self):
         if self.entry_from1.get() != self.from1_init:
             self.preset.loc[0, 'from1'] = self.entry_from1.get()
@@ -1924,6 +2015,12 @@ class Sweeper2d(tk.Frame):
             delay_factor2 = float(self.entry_delay_factor2.get())
         except ValueError:
             pass
+        
+        if self.count_option1 == 'step':
+            ratio_sweep1 = ratio_sweep1 / delay_factor1
+            
+        if self.count_option2 == 'step':
+            ratio_sweep2 = ratio_sweep2 / delay_factor2
         
         if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
             ratio_sweep1 = -ratio_sweep1
@@ -2031,11 +2128,11 @@ class Sweeper2d(tk.Frame):
         pause_flag = not(pause_flag)
         
         if self.button_pause['text'] == '⏸️':
-            self.button_pause['text'] = '▶️'
+            self.button_pause.configure(text = '▶️')
         if self.button_pause['text'] == '▶️':
-            self.button_pause['text'] = '⏸️'
+            self.button_pause.configure(text = '⏸️')
             
-        self.button_pause.after(1000)
+        self.button_pause.after(100)
         
     def stop(self):
         
@@ -2141,22 +2238,26 @@ class Sweeper2d(tk.Frame):
             from_sweep1 = float(self.entry_from1.get())
         if self.entry_to1.get() != '':
             to_sweep1 = float(self.entry_to1.get())
-        if self.entry_ratio1.get() != '':
-            ratio_sweep1 = float(self.entry_ratio1.get())
-        if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
-            ratio_sweep1 = -ratio_sweep1
         if self.entry_delay_factor1.get() != '':
             delay_factor1 = float(self.entry_delay_factor1.get())
+        if self.entry_ratio1.get() != '':
+            ratio_sweep1 = float(self.entry_ratio1.get())
+            if self.count_option1 == 'step':
+                ratio_sweep1 = ratio_sweep1 / delay_factor1
+        if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
+            ratio_sweep1 = -ratio_sweep1
         if self.entry_from2.get() != '':
             from_sweep2 = float(self.entry_from2.get())
         if self.entry_to2.get() != '':
             to_sweep2 = float(self.entry_to2.get())
-        if self.entry_ratio2.get() != '':
-            ratio_sweep2 = float(self.entry_ratio2.get())
-        if from_sweep2 > to_sweep2 and ratio_sweep2 > 0:
-            ratio_sweep2 = -ratio_sweep2
         if self.entry_delay_factor2.get() != '':
             delay_factor2 = float(self.entry_delay_factor2.get())
+        if self.entry_ratio2.get() != '':
+            ratio_sweep2 = float(self.entry_ratio2.get())
+            if self.count_option2 == 'step':
+                ratio_sweep2 = ratio_sweep2 / delay_factor2
+        if from_sweep2 > to_sweep2 and ratio_sweep2 > 0:
+            ratio_sweep2 = -ratio_sweep2
         if self.entry_filename.get() != '':
             filename_sweep = self.entry_filename.get()
         sweeper_flag1 = False
@@ -2190,14 +2291,17 @@ class Sweeper3d(tk.Frame):
         self.from1_init = self.preset['from1'].values[0]
         self.to1_init = self.preset['to1'].values[0]
         self.ratio1_init = self.preset['ratio1'].values[0]
+        self.count_option1 = self.preset['count_option1'][0]
         self.delay_factor1_init = self.preset['delay_factor1'].values[0]
         self.from2_init = self.preset['from2'].values[0]
         self.to2_init = self.preset['to2'].values[0]
         self.ratio2_init = self.preset['ratio2'].values[0]
+        self.count_option2 = self.preset['count_option2'][0]
         self.delay_factor2_init = self.preset['delay_factor2'].values[0]
         self.from3_init = self.preset['from3'].values[0]
         self.to3_init = self.preset['to3'].values[0]
         self.ratio3_init = self.preset['ratio3'].values[0]
+        self.count_option3 = self.preset['count_option3'][0]
         self.delay_factor3_init = self.preset['delay_factor3'].values[0]
         self.manual_filenames = [self.preset['manual_filename1'].values[0], self.preset['manual_filename2'].values[0], self.preset['manual_filename3'].values[0]]
         self.status_back_and_forth_master = tk.IntVar(value = int(self.preset['status_back_and_forth1'].values[0]))
@@ -2392,9 +2496,13 @@ class Sweeper3d(tk.Frame):
         label_to1 = tk.Label(self, text='To', font=LARGE_FONT)
         label_to1.place(relx=0.12, rely=0.33)
 
-        label_step1 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
-        label_step1.place(relx=0.12, rely=0.37)
-        CreateToolTip(label_step1, 'Speed of 1d-sweep')
+        if self.count_option1 == 'ratio':
+            self.label_ratio1 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
+            CreateToolTip(self.label_ratio1, 'Speed of 1d-sweep')
+        elif self.count_option1 == 'step':
+            self.label_ratio1 = tk.Label(self, text='Step, Δ', font=LARGE_FONT)
+            CreateToolTip(self.label_ratio1, 'Step of 1d-sweep')
+        self.label_ratio1.place(relx=0.12, rely=0.37)
 
         self.entry_from1 = tk.Entry(self)
         self.entry_from1.insert(0, self.from1_init)
@@ -2407,6 +2515,10 @@ class Sweeper3d(tk.Frame):
         self.entry_ratio1 = tk.Entry(self)
         self.entry_ratio1.insert(0, self.ratio1_init)
         self.entry_ratio1.place(relx=0.17, rely=0.37)
+        
+        button_swap1 = tk.Button(self, text = r'🆚', font = ('Verdana', 8), command = self.swap_ratio_step1)
+        button_swap1.place(relx = 0.1, rely = 0.4)
+        CreateToolTip(button_swap1, 'Change Ratio/Step')
 
         label_delay_factor1 = tk.Label(
             self, text='Delay factor, s', justify=tk.LEFT, font=LARGE_FONT)
@@ -2423,9 +2535,13 @@ class Sweeper3d(tk.Frame):
         label_to2 = tk.Label(self, text='To', font=LARGE_FONT)
         label_to2.place(relx=0.27, rely=0.33)
 
-        label_step2 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
-        label_step2.place(relx=0.27, rely=0.37)
-        CreateToolTip(label_step2, 'Speed of 1d-sweep')
+        if self.count_option2 == 'ratio':
+            self.label_ratio2 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
+            CreateToolTip(self.label_ratio2, 'Speed of 1d-sweep')
+        elif self.count_option2 == 'step':
+            self.label_ratio2 = tk.Label(self, text='Step, Δ', font=LARGE_FONT)
+            CreateToolTip(self.label_ratio2, 'Step of 1d-sweep')
+        self.label_ratio2.place(relx=0.27, rely=0.37)
 
         self.entry_from2 = tk.Entry(self)
         self.entry_from2.insert(0, self.from2_init)
@@ -2438,6 +2554,10 @@ class Sweeper3d(tk.Frame):
         self.entry_ratio2 = tk.Entry(self)
         self.entry_ratio2.insert(0, self.ratio2_init)
         self.entry_ratio2.place(relx=0.32, rely=0.37)
+        
+        button_swap2 = tk.Button(self, text = r'🆚', font = ('Verdana', 8), command = self.swap_ratio_step2)
+        button_swap2.place(relx = 0.25, rely = 0.4)
+        CreateToolTip(button_swap2, 'Change Ratio/Step')
 
         label_delay_factor2 = tk.Label(
             self, text='Delay factor, s', justify=tk.LEFT, font=LARGE_FONT)
@@ -2454,9 +2574,13 @@ class Sweeper3d(tk.Frame):
         label_to3 = tk.Label(self, text='To', font=LARGE_FONT)
         label_to3.place(relx=0.42, rely=0.33)
 
-        label_step3 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
-        label_step3.place(relx=0.42, rely=0.37)
-        CreateToolTip(label_step3, 'Speed of 1d-sweep')
+        if self.count_option3 == 'ratio':
+            self.label_ratio3 = tk.Label(self, text='Ratio, \n Δ/s', font=LARGE_FONT)
+            CreateToolTip(self.label_ratio3, 'Speed of 1d-sweep')
+        elif self.count_option3 == 'step':
+            self.label_ratio3 = tk.Label(self, text='Step, Δ', font=LARGE_FONT)
+            CreateToolTip(self.label_ratio3, 'Step of 1d-sweep')
+        self.label_ratio3.place(relx=0.42, rely=0.37)
 
         self.entry_from3 = tk.Entry(self)
         self.entry_from3.insert(0, self.from3_init)
@@ -2469,6 +2593,10 @@ class Sweeper3d(tk.Frame):
         self.entry_ratio3 = tk.Entry(self)
         self.entry_ratio3.insert(0, self.ratio3_init)
         self.entry_ratio3.place(relx=0.47, rely=0.37)
+        
+        button_swap3 = tk.Button(self, text = r'🆚', font = ('Verdana', 8), command = self.swap_ratio_step3)
+        button_swap3.place(relx = 0.4, rely = 0.4)
+        CreateToolTip(button_swap3, 'Change Ratio/Step')
 
         label_delay_factor3 = tk.Label(
             self, text='Delay factor, s', justify=tk.LEFT, font=LARGE_FONT)
@@ -2686,6 +2814,57 @@ class Sweeper3d(tk.Frame):
             self.preset.loc[0, 'sweep_options3'] = self.sweep_options3.current()
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
             
+    def swap_ratio_step1(self):
+        if self.count_option1 == 'step':
+            self.count_option1 = 'ratio'
+        elif self.count_option1 == 'ratio':
+            self.count_option1 = 'step'
+            
+        if self.count_option1 == 'step' and self.label_ratio1['text'].startswith('Ratio'):
+            self.label_ratio1.configure(text = 'Step, Δ')
+            self.update()
+        
+        if self.count_option1 == 'ratio' and self.label_ratio1['text'].startswith('Step'):
+            self.label_ratio1.configure(text = 'Ratio, \n Δ/s')
+            self.update()
+        
+        self.preset.loc[0, 'count_option1'] = self.count_option1
+        self.preset.to_csv(globals()['sweeper1d_path'], index = False)
+        
+    def swap_ratio_step2(self):
+        if self.count_option2 == 'step':
+            self.count_option2 = 'ratio'
+        elif self.count_option2 == 'ratio':
+            self.count_option2 = 'step'
+            
+        if self.count_option2 == 'step' and self.label_ratio2['text'].startswith('Ratio'):
+            self.label_ratio2.configure(text = 'Step, Δ')
+            self.update()
+        
+        if self.count_option2 == 'ratio' and self.label_ratio2['text'].startswith('Step'):
+            self.label_ratio2.configure(text = 'Ratio, \n Δ/s')
+            self.update()
+        
+        self.preset.loc[0, 'count_option2'] = self.count_option2
+        self.preset.to_csv(globals()['sweeper2d_path'], index = False)
+        
+    def swap_ratio_step3(self):
+        if self.count_option3 == 'step':
+            self.count_option3 = 'ratio'
+        elif self.count_option3 == 'ratio':
+            self.count_option3 = 'step'
+            
+        if self.count_option3 == 'step' and self.label_ratio3['text'].startswith('Ratio'):
+            self.label_ratio3.configure(text = 'Step, Δ')
+            self.update()
+        
+        if self.count_option3 == 'ratio' and self.label_ratio3['text'].startswith('Step'):
+            self.label_ratio3.configure(text = 'Ratio, \n Δ/s')
+            self.update()
+        
+        self.preset.loc[0, 'count_option3'] = self.count_option3
+        self.preset.to_csv(globals()['sweeper3d_path'], index = False)
+            
     def rewrite_preset(self):
         if self.entry_from1.get() != self.from1_init:
             self.preset.loc[0, 'from1'] = self.entry_from1.get()
@@ -2799,6 +2978,15 @@ class Sweeper3d(tk.Frame):
             delay_factor3 = float(self.entry_delay_factor3.get())
         except ValueError:
             pass
+        
+        if self.count_option1 == 'step':
+            ratio_sweep1 = ratio_sweep1 / delay_factor1
+        
+        if self.count_option2 == 'step':
+            ratio_sweep2 = ratio_sweep2 / delay_factor2
+            
+        if self.count_option3 == 'step':
+            ratio_sweep3 = ratio_sweep3 / delay_factor3
         
         if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
             ratio_sweep1 = -ratio_sweep1
@@ -3071,32 +3259,38 @@ class Sweeper3d(tk.Frame):
             from_sweep1 = float(self.entry_from1.get())
         if self.entry_to1.get() != '':
             to_sweep1 = float(self.entry_to1.get())
-        if self.entry_ratio1.get() != '':
-            ratio_sweep1 = float(self.entry_ratio1.get())
-        if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
-            ratio_sweep1 = -ratio_sweep1
         if self.entry_delay_factor1.get() != '':
             delay_factor1 = float(self.entry_delay_factor1.get())
+        if self.entry_ratio1.get() != '':
+            ratio_sweep1 = float(self.entry_ratio1.get())
+            if self.count_option1 == 'step':
+                ratio_sweep1 = ratio_sweep1 / delay_factor1
+        if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
+            ratio_sweep1 = -ratio_sweep1
         if self.entry_from2.get() != '':
             from_sweep2 = float(self.entry_from2.get())
         if self.entry_to2.get() != '':
             to_sweep2 = float(self.entry_to2.get())
-        if self.entry_ratio2.get() != '':
-            ratio_sweep2 = float(self.entry_ratio2.get())
-        if from_sweep2 > to_sweep2 and ratio_sweep2 > 0:
-            ratio_sweep2 = -ratio_sweep2
         if self.entry_delay_factor2.get() != '':
             delay_factor2 = float(self.entry_delay_factor2.get())
+        if self.entry_ratio2.get() != '':
+            ratio_sweep2 = float(self.entry_ratio2.get())
+            if self.count_option1 == 'step':
+                ratio_sweep2 = ratio_sweep2 / delay_factor2
+        if from_sweep2 > to_sweep2 and ratio_sweep2 > 0:
+            ratio_sweep2 = -ratio_sweep2
         if self.entry_from3.get() != '':
             from_sweep3 = float(self.entry_from3.get())
         if self.entry_to3.get() != '':
             to_sweep3 = float(self.entry_to3.get())
-        if self.entry_ratio3.get() != '':
-            ratio_sweep3 = float(self.entry_ratio3.get())
-        if from_sweep3 > to_sweep3 and ratio_sweep3 > 0:
-            ratio_sweep3 = -ratio_sweep3
         if self.entry_delay_factor3.get() != '':
             delay_factor3 = float(self.entry_delay_factor3.get())
+        if self.entry_ratio3.get() != '':
+            ratio_sweep3 = float(self.entry_ratio3.get())
+            if self.count_option3 == 'step':
+                ratio_sweep3 = ratio_sweep3 / delay_factor3
+        if from_sweep3 > to_sweep3 and ratio_sweep3 > 0:
+            ratio_sweep3 = -ratio_sweep3
         if self.entry_filename.get() != '':
             filename_sweep = self.entry_filename.get()
         sweeper_flag1 = False
@@ -4069,7 +4263,7 @@ class Sweeper_write(threading.Thread):
                 basic_name = basic_name[:basic_name.find('_')]
             print(basic_name)
             for file in files:
-                if basic_name in file and 'manual' not in file:
+                if basic_name in file and 'manual' not in file and 'setget' not in file:
                     index_start = len(file) - file[::-1].find('-') - 1
                     index_stop = file.find('.csv')
                     ind.append(int(file[index_start + 1 : index_stop]))
