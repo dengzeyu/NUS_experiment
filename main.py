@@ -1,6 +1,7 @@
 import os
 from os.path import exists
 cur_dir = os.getcwd() 
+import sys
 import re
 import json
 from csv import writer
@@ -16,20 +17,27 @@ from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
 import matplotlib.pyplot as plt
 from matplotlib import style
 import pyvisa as visa
-from pyvisa import constants
 import time
 from datetime import datetime
 import pandas as pd
 import matplotlib
 import numpy as np
 
-from lock_in import lock_in
-from SourceMeter import SourceMeter
-from TC300 import TC300
-from ZStage import ZStage
-from RotStage import RotStage
-from lakeshore336 import LakeShore336
-from AMI430 import AMI430
+if not exists(os.path.join(cur_dir, 'devices')):
+    os.mkdir(os.path.join(cur_dir, 'devices'))
+    
+sys.path.insert(0, os.path.join(cur_dir, 'devices'))
+
+def str_to_class(classname):
+    return getattr(sys.modules[__name__], classname)
+
+device_classes = os.listdir(os.path.join(cur_dir, 'devices'))
+if '__pycache__' in device_classes:
+    device_classes.remove('__pycache__')
+    
+for ind, device in enumerate(device_classes):
+    exec(f'from {device[:-3]} import {device[:-3]}')
+    device_classes[ind] = str_to_class(device[:-3])
 
 #import random
 
@@ -43,14 +51,6 @@ style.use('seaborn-whitegrid')
 rm = visa.ResourceManager()
 list_of_devices = list(rm.list_resources())
 
-'''
-temp = rm.open_resource('ASRL3::INSTR', baud_rate=115200,
-                        data_bits=8, parity=constants.VI_ASRL_PAR_NONE,
-                        stop_bits=constants.VI_ASRL_STOP_ONE,
-                        flow_control=constants.VI_ASRL_FLOW_NONE,
-                        write_termination='\r', read_termination='\r')
-'''
-
 # Write command to a device and get it's output
 def get(device, command):
     # return np.round(np.random.random(1), 1)
@@ -60,7 +60,6 @@ def get(device, command):
 #print(get(temp, 'IDN?'))
 
 print(rm.list_resources(), '\n')
-
 
 def var2str(var, vars_data=locals()):
     return [var_name for var_name in vars_data if id(var) == id(vars_data[var_name])][0]
@@ -107,6 +106,12 @@ stop_flag = False
 tozero_flag = False
 
 condition = ''
+
+if not exists(os.path.join(cur_dir, 'data_files')):
+    os.mkdir(os.path.join(cur_dir, 'data_files'))
+    
+if not exists(os.path.join(cur_dir, 'config')):
+    os.mkdir(os.path.join(cur_dir, 'config'))
 
 manual_sweep_flags = [0]
 manual_filenames = [cur_dir + '\data_files\manual' + datetime.today().strftime(
@@ -197,8 +202,6 @@ class Time():
     def set_Time(self, value = None):
         return
 
-device_classes = (lock_in, TC300, SourceMeter, ZStage, RotStage)
-
 '''
 def devices_list():
     # queries each device IDN?
@@ -239,6 +242,7 @@ def devices_list():
             types_of_devices.append('Not a class')
     return list_of_devices, types_of_devices
 '''
+
 if len(list_of_devices) == 0:
     list_of_devices = ['']
     
@@ -259,7 +263,8 @@ for ind_, type_ in enumerate(types_of_devices):
             types_of_devices[ind_] = adress_dict[list_of_devices[ind_]]
         
 
-def new_parameters_to_read(types_of_devices = types_of_devices):
+def new_parameters_to_read():
+    global types_of_devices
     global list_of_devices
     parameters_to_read = []
     for ind, device_type in enumerate(types_of_devices):
@@ -387,6 +392,10 @@ class StartPage(tk.Frame):
         label = tk.Label(self, text='Start Page', font=LARGE_FONT)
         label.pack(pady=10, padx=10)
         
+        devices_button = tk.Button(self, text = 'Devices', command = lambda: self.devices_show(), 
+                                   font = LARGE_FONT)
+        devices_button.place(relx = 0.1, rely = 0.1)
+        
         setget_button = tk.Button(self, text = 'Set/Get', 
                                   command = lambda: self.setget_show(), font = LARGE_FONT)
         setget_button.place(relx = 0.1, rely = 0.25)
@@ -420,6 +429,53 @@ class StartPage(tk.Frame):
         global settings_flag
         settings_flag = True
         self.controller.show_frame(Sweeper3d)
+        
+    def devices_show(self):
+        self.controller.show_frame(Devices)
+
+class Devices(tk.Frame):
+    
+    def __init__(self, parent, controller):       
+
+        tk.Frame.__init__(self, parent)
+        
+        button_home = tk.Button(self, text='Back to Home',
+                                 command=lambda: controller.show_frame(StartPage))
+        button_home.pack()
+        
+        label_adress = tk.Label(self, text = 'Set device type:', font = LARGE_FONT)
+        label_adress.place(relx = 0.05, rely = 0.05)
+        
+        self.combo_adresses = ttk.Combobox(self, value = list_of_devices)
+        self.combo_adresses.current(0)
+        self.combo_adresses.place(relx = 0.05, rely = 0.1)
+        
+        self.device_classes = []
+        for class_ in device_classes:
+            self.device_classes.append(var2str(class_))
+            
+        self.combo_types = ttk.Combobox(self, value = self.device_classes)    
+        self.combo_types.bind("<<ComboboxSelected>>", self.set_type_to_adress)
+        self.combo_types.place(relx = 0.2, rely = 0.1)
+        
+    def set_type_to_adress(self, interval = 100):
+        global adress_dict
+        global types_of_devices
+        global parameters_to_read
+        global parameters_to_read_copy
+        global new_parameters_to_read
+        
+        if list(self.combo_adresses['values'])[self.combo_adresses.current()] != '':
+        
+            types_of_devices[self.combo_adresses.current()] = list(self.combo_types['values'])[self.combo_types.current()]
+            
+            adress_dict[list(self.combo_adresses['values'])[self.combo_adresses.current()]] = list(self.combo_types['values'])[self.combo_types.current()]
+            
+            with open(cur_dir + '\\config\\adress_dictionary.txt', "w") as outfile:
+                json.dump(adress_dict, outfile)
+                
+            parameters_to_read = new_parameters_to_read()
+            parameters_to_read_copy = parameters_to_read.copy()
 
 class SetGet(tk.Frame):
     
@@ -1124,8 +1180,8 @@ class Sweeper1d(tk.Frame):
             
         lstbox_height = len(parameters_to_read) / 47
         
-        button_update_sweep = tk.Button(self, text = 'Update sweep', command = lambda: self.update_sweep_configuration())
-        button_update_sweep.place(relx = 0.3, rely = 0.21 + lstbox_height)
+        self.button_update_sweep = tk.Button(self, text = 'Update sweep', command = lambda: self.update_sweep_configuration())
+        self.button_update_sweep.place(relx = 0.3, rely = 0.21 + lstbox_height)
 
         self.button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause())
         self.button_pause.place(relx = 0.3, rely = 0.25 + lstbox_height)
@@ -1135,13 +1191,15 @@ class Sweeper1d(tk.Frame):
         self.button_stop.place(relx = 0.3375, rely = 0.25 + lstbox_height)
         CreateToolTip(self.button_stop, 'Stop sweep')
         
-        button_start_sweeping = tk.Button(
+        self.button_start_sweeping = tk.Button(
             self, text="▶", command=lambda: self.start_sweeping(), font = LARGE_FONT)
-        button_start_sweeping.place(relx=0.375, rely=0.21 + lstbox_height, height= 90, width=30)
-        CreateToolTip(button_start_sweeping, 'Start sweeping')
+        self.button_start_sweeping.place(relx=0.375, rely=0.21 + lstbox_height, height= 90, width=30)
+        CreateToolTip(self.button_start_sweeping, 'Start sweeping')
         
         self.button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero())
         self.button_tozero.place(relx = 0.3, rely = 0.3 + lstbox_height)
+        
+        self.update_listbox()
 
         label_options = tk.Label(self, text = 'Options:', font = LARGE_FONT)
         label_options.place(relx = 0.05, rely = 0.2)
@@ -1327,6 +1385,22 @@ class Sweeper1d(tk.Frame):
             ratio_sweep1 = -ratio_sweep1
             
         self.rewrite_preset()
+        
+    def update_listbox(self, interval = 10000):
+        global parameters_to_read
+        self.devices = tk.StringVar()
+        self.devices.set(value=parameters_to_read)
+        self.lstbox_to_read.configure(listvariable = self.devices,
+                                         height=len(parameters_to_read) * 1)
+        self.lstbox_to_read.after(interval, self.update_listbox)
+        
+        lstbox_height = len(parameters_to_read) / 47
+        
+        self.button_pause.place(relx = 0.3, rely = 0.25 + lstbox_height)
+        self.button_stop.place(relx = 0.3375, rely = 0.25 + lstbox_height)
+        self.button_start_sweeping.place(relx = 0.375, rely = 0.21 + lstbox_height)
+        self.button_tozero.place(relx = 0.3, rely = 0.3 + lstbox_height)
+        self.button_update_sweep.place(relx = 0.3, rely = 0.21 + lstbox_height)
     
     def save_manual_status(self):
         global filename_sweep
@@ -1832,6 +1906,8 @@ class Sweeper2d(tk.Frame):
         graph_button.place(relx=0.7, rely=0.8)
         CreateToolTip(graph_button, 'Graph')
         
+        self.update_listbox()
+        
     def update_master2_combo(self, event, interval = 100):
         if self.combo_master1['value'][self.combo_master1.current()] == '':
             self.combo_master2['value'] = self.master_option
@@ -2029,6 +2105,22 @@ class Sweeper2d(tk.Frame):
             ratio_sweep2 = -ratio_sweep2
             
         self.rewrite_preset()
+        
+    def update_listbox(self, interval = 10000):
+        global parameters_to_read
+        self.devices = tk.StringVar()
+        self.devices.set(value=parameters_to_read)
+        self.lstbox_to_read.configure(listvariable = self.devices,
+                                         height=len(parameters_to_read) * 1)
+        self.lstbox_to_read.after(interval, self.update_listbox)
+        
+        lstbox_height = len(parameters_to_read) / 47
+        
+        self.button_pause.place(relx = 0.45, rely = 0.25 + lstbox_height)
+        self.button_stop.place(relx = 0.4875, rely = 0.25 + lstbox_height)
+        self.button_start_sweeping.place(relx = 0.425, rely = 0.21 + lstbox_height)
+        self.button_tozero.place(relx = 0.45, rely = 0.3 + lstbox_height)
+        self.button_update_sweep.place(relx = 0.45, rely = 0.21 + lstbox_height)
 
     def save_manual_status(self, i):
         if self.manual_sweep_flags[i - 1] != getattr(self, 'status_manual' + str(i)).get():
@@ -2998,6 +3090,22 @@ class Sweeper3d(tk.Frame):
             ratio_sweep3 = -ratio_sweep3
             
         self.rewrite_preset()
+        
+    def update_listbox(self, interval = 10000):
+        global parameters_to_read
+        self.devices = tk.StringVar()
+        self.devices.set(value=parameters_to_read)
+        self.lstbox_to_read.configure(listvariable = self.devices,
+                                         height=len(parameters_to_read) * 1)
+        self.lstbox_to_read.after(interval, self.update_listbox)
+        
+        lstbox_height = len(parameters_to_read) / 47
+        
+        self.button_pause.place(relx = 0.6, rely = 0.25 + lstbox_height)
+        self.button_stop.place(relx = 0.6375, rely = 0.25 + lstbox_height)
+        self.button_start_sweeping.place(relx = 0.675, rely = 0.21 + lstbox_height)
+        self.button_tozero.place(relx = 0.6, rely = 0.3 + lstbox_height)
+        self.button_update_sweep.place(relx = 0.6, rely = 0.21 + lstbox_height)
 
     def save_manual_status(self, i):
         if self.manual_sweep_flags[i - 1] != getattr(self, 'status_manual' + str(i)).get():
@@ -3483,10 +3591,12 @@ class Settings(tk.Frame):
         button_set_script.place(relx = 0.525, rely = 0.56)
         
         
-    def set_type_to_adress(self, interval = 1000):
+    def set_type_to_adress(self, interval = 100):
         global adress_dict
         global types_of_devices
         global new_parameters_to_read
+        global parameters_to_read
+        global parameters_to_read_copy
         
         if list(self.combo_adresses['values'])[self.combo_adresses.current()] != '':
         
@@ -3497,7 +3607,8 @@ class Settings(tk.Frame):
             with open(cur_dir + '\\config\\adress_dictionary.txt', "w") as outfile:
                 json.dump(adress_dict, outfile)
                 
-            new_parameters_to_read()
+            parameters_to_read = new_parameters_to_read()
+            parameters_to_read_copy = parameters_to_read.copy()
         
     
     def update_combo_set_parameters(self, event, interval = 100):
@@ -4252,9 +4363,9 @@ class Sweeper_write(threading.Thread):
             global sweeper_flag2
             global sweeper_flag3
             
-            files = os.listdir(cur_dir + '\data_files')
+            files = os.listdir(os.path.join(cur_dir, 'data_files'))
             ind = [0]
-            basic_name = filename_sweep[len(cur_dir + '\data_files') + 1:-4]
+            basic_name = filename_sweep[len(os.path.join(cur_dir + 'data_files'))+ 1:-4]
             if '-' in basic_name:
                 basic_name = basic_name[:basic_name.find('-')]
             if '_' in basic_name:
@@ -5022,7 +5133,7 @@ interval = 100
 def main():
     #write_config_parameters()
     #write_config_channels()
-    app = Universal_frontend(classes=(StartPage, SetGet, Sweeper1d, Sweeper2d, Sweeper3d),
+    app = Universal_frontend(classes=(StartPage, Devices, SetGet, Sweeper1d, Sweeper2d, Sweeper3d),
                              start=StartPage)
     app.mainloop()
     while True:
