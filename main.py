@@ -999,7 +999,11 @@ class SetGet(tk.Frame):
     def heading_chosed(self, event):
         global parameters_to_read 
         
-        self.current_heading = parameters_to_read[int(self.table_dataframe.identify_column(event.x)[1:]) - 2]
+        try:
+            self.current_heading = parameters_to_read[int(self.table_dataframe.identify_column(event.x)[1:]) - 2]
+        except IndexError:
+            self.current_heading = 'Time'
+        
         
         globals()[f'self.tw{self.num_tw}'] = tw = tk.Toplevel(self)
         
@@ -1175,35 +1179,45 @@ class Sweeper1d(tk.Frame):
         self.lstbox_to_read = tk.Listbox(self, listvariable = self.devices,
                                          selectmode='multiple', width=20,
                                          height=len(parameters_to_read) * 1)
-        self.lstbox_to_read.place(relx=0.3, rely=0.16)
         
         self.dict_lstbox = {}
         
         for parameter in parameters_to_read:
             self.dict_lstbox[parameter] = parameter
             
-        lstbox_height = len(parameters_to_read) / 47
+        self.lstbox_height = len(parameters_to_read) / 47
         
         self.button_update_sweep = tk.Button(self, text = 'Update sweep', command = lambda: self.update_sweep_configuration())
-        self.button_update_sweep.place(relx = 0.3, rely = 0.21 + lstbox_height)
+        self.button_update_sweep.place(relx = 0.3, rely = 0.21 + self.lstbox_height)
 
         self.button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause())
-        self.button_pause.place(relx = 0.3, rely = 0.25 + lstbox_height)
+        self.button_pause.place(relx = 0.3, rely = 0.25 + self.lstbox_height)
         CreateToolTip(self.button_pause, 'Pause\continue sweep')
         
         self.button_stop = tk.Button(self, text = '⏹️', font = LARGE_FONT, command = lambda: self.stop())
-        self.button_stop.place(relx = 0.3375, rely = 0.25 + lstbox_height)
+        self.button_stop.place(relx = 0.3375, rely = 0.25 + self.lstbox_height)
         CreateToolTip(self.button_stop, 'Stop sweep')
         
         self.button_start_sweeping = tk.Button(
             self, text="▶", command=lambda: self.start_sweeping(), font = LARGE_FONT)
-        self.button_start_sweeping.place(relx=0.375, rely=0.21 + lstbox_height, height= 90, width=30)
+        self.button_start_sweeping.place(relx=0.375, rely=0.21 + self.lstbox_height, height= 90, width=30)
         CreateToolTip(self.button_start_sweeping, 'Start sweeping')
         
         self.button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero())
-        self.button_tozero.place(relx = 0.3, rely = 0.3 + lstbox_height)
+        self.button_tozero.place(relx = 0.3, rely = 0.3 + self.lstbox_height)
         
-        #self.update_listbox()
+        if len(parameters_to_read) < 10:
+            self.lstbox_to_read.place(relx=0.3, rely=0.16)
+        else:
+            self.lstbox_height = 18 / 47
+            self.lstbox_to_read.place(relx=0.3, rely=0.16, height = 300)
+            self.button_pause.place(relx = 0.3, rely = 0.25 + self.lstbox_height)
+            self.button_stop.place(relx = 0.3375, rely = 0.25 + self.lstbox_height)
+            self.button_start_sweeping.place(relx = 0.375, rely = 0.21 + self.lstbox_height)
+            self.button_tozero.place(relx = 0.3, rely = 0.3 + self.lstbox_height)
+            self.button_update_sweep.place(relx = 0.3, rely = 0.21 + self.lstbox_height)
+            
+        self.lstbox_to_read.bind('<Button-3>', self.update_listbox)
 
         label_options = tk.Label(self, text = 'Options:', font = LARGE_FONT)
         label_options.place(relx = 0.05, rely = 0.2)
@@ -1306,7 +1320,10 @@ class Sweeper1d(tk.Frame):
         if class_of_sweeper_device1 != 'Not a class':
             self.sweep_options1['value'] = getattr(
                 globals()[class_of_sweeper_device1](), 'set_options')
-            self.sweep_options1.current(self.sweep_options1_current)
+            try:
+                self.sweep_options1.current(self.sweep_options1_current)
+            except tk.TclError:
+                self.sweep_options1.current(0)
             self.sweep_options1.after(interval)
         else:
             self.sweep_options1['value'] = ['']
@@ -1396,15 +1413,17 @@ class Sweeper1d(tk.Frame):
         self.devices.set(value=parameters_to_read)
         self.lstbox_to_read.configure(listvariable = self.devices,
                                          height=len(parameters_to_read) * 1)
-        self.lstbox_to_read.after(interval, self.update_listbox)
         
-        lstbox_height = len(parameters_to_read) / 47
-        
-        self.button_pause.place(relx = 0.3, rely = 0.25 + lstbox_height)
-        self.button_stop.place(relx = 0.3375, rely = 0.25 + lstbox_height)
-        self.button_start_sweeping.place(relx = 0.375, rely = 0.21 + lstbox_height)
-        self.button_tozero.place(relx = 0.3, rely = 0.3 + lstbox_height)
-        self.button_update_sweep.place(relx = 0.3, rely = 0.21 + lstbox_height)
+        if len(parameters_to_read) < 10:
+            self.lstbox_to_read.place(relx=0.3, rely=0.16)
+        else:
+            self.lstbox_height = 18 / 47
+            self.lstbox_to_read.place(relx=0.3, rely=0.16, height = 300)
+            self.button_pause.place(relx = 0.3, rely = 0.25 + self.lstbox_height)
+            self.button_stop.place(relx = 0.3375, rely = 0.25 + self.lstbox_height)
+            self.button_start_sweeping.place(relx = 0.375, rely = 0.21 + self.lstbox_height)
+            self.button_tozero.place(relx = 0.3, rely = 0.3 + self.lstbox_height)
+            self.button_update_sweep.place(relx = 0.3, rely = 0.21 + self.lstbox_height)
     
     def save_manual_status(self):
         global filename_sweep
@@ -1454,8 +1473,7 @@ class Sweeper1d(tk.Frame):
         global filename_sweep
 
         filename_sweep = tk.filedialog.asksaveasfilename(title='Save the file',
-                                                         initialfile=cur_dir + '\data_files\sweep' + datetime.today().strftime(
-                                                             '%H_%M_%d_%m_%Y'),
+                                                         initialfile=cur_dir + '\data_files',
                                                          defaultextension='.csv')
         
         self.entry_filename.delete(0, tk.END)
@@ -1741,26 +1759,38 @@ class Sweeper2d(tk.Frame):
         for parameter in parameters_to_read:
             self.dict_lstbox[parameter] = parameter
             
-        lstbox_height = len(parameters_to_read) / 47
+        self.lstbox_height = len(parameters_to_read) / 47
         
         self.button_update_sweep = tk.Button(self, text = 'Update sweep', command = lambda: self.update_sweep_configuration())
-        self.button_update_sweep.place(relx = 0.45, rely = 0.21 +  lstbox_height)
+        self.button_update_sweep.place(relx = 0.45, rely = 0.21 +  self.lstbox_height)
 
         self.button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause())
-        self.button_pause.place(relx = 0.45, rely = 0.25 + lstbox_height)
+        self.button_pause.place(relx = 0.45, rely = 0.25 + self.lstbox_height)
         CreateToolTip(self.button_pause, 'Pause\Continue sweep')
         
         self.button_stop = tk.Button(self, text = '⏹️', font = LARGE_FONT, command = lambda: self.stop())
-        self.button_stop.place(relx = 0.4875, rely = 0.25 + lstbox_height)
+        self.button_stop.place(relx = 0.4875, rely = 0.25 + self.lstbox_height)
         CreateToolTip(self.button_stop, 'Stop sweep')
         
         self.button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero())
-        self.button_tozero.place(relx = 0.45, rely = 0.3 + lstbox_height)
+        self.button_tozero.place(relx = 0.45, rely = 0.3 + self.lstbox_height)
         
         self.button_start_sweeping = tk.Button(
             self, text="▶", command=lambda: self.start_sweeping(), font = LARGE_FONT)
-        self.button_start_sweeping.place(relx=0.525, rely=0.21 + lstbox_height, height= 90, width=30)
+        self.button_start_sweeping.place(relx=0.525, rely=0.21 + self.lstbox_height, height= 90, width=30)
         CreateToolTip(self.button_start_sweeping, 'Start sweeping')
+        
+        if len(parameters_to_read) < 10:
+            self.lstbox_to_read.place(relx=0.45, rely=0.16)
+        else:
+            self.lstbox_height = 18 / 47
+            self.lstbox_to_read.place(relx=0.45, rely=0.16, height = 300)
+            self.button_pause.place(relx = 0.45, rely = 0.25 + self.lstbox_height)
+            self.button_stop.place(relx = 0.4875, rely = 0.25 + self.lstbox_height)
+            self.button_start_sweeping.place(relx = 0.525, rely = 0.21 + self.lstbox_height)
+            self.button_tozero.place(relx = 0.45, rely = 0.3 + self.lstbox_height)
+            self.button_update_sweep.place(relx = 0.45, rely = 0.21 + self.lstbox_height)
+        self.lstbox_to_read.bind('<Button-3>', self.update_listbox)
 
         label_options = tk.Label(self, text = 'Options:', font=LARGE_FONT)
         label_options.place(relx = 0.05, rely = 0.25)
@@ -1910,8 +1940,6 @@ class Sweeper2d(tk.Frame):
         graph_button.place(relx=0.7, rely=0.8)
         CreateToolTip(graph_button, 'Graph')
         
-        #self.update_listbox()
-        
     def update_master2_combo(self, event, interval = 100):
         if self.combo_master1['value'][self.combo_master1.current()] == '':
             self.combo_master2['value'] = self.master_option
@@ -1946,7 +1974,10 @@ class Sweeper2d(tk.Frame):
         if class_of_sweeper_device1 != 'Not a class':
             self.sweep_options1['value'] = getattr(
                 globals()[class_of_sweeper_device1](), 'set_options')
-            self.sweep_options1.current(self.sweep_options1_current)
+            try:
+                self.sweep_options1.current(self.sweep_options1_current)
+            except tk.TclError:
+                self.sweep_options1.current(0)
             self.sweep_options1.after(interval)
         else:
             self.sweep_options1['value'] = ['']
@@ -1968,7 +1999,10 @@ class Sweeper2d(tk.Frame):
         if class_of_sweeper_device2 != 'Not a class':
             self.sweep_options2['value'] = getattr(
                 globals()[class_of_sweeper_device2](), 'set_options')
-            self.sweep_options2.current(self.sweep_options2_current)
+            try:
+                self.sweep_options2.current(self.sweep_options2_current)
+            except tk.TclError:
+                self.sweep_options2.current(0)
             self.sweep_options2.after(interval)
         else:
             self.sweep_options2['value'] = ['']
@@ -2116,15 +2150,14 @@ class Sweeper2d(tk.Frame):
         self.devices.set(value=parameters_to_read)
         self.lstbox_to_read.configure(listvariable = self.devices,
                                          height=len(parameters_to_read) * 1)
-        self.lstbox_to_read.after(interval, self.update_listbox)
         
-        lstbox_height = len(parameters_to_read) / 47
+        self.lstbox_height = len(parameters_to_read) / 47
         
-        self.button_pause.place(relx = 0.45, rely = 0.25 + lstbox_height)
-        self.button_stop.place(relx = 0.4875, rely = 0.25 + lstbox_height)
-        self.button_start_sweeping.place(relx = 0.525, rely = 0.21 + lstbox_height)
-        self.button_tozero.place(relx = 0.45, rely = 0.3 + lstbox_height)
-        self.button_update_sweep.place(relx = 0.45, rely = 0.21 + lstbox_height)
+        self.button_pause.place(relx = 0.45, rely = 0.25 + self.lstbox_height)
+        self.button_stop.place(relx = 0.4875, rely = 0.25 + self.lstbox_height)
+        self.button_start_sweeping.place(relx = 0.525, rely = 0.21 + self.lstbox_height)
+        self.button_tozero.place(relx = 0.45, rely = 0.3 + self.lstbox_height)
+        self.button_update_sweep.place(relx = 0.45, rely = 0.21 + self.lstbox_height)
 
     def save_manual_status(self, i):
         if self.manual_sweep_flags[i - 1] != getattr(self, 'status_manual' + str(i)).get():
@@ -2456,25 +2489,25 @@ class Sweeper3d(tk.Frame):
         label_devices = tk.Label(self, text = 'Devices:', font=LARGE_FONT)
         label_devices.place(relx = 0.05, rely = 0.21)
         
-        lstbox_height = len(parameters_to_read) / 47
+        self.lstbox_height = len(parameters_to_read) / 47
         
         self.button_update_sweep = tk.Button(self, text = 'Update sweep', command = lambda: self.update_sweep_configuration)
-        self.button_update_sweep.place(relx = 0.6, rely = 0.21 + lstbox_height)
+        self.button_update_sweep.place(relx = 0.6, rely = 0.21 + self.lstbox_height)
         
         self.button_pause = tk.Button(self, text = '⏸️', font = LARGE_FONT, command = lambda: self.pause())
-        self.button_pause.place(relx = 0.6, rely = 0.25 + lstbox_height)
+        self.button_pause.place(relx = 0.6, rely = 0.25 + self.lstbox_height)
         CreateToolTip(self.button_pause, 'Pause\Continue sweep')
         
         self.button_stop = tk.Button(self, text = '⏹️', font = LARGE_FONT, command = lambda: self.stop())
-        self.button_stop.place(relx = 0.6335, rely = 0.25 + lstbox_height)
+        self.button_stop.place(relx = 0.6335, rely = 0.25 + self.lstbox_height)
         CreateToolTip(self.button_stop, 'Stop sweep')
         
         self.button_tozero = tk.Button(self, text = 'To zero', width = 11, command = lambda: self.tozero())
-        self.button_tozero.place(relx = 0.6, rely = 0.3 + lstbox_height)
+        self.button_tozero.place(relx = 0.6, rely = 0.3 + self.lstbox_height)
         
         self.button_start_sweeping = tk.Button(
             self, text="▶", command=lambda: self.start_sweeping(), font = LARGE_FONT)
-        self.button_start_sweeping.place(relx=0.675, rely=0.21 + lstbox_height, height= 90, width=30)
+        self.button_start_sweeping.place(relx=0.675, rely=0.21 + self.lstbox_height, height= 90, width=30)
         CreateToolTip(self.button_start_sweeping, 'Start sweeping')
 
         self.combo_to_sweep1 = ttk.Combobox(self, value=list_of_devices)
@@ -2577,6 +2610,19 @@ class Sweeper3d(tk.Frame):
                                          selectmode='multiple', width=20,
                                          height=len(parameters_to_read) * 1)
         self.lstbox_to_read.place(relx=0.6, rely=0.17)
+        
+        if len(parameters_to_read) < 10:
+            self.lstbox_to_read.place(relx=0.6, rely=0.16)
+        else:
+            self.lstbox_height = 18 / 47
+            self.lstbox_to_read.place(relx=0.6, rely=0.16, height = 300)
+            self.button_pause.place(relx = 0.6, rely = 0.25 + self.lstbox_height)
+            self.button_stop.place(relx = 0.6375, rely = 0.25 + self.lstbox_height)
+            self.button_start_sweeping.place(relx = 0.675, rely = 0.21 + self.lstbox_height)
+            self.button_tozero.place(relx = 0.6, rely = 0.3 + self.lstbox_height)
+            self.button_update_sweep.place(relx = 0.6, rely = 0.21 + self.lstbox_height)
+            
+        self.lstbox_to_read.bind('<Button-3>', self.update_listbox)
         
         self.dict_lstbox = {}
         
@@ -2862,7 +2908,10 @@ class Sweeper3d(tk.Frame):
         if class_of_sweeper_device1 != 'Not a class':
             self.sweep_options1['value'] = getattr(
                 globals()[class_of_sweeper_device1](), 'set_options')
-            self.sweep_options1.current(self.sweep_options1_current)
+            try:
+                self.sweep_options1.current(self.sweep_options1_current)
+            except tk.TclError:
+                self.sweep_options1.current(0)
             self.sweep_options1.after(interval)
         else:
             self.sweep_options1['value'] = ['']
@@ -2875,7 +2924,10 @@ class Sweeper3d(tk.Frame):
         if class_of_sweeper_device2 != 'Not a class':
             self.sweep_options2['value'] = getattr(
                 globals()[class_of_sweeper_device2](), 'set_options')
-            self.sweep_options2.current(self.sweep_options2_current)
+            try:
+                self.sweep_options2.current(self.sweep_options2_current)
+            except tk.TclError:
+                self.sweep_options2.current(0)
             self.sweep_options2.after(interval)
         else:
             self.sweep_options2['value'] = ['']
@@ -2888,7 +2940,10 @@ class Sweeper3d(tk.Frame):
         if class_of_sweeper_device3 != 'Not a class':
             self.sweep_options3['value'] = getattr(
                 globals()[class_of_sweeper_device3](), 'set_options')
-            self.sweep_options3.current(self.sweep_options3_current)
+            try:
+                self.sweep_options3.current(self.sweep_options3_current)
+            except tk.TclError:
+                self.sweep_options3.current(0)
             self.sweep_options3.after(interval)
         else:
             self.sweep_options3['value'] = ['']
@@ -3095,21 +3150,20 @@ class Sweeper3d(tk.Frame):
             
         self.rewrite_preset()
         
-    def update_listbox(self, interval = 10000):
+    def update_listbox(self, interval = 1):
         global parameters_to_read
         self.devices = tk.StringVar()
         self.devices.set(value=parameters_to_read)
         self.lstbox_to_read.configure(listvariable = self.devices,
                                          height=len(parameters_to_read) * 1)
-        self.lstbox_to_read.after(interval, self.update_listbox)
         
-        lstbox_height = len(parameters_to_read) / 47
+        self.lstbox_height = len(parameters_to_read) / 47
         
-        self.button_pause.place(relx = 0.6, rely = 0.25 + lstbox_height)
-        self.button_stop.place(relx = 0.6375, rely = 0.25 + lstbox_height)
-        self.button_start_sweeping.place(relx = 0.675, rely = 0.21 + lstbox_height)
-        self.button_tozero.place(relx = 0.6, rely = 0.3 + lstbox_height)
-        self.button_update_sweep.place(relx = 0.6, rely = 0.21 + lstbox_height)
+        self.button_pause.place(relx = 0.6, rely = 0.25 + self.lstbox_height)
+        self.button_stop.place(relx = 0.6375, rely = 0.25 + self.lstbox_height)
+        self.button_start_sweeping.place(relx = 0.675, rely = 0.21 + self.lstbox_height)
+        self.button_tozero.place(relx = 0.6, rely = 0.3 + self.lstbox_height)
+        self.button_update_sweep.place(relx = 0.6, rely = 0.21 + self.lstbox_height)
 
     def save_manual_status(self, i):
         if self.manual_sweep_flags[i - 1] != getattr(self, 'status_manual' + str(i)).get():
@@ -3774,7 +3828,6 @@ class Sweeper_write(threading.Thread):
             self.value1 = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](
                 adress=device_to_sweep1), parameter_to_sweep1)()
         self.condition = condition
-        self.step1 = float(delay_factor1) * float(ratio_sweep1)
         self.time1 = (float(from_sweep1) - float(to_sweep1)) / float(ratio_sweep1)
         self.filename_sweep = filename_sweep
         self.columns = columns
@@ -3790,11 +3843,19 @@ class Sweeper_write(threading.Thread):
         
         globals()['dataframe'] = []
         
+        if self.sweepable1 == False:
+            self.step1 = float(delay_factor1) * float(ratio_sweep1)
+        else:
+            self.step1 = (self.value1 - float(to_sweep1))
+        
         try:
             self.nstep1 = (float(to_sweep1) - float(from_sweep1)) / self.ratio_sweep1 / self.delay_factor1
             self.nstep1 = int(abs(self.nstep1))
         except ValueError:
             self.nstep1 = 1
+            
+        if self.sweepable1 == True:
+            self.nstep = 1
         
         if self.sweeper_flag2 == True:
             self.device_to_sweep2 = device_to_sweep2
@@ -3810,14 +3871,11 @@ class Sweeper_write(threading.Thread):
                 self.value2 = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
                     adress=device_to_sweep2), parameter_to_sweep2)()
             self.columns = columns
-            self.step2 = float(delay_factor2) * float(ratio_sweep2)
             self.time2 = (float(from_sweep2) - float(to_sweep2)) / float(ratio_sweep2)
             
             try:
                 self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
                 self.nstep2 = int(abs(self.nstep2))
-                globals()['nstep1'] = self.nstep1
-                globals()['nstep2'] = self.nstep2
             except ValueError:
                 self.nstep2 = 1
                 
@@ -3830,7 +3888,23 @@ class Sweeper_write(threading.Thread):
                         adress=device_to_sweep2), 'set_options').index(parameter_to_sweep2)]:
                             self.sweepable2 = True
                             globals()['upcoming_value2'] = self.value2
+                            
+            if self.sweepable2 == False:
+                self.step2 = float(delay_factor2) * float(ratio_sweep2)
+            else:
+                self.step2 = (self.value2 - float(to_sweep2))
+                
+            if self.sweepable2 == True:
+                self.nstep2 = 1
+                
+            self.step1 = float(delay_factor1) * float(ratio_sweep1)
             
+            try:
+                self.nstep1 = (float(to_sweep1) - float(from_sweep1)) / self.ratio_sweep1 / self.delay_factor1
+                self.nstep1 = int(abs(self.nstep1))
+            except ValueError:
+                self.nstep1 = 1
+        
         if self.sweeper_flag3 == True:
             self.device_to_sweep2 = device_to_sweep2
             self.device_to_sweep3 = device_to_sweep3
@@ -3892,6 +3966,22 @@ class Sweeper_write(threading.Thread):
                         adress=device_to_sweep3), 'set_options').index(parameter_to_sweep3)]:
                             self.sweepable3 = True
                             globals()['upcoming_value3'] = self.value3
+                            
+            if self.sweepable3 == False:
+                self.step3 = float(delay_factor3) * float(ratio_sweep3)
+            else:
+                self.step3 = (self.value3 - float(to_sweep3))
+                
+            self.step1 = float(delay_factor1) * float(ratio_sweep1)
+            
+            try:
+                self.nstep1 = (float(to_sweep1) - float(from_sweep1)) / self.ratio_sweep1 / self.delay_factor1
+                self.nstep1 = int(abs(self.nstep1))
+            except ValueError:
+                self.nstep1 = 1
+                
+            if self.sweepable3 == True:
+                self.nstep3 = 1
             
         print(f'Manual_sweep_flags are {manual_sweep_flags}\nrange1 = [{from_sweep1}:{to_sweep1}), ratio_sweep1 = {ratio_sweep1}\nrange2 = [{from_sweep2}:{to_sweep2}), ratio_sweep2 = {ratio_sweep2}\nrange3 = [{from_sweep3}:{to_sweep3}), ratio_sweep3 = {ratio_sweep3}')
 
