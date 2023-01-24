@@ -84,6 +84,7 @@ from_sweep3 = float
 to_sweep3 = float
 ratio_sweep3 = float
 delay_factor3 = float
+stepper_flag = False
 
 month_dictionary = {'01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr', '05': 'May', '06': 'Jun', 
                     '07': 'Jul', '08': 'Aug', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'}
@@ -104,8 +105,6 @@ else:
         cur_dir = os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}', 'data_files')
     else:
         cur_dir = os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}', 'data_files')
-        
-print(f'Cur_dir is {cur_dir}')
 
 filename_sweep = os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}.csv')
 
@@ -113,7 +112,6 @@ ind_setget = []
 flag_setget = False
 
 for file in os.listdir(cur_dir):
-    print(file)
     if f'setget_{DAY}{MONTH}{YEAR}' not in file:
         flag_setget = False or flag_setget
     else:
@@ -3565,65 +3563,70 @@ class Settings(tk.Frame):
         button_change_name_get_parameters = tk.Button(self, text = 'Change get name', command = lambda: self.update_names_get_parameters(parent))
         button_change_name_get_parameters.place(relx = 0.2, rely = 0.29)
         
+        self.checkbox_stepper = tk.Checkbutton(self, text = 'Stepper mode', font = LARGE_FONT, command = self.stepper_mode)
+        if stepper_flag == True:
+            self.checkbox_stepper.select()
+        self.checkbox_stepper.place(relx = 0.55, rely = 0.05)
+        
         if hasattr(parent, 'back_and_forth_slave_slave_count'): 
             
             label_back_and_forth_master = tk.Label(self, text = 'Set number of back and forth walks for master axis', font = LARGE_FONT)
-            label_back_and_forth_master.place(relx = 0.55, rely = 0.05)
+            label_back_and_forth_master.place(relx = 0.55, rely = 0.15)
             
             label_back_and_forth_slave = tk.Label(self, text = 'Set number of back and forth walks for slave axis', font = LARGE_FONT)
-            label_back_and_forth_slave.place(relx = 0.55, rely = 0.15)
+            label_back_and_forth_slave.place(relx = 0.55, rely = 0.25)
             
             label_back_and_forth_slave_slave = tk.Label(self, text = 'Set number of back and forth walks for slave_slave axis', font = LARGE_FONT)
-            label_back_and_forth_slave_slave.place(relx = 0.55, rely = 0.25)
+            label_back_and_forth_slave_slave.place(relx = 0.55, rely = 0.35)
             
             self.combo_back_and_forth_master = ttk.Combobox(self, value = [2, 'custom', 'continious'])
-            self.combo_back_and_forth_master.place(relx = 0.55, rely = 0.1)
+            self.combo_back_and_forth_master.place(relx = 0.55, rely = 0.2)
             
             button_set_back_and_forth_master = tk.Button(self, text = 'Set', command = lambda: self.update_back_and_forth_master_count(parent = parent))
-            button_set_back_and_forth_master.place(relx = 0.68, rely = 0.09)
+            button_set_back_and_forth_master.place(relx = 0.68, rely = 0.19)
             
             self.combo_back_and_forth_slave = ttk.Combobox(self, value = [2, 'custom', 'continious'])
-            self.combo_back_and_forth_slave.place(relx = 0.55, rely = 0.2)
+            self.combo_back_and_forth_slave.place(relx = 0.55, rely = 0.3)
             
             button_set_back_and_forth_slave = tk.Button(self, text = 'Set', command = lambda: self.update_back_and_forth_slave_count(parent = parent))
-            button_set_back_and_forth_slave.place(relx = 0.68, rely = 0.19)
+            button_set_back_and_forth_slave.place(relx = 0.68, rely = 0.29)
             
             self.combo_back_and_forth_slave_slave = ttk.Combobox(self, value = [2, 'custom', 'continious'])
-            self.combo_back_and_forth_slave_slave.place(relx = 0.55, rely = 0.3)
+            self.combo_back_and_forth_slave_slave.place(relx = 0.55, rely = 0.4)
             
             button_set_back_and_forth_slave_slave = tk.Button(self, text = 'Set', command = lambda: self.update_back_and_forth_slave_count(parent = parent))
-            button_set_back_and_forth_slave_slave.place(relx = 0.68, rely = 0.29)
+            button_set_back_and_forth_slave_slave.place(relx = 0.68, rely = 0.39)
         
         elif hasattr(parent, 'back_and_forth_slave_count') and not hasattr(parent, 'back_and_forth_slave_slave_count'):
             
             label_back_and_forth_master = tk.Label(self, text = 'Set number of back and forth walks for master axis', font = LARGE_FONT)
-            label_back_and_forth_master.place(relx = 0.55, rely = 0.05)
+            label_back_and_forth_master.place(relx = 0.55, rely = 0.15)
             
             label_back_and_forth_slave = tk.Label(self, text = 'Set number of back and forth walks for slave axis', font = LARGE_FONT)
-            label_back_and_forth_slave.place(relx = 0.55, rely = 0.15)
+            label_back_and_forth_slave.place(relx = 0.55, rely = 0.25)
             
             self.combo_back_and_forth_master = ttk.Combobox(self, value = [2, 'custom', 'continious'])
-            self.combo_back_and_forth_master.place(relx = 0.55, rely = 0.1)
+            self.combo_back_and_forth_master.place(relx = 0.55, rely = 0.2)
             
             button_set_back_and_forth_master = tk.Button(self, text = 'Set', command = lambda: self.update_back_and_forth_master_count(parent = parent))
-            button_set_back_and_forth_master.place(relx = 0.68, rely = 0.09)
+            button_set_back_and_forth_master.place(relx = 0.68, rely = 0.19)
             
             self.combo_back_and_forth_slave = ttk.Combobox(self, value = [2, 'custom', 'continious'])
-            self.combo_back_and_forth_slave.place(relx = 0.55, rely = 0.2)
+            self.combo_back_and_forth_slave.place(relx = 0.55, rely = 0.3)
             
             button_set_back_and_forth_slave = tk.Button(self, text = 'Set', command = lambda: self.update_back_and_forth_slave_count(parent = parent))
-            button_set_back_and_forth_slave.place(relx = 0.68, rely = 0.19)
+            button_set_back_and_forth_slave.place(relx = 0.68, rely = 0.29)
             
         else:
             
             label_back_and_forth_master = tk.Label(self, text = 'Set number of back and forth walks for master axis', font = LARGE_FONT)
-            label_back_and_forth_master.place(relx = 0.55, rely = 0.05)
+            label_back_and_forth_master.place(relx = 0.55, rely = 0.15)
             
             self.combo_back_and_forth_master = ttk.Combobox(self, value = [2, 'custom', 'continious'])
-            self.combo_back_and_forth_master.place(relx = 0.55, rely = 0.1)
+            self.combo_back_and_forth_master.place(relx = 0.55, rely = 0.2)
             
             button_set_back_and_forth_master = tk.Button(self, text = 'Set', command = lambda: self.update_back_and_forth_master_count(parent = parent))
-            button_set_back_and_forth_master.place(relx = 0.68, rely = 0.09)
+            button_set_back_and_forth_master.place(relx = 0.68, rely = 0.19)
         
         for_text_loops = ''
         indent = '\t'
@@ -3797,6 +3800,15 @@ class Settings(tk.Frame):
         else:
             raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_slave_slave.get())}')
        
+    def stepper_mode(self):
+        global stepper_flag
+        
+        #stepper_flag = self.stepper_flag.get()
+        if stepper_flag == True:
+            stepper_flag = False
+        elif stepper_flag == False:
+            stepper_flag = True
+       
     def explore_script(self, interval = 1):
         script_filename = tk.filedialog.askopenfilename(initialdir=cur_dir,
                                                                  title='Select a manual sweeper',
@@ -3865,7 +3877,10 @@ class Sweeper_write(threading.Thread):
         if self.sweepable1 == False:
             self.step1 = float(delay_factor1) * float(ratio_sweep1)
         else:
-            self.step1 = (self.value1 - float(to_sweep1))
+            if stepper_flag == False:
+                self.step1 = (self.value1 - float(to_sweep1))
+            else:
+                self.step1 = float(delay_factor1) * float(ratio_sweep1)
         
         try:
             self.nstep1 = (float(to_sweep1) - float(from_sweep1)) / self.ratio_sweep1 / self.delay_factor1
@@ -3873,7 +3888,7 @@ class Sweeper_write(threading.Thread):
         except ValueError:
             self.nstep1 = 1
             
-        if self.sweepable1 == True:
+        if self.sweepable1 == True and stepper_flag == False:
             self.nstep = 1
         
         if self.sweeper_flag2 == True:
@@ -3911,9 +3926,12 @@ class Sweeper_write(threading.Thread):
             if self.sweepable2 == False:
                 self.step2 = float(delay_factor2) * float(ratio_sweep2)
             else:
-                self.step2 = (self.value2 - float(to_sweep2))
+                if stepper_flag == False:
+                    self.step2 = (self.value2 - float(to_sweep2))
+                else:
+                    self.step2 = float(delay_factor2) * float(ratio_sweep2)
                 
-            if self.sweepable2 == True:
+            if self.sweepable2 == True and stepper_flag == False:
                 self.nstep2 = 1
                 
             self.step1 = float(delay_factor1) * float(ratio_sweep1)
@@ -3989,7 +4007,10 @@ class Sweeper_write(threading.Thread):
             if self.sweepable3 == False:
                 self.step3 = float(delay_factor3) * float(ratio_sweep3)
             else:
-                self.step3 = (self.value3 - float(to_sweep3))
+                if stepper_flag == False:
+                    self.step3 = (self.value3 - float(to_sweep3))
+                else:
+                    self.step3 = float(delay_factor3) * float(ratio_sweep3)
                 
             self.step1 = float(delay_factor1) * float(ratio_sweep1)
             
@@ -3999,7 +4020,7 @@ class Sweeper_write(threading.Thread):
             except ValueError:
                 self.nstep1 = 1
                 
-            if self.sweepable3 == True:
+            if self.sweepable3 == True and stepper_flag == False:
                 self.nstep3 = 1
             
         print(f'Manual_sweep_flags are {manual_sweep_flags}\nrange1 = [{from_sweep1}:{to_sweep1}), ratio_sweep1 = {ratio_sweep1}\nrange2 = [{from_sweep2}:{to_sweep2}), ratio_sweep2 = {ratio_sweep2}\nrange3 = [{from_sweep3}:{to_sweep3}), ratio_sweep3 = {ratio_sweep3}')
