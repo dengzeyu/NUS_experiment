@@ -1,6 +1,6 @@
 import os
 from os.path import exists
-cur_dir = os.getcwd() 
+core_dir = os.getcwd() 
 import sys
 import re
 import json
@@ -23,15 +23,15 @@ import pandas as pd
 import matplotlib
 import numpy as np
 
-if not exists(os.path.join(cur_dir, 'devices')):
-    os.mkdir(os.path.join(cur_dir, 'devices'))
+if not exists(os.path.join(core_dir, 'devices')):
+    os.mkdir(os.path.join(core_dir, 'devices'))
     
-sys.path.insert(0, os.path.join(cur_dir, 'devices'))
+sys.path.insert(0, os.path.join(core_dir, 'devices'))
 
 def str_to_class(classname):
     return getattr(sys.modules[__name__], classname)
 
-device_classes = os.listdir(os.path.join(cur_dir, 'devices'))
+device_classes = os.listdir(os.path.join(core_dir, 'devices'))
 if '__pycache__' in device_classes:
     device_classes.remove('__pycache__')
     
@@ -59,7 +59,7 @@ def get(device, command):
 
 #print(get(temp, 'IDN?'))
 
-print(rm.list_resources(), '\n')
+print(f'Instruments: {rm.list_resources()} \n')
 
 def var2str(var, vars_data=locals()):
     return [var_name for var_name in vars_data if id(var) == id(vars_data[var_name])][0]
@@ -91,8 +91,39 @@ DAY = datetime.today().strftime('%d')
 MONTH = month_dictionary[datetime.today().strftime('%m')]
 YEAR = datetime.today().strftime('%Y')[-2:]
 
-filename_sweep = cur_dir + f'\data_files\{DAY}{MONTH}{YEAR}.csv'
-filename_setget = cur_dir + f'\data_files\setget_{DAY}{MONTH}{YEAR}.csv'
+cur_dir = os.getcwd()
+
+if not exists(os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}')):
+    os.mkdir(os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}'))
+    cur_dir = os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}')
+    os.mkdir(os.path.join(cur_dir, 'data_files'))
+    cur_dir = os.path.join(cur_dir, 'data_files')
+else:
+    if not exists(os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}', 'data_files')):
+        os.mkdir(os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}', 'data_files'))
+        cur_dir = os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}', 'data_files')
+    else:
+        cur_dir = os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}', 'data_files')
+        
+print(f'Cur_dir is {cur_dir}')
+
+filename_sweep = os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}.csv')
+
+ind_setget = []
+flag_setget = False
+
+for file in os.listdir(cur_dir):
+    print(file)
+    if f'setget_{DAY}{MONTH}{YEAR}' not in file:
+        flag_setget = False or flag_setget
+    else:
+        flag_setget = True or flag_setget
+        ind_setget.append(int(file[file.find('-') + 1 : -4]))
+        
+if flag_setget == False:
+    filename_setget = os.path.join(cur_dir, f'setget_{DAY}{MONTH}{YEAR}-1.csv')
+else:
+    filename_setget = os.path.join(cur_dir, f'setget_{DAY}{MONTH}{YEAR}-{np.max(ind_setget) + 1}.csv')
 
 settings_flag = False
 
@@ -107,15 +138,12 @@ tozero_flag = False
 
 condition = ''
 
-if not exists(os.path.join(cur_dir, 'data_files')):
-    os.mkdir(os.path.join(cur_dir, 'data_files'))
-    
-if not exists(os.path.join(cur_dir, 'config')):
-    os.mkdir(os.path.join(cur_dir, 'config'))
+if not exists(os.path.join(core_dir, 'config')):
+    os.mkdir(os.path.join(core_dir, 'config'))
 
 manual_sweep_flags = [0]
-manual_filenames = [cur_dir + '\data_files\manual' + datetime.today().strftime(
-    '%H_%M_%d_%m_%Y') + '.csv']
+manual_filenames = [os.path.join(cur_dir, 'manual' + datetime.today().strftime(
+    '%H_%M_%d_%m_%Y') + '.csv')]
 
 master_lock = False
 
@@ -131,7 +159,7 @@ cur_animation_num = 1
 
 #creating config files if they were deleted
 
-adress_dictionary_path = cur_dir + '//config//adress_dictionary.txt'
+adress_dictionary_path = os.path.join(core_dir, 'config', 'adress_dictionary.txt')
 if not exists(adress_dictionary_path):
     with open(adress_dictionary_path, 'w') as file:
         try:
@@ -145,8 +173,8 @@ if not exists(adress_dictionary_path):
 def create_preset(dimension):
     global cur_dir
     dimension = str(dimension)
-    globals()['sweeper' + dimension + 'd_path'] = cur_dir + '//config//sweeper' + dimension + 'd_preset.csv'
-    if not exists(globals()['sweeper' + dimension + 'd_path']):
+    globals()['sweeper' + dimension + 'd_path'] = os.path.join(core_dir, 'config', f'sweeper{dimension}d_preset.csv')
+    if not exists(globals()[f'sweeper{dimension}d_path']):
         dic = {}
         for i in range(int(dimension)):
              dic['combo_to_sweep' + str(i+1)] = [0]
@@ -162,9 +190,9 @@ def create_preset(dimension):
              dic['master_option' + str(i+1)] = 0
         dic['condition'] = ''
         dataframe = pd.DataFrame(dic)
-        dataframe.to_csv(globals()['sweeper' + dimension + 'd_path'], index = False)
+        dataframe.to_csv(globals()[f'sweeper{dimension}d_path'], index = False)
         
-    globals()['setget_path'] = cur_dir + '//config//setget_preset.csv'
+    globals()['setget_path'] = os.path.join(core_dir, 'config', 'setget_preset.csv')
     if not exists(globals()['setget_path']):
         dic = {}
         dic['num_widgets'] = [1]
@@ -191,16 +219,7 @@ def create_preset(dimension):
 
 for i in range(3):
     create_preset(i+1)
-    
-class Time():
-    
-    def __init__(self, adress = None):
-        
-        self.set_options = ['Time']
-        self.get_options = []
-        
-    def set_Time(self, value = None):
-        return
+
 
 '''
 def devices_list():
@@ -253,7 +272,7 @@ for i in range (len(list_of_devices)):
 list_of_devices.insert(0, 'Time')
 types_of_devices.insert(0, 'Time')
         
-with open(cur_dir + '\\config\\adress_dictionary.txt', 'r') as file:
+with open(os.path.join(core_dir, 'config', 'adress_dictionary.txt'), 'r') as file:
     adress_dict = file.read()
 adress_dict = json.loads(adress_dict)
     
@@ -2929,7 +2948,7 @@ class Sweeper3d(tk.Frame):
             except tk.TclError:
                 self.sweep_options2.current(0)
             self.sweep_options2.after(interval)
-        else:
+        else: 
             self.sweep_options2['value'] = ['']
             self.sweep_options2.current(0)
             self.sweep_options2.after(interval)
@@ -4476,9 +4495,9 @@ class Sweeper_write(threading.Thread):
             global sweeper_flag2
             global sweeper_flag3
             
-            files = os.listdir(cur_dir +  '\data_files')
+            files = os.listdir(cur_dir)
             ind = [0]
-            basic_name = filename_sweep[len(cur_dir + '\data_files')+ 1:-4]
+            basic_name = filename_sweep[len(cur_dir)+ 1:-4]
             if '-' in basic_name:
                 basic_name = basic_name[:basic_name.find('-')]
             if '_' in basic_name:
@@ -4494,12 +4513,12 @@ class Sweeper_write(threading.Thread):
             previous_ind = np.max(ind)
             print(previous_ind)
             if sweeper_flag1 == True:
-                filename_sweep = f'{cur_dir}\data_files\{basic_name}-{previous_ind + 1}.csv'
+                filename_sweep = f'{cur_dir}\{basic_name}-{previous_ind + 1}.csv'
             elif sweeper_flag2 == True:
                 value1 = self.value1
                 integer1 = int(value1)
                 fractional1 = int(10 * (value1 % 1))
-                filename_sweep = f'{cur_dir}\data_files\{basic_name}_{integer1}.{fractional1}-{previous_ind + 1}.csv'
+                filename_sweep = f'{cur_dir}\{basic_name}_{integer1}.{fractional1}-{previous_ind + 1}.csv'
             elif sweeper_flag3 == True:
                 value1 = self.value1
                 value2 = self.value2
@@ -4507,7 +4526,7 @@ class Sweeper_write(threading.Thread):
                 fractional1 = int(10 * (value1 % 1))
                 integer2 = int(value2)
                 fractional2 = int(10 * (value2 % 1))
-                filename_sweep = f'{cur_dir}\data_files\{basic_name}_{integer1}.{fractional1}_{integer2}.{fractional2}-{previous_ind + 1}.csv'
+                filename_sweep = f'{cur_dir}\{basic_name}_{integer1}.{fractional1}_{integer2}.{fractional2}-{previous_ind + 1}.csv'
                 
             
             globals()['dataframe'] = pd.DataFrame(columns=self.columns)
