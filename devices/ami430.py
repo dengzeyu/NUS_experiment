@@ -10,7 +10,7 @@ def get(device, command):
     return device.query(command)
 
 class ami430():
-    def __init__(self, adress = 'ASRL12::INSTR'):
+    def __init__(self, adress = 'ASRL13::INSTR'):
         self.adress = adress
         
         self.AMI430 = AMI430(self.adress)
@@ -52,7 +52,7 @@ class ami430():
         return self.AMI430.magnet_current
     
 def main():
-    device = AMI430()
+    device = ami430()
     print(device.field())
     
 if __name__ == '__main__':

@@ -84,7 +84,6 @@ from_sweep3 = float
 to_sweep3 = float
 ratio_sweep3 = float
 delay_factor3 = float
-num_opened_graphs = 0
 stepper_flag = False
 
 month_dictionary = {'01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr', '05': 'May', '06': 'Jun', 
@@ -190,35 +189,58 @@ def create_preset(dimension):
         dic['condition'] = ''
         dataframe = pd.DataFrame(dic)
         dataframe.to_csv(globals()[f'sweeper{dimension}d_path'], index = False)
-        
-    globals()['setget_path'] = os.path.join(core_dir, 'config', 'setget_preset.csv')
-    if not exists(globals()['setget_path']):
-        dic = {}
-        dic['num_widgets'] = [1]
-        dic['combo_to_sweep1'] = [0]
-        dic['sweep_options1'] = [0]
-        dic['set1'] = ['']
-        dic['combo_to_sweep2'] = [0]
-        dic['sweep_options2'] = [0]
-        dic['set2'] = ['']
-        dic['combo_to_sweep3'] = [0]
-        dic['sweep_options3'] = [0]
-        dic['set3'] = ['']
-        dic['combo_to_sweep4'] = [0]
-        dic['sweep_options4'] = [0]
-        dic['set4'] = ['']
-        dic['combo_to_sweep5'] = [0]
-        dic['sweep_options5'] = [0]
-        dic['set5'] = ['']
-        dic['combo_to_sweep6'] = [0]
-        dic['sweep_options6'] = [0]
-        dic['set6'] = ['']
-        dataframe = pd.DataFrame(dic)
-        dataframe.to_csv(globals()['setget_path'], index = False)
 
 for i in range(3):
     create_preset(i+1)
 
+setget_path = os.path.join(core_dir, 'config', 'setget_preset.csv')
+if not exists(setget_path):
+    dic = {}
+    dic['num_widgets'] = [1]
+    dic['combo_to_sweep1'] = [0]
+    dic['sweep_options1'] = [0]
+    dic['set1'] = ['']
+    dic['combo_to_sweep2'] = [0]
+    dic['sweep_options2'] = [0]
+    dic['set2'] = ['']
+    dic['combo_to_sweep3'] = [0]
+    dic['sweep_options3'] = [0]
+    dic['set3'] = ['']
+    dic['combo_to_sweep4'] = [0]
+    dic['sweep_options4'] = [0]
+    dic['set4'] = ['']
+    dic['combo_to_sweep5'] = [0]
+    dic['sweep_options5'] = [0]
+    dic['set5'] = ['']
+    dic['combo_to_sweep6'] = [0]
+    dic['sweep_options6'] = [0]
+    dic['set6'] = ['']
+    dataframe = pd.DataFrame(dic)
+    dataframe.to_csv(setget_path, index = False)
+
+graph_preset_path = os.path.join(core_dir, 'config', 'graph_preset.csv')
+if not exists(graph_preset_path):
+    dic = {}
+    dic['num_plots'] = [1]
+    for i in range(1, 100):
+        dic[f'title{i}'] = [f'Plot {i}']
+        dic[f'x{i}_current'] = [0]
+        dic[f'x{i}_log'] = [0]
+        dic[f'y{i}_current'] = [0]
+        dic[f'y{i}_log'] = [0]
+        dic[f'x{i}_lim_left'] = ['']
+        dic[f'x{i}_lim_right'] = ['']
+        dic[f'x{i}_autoscale'] = [0]
+        dic[f'y{i}_lim_left'] = ['']
+        dic[f'y{i}_lim_right'] = ['']
+        dic[f'y{i}_autoscale'] = [0]
+        dic[f'x{i}_label'] = ['x']
+        dic[f'y{i}_label'] = ['y']
+        dic[f'x{i}_transform'] = ['x']
+        dic[f'y{i}_transform'] = ['y']
+        
+    dataframe = pd.DataFrame(dic)
+    dataframe.to_csv(graph_preset_path, index = False)
 
 '''
 def devices_list():
@@ -301,14 +323,7 @@ parameters_to_read_copy = parameters_to_read.copy()
 
 zero_time = time.perf_counter()
 
-def my_animate_initial(n):
-    # function to animate graph on first step
-    ax = globals()[f'ax{n}']
-    line, = ax.plot([0], [0])
-    line.set_data([0], [0])
-    return line,
-
-def my_animate(i, n, num_plots, num_opened_graphs):
+def my_animate(i, n, filename):
     # function to animate graph on each step
     
     def axes_settings(i, pad = 0, tick_size = 4, label_size = 6, x_pad =0, y_pad = 1, title_size = 8, title_pad = -5):
@@ -319,7 +334,6 @@ def my_animate(i, n, num_plots, num_opened_graphs):
         globals()[f'ax{i}'].set_title(f'Plot {i}', fontsize = title_size, pad = title_pad)
     
     global columns
-    global filename_sweep
     global x_transformation
     global y_transformation
     
@@ -333,7 +347,7 @@ def my_animate(i, n, num_plots, num_opened_graphs):
         color = 'black'
 
     try:
-        data = pd.read_csv(filename_sweep)
+        data = pd.read_csv(filename)
         globals()[f'x{n}'] = data[columns[globals()[f'x{n}_status']]].values
         globals()[f'y{n}'] = data[columns[globals()[f'y{n}_status']]].values
     except:
@@ -355,6 +369,7 @@ def my_animate(i, n, num_plots, num_opened_graphs):
     
     xscale_status = ax.get_xscale()
     yscale_status = ax.get_yscale()
+    title = ax.get_title()
     xlabel = ax.get_xlabel()
     ylabel = ax.get_ylabel()
     xlims = ax.get_xlim()
@@ -363,18 +378,18 @@ def my_animate(i, n, num_plots, num_opened_graphs):
     ax.set_xscale(xscale_status)
     ax.set_yscale(yscale_status)
     axes_settings(n)
+    ax.set_title(title, fontsize = 8, pad = -5)
     ax.set_xlim(xlims)
     ax.set_ylim(ylims)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
+    ax.set_xlabel(xlabel, fontsize = 8)
+    ax.set_ylabel(ylabel, fontsize = 8)
     ax.autoscale(enable = globals()[f'x{n}_autoscale'], axis = 'x')
     ax.autoscale(enable = globals()[f'y{n}_autoscale'], axis = 'y')
     
     ax.plot(x, y, '-', lw=1, color=color)
     
-    globals()[f'graph_object{num_opened_graphs}'].update()
-    globals()[f'graph_object{num_opened_graphs}'].update_idletasks()
-    
+    globals()[f'graph_object{globals()["cur_animation_num"] - 3}'].update()
+    globals()[f'graph_object{globals()["cur_animation_num"] - 3}'].update_idletasks()
     return [ax]
 
 zero_time = time.perf_counter()
@@ -406,9 +421,7 @@ class Universal_frontend(tk.Tk):
         global settings_flag
         frame = self.frames[cont]
         frame.tkraise()
-        if settings_flag == True:
-            globals()['Sweeper_object'] = frame
-            settings_flag = False
+        globals()['Sweeper_object'] = frame
 
 class StartPage(tk.Frame):
 
@@ -614,6 +627,10 @@ class SetGet(tk.Frame):
         
         self.scrollbar.config(command=self.lstbox_to_read.yview)
         self.lstbox_to_read.config(yscrollcommand=self.scrollbar.set)
+        
+        button_open_graph = tk.Button(
+            self, text='📊', font = SUPER_LARGE, command=lambda: self.open_graph())
+        button_open_graph.place(relx = 0.85, rely = 0.6)
         
         button_get = tk.Button(self, text = 'Get!', command = lambda: self.get_read_parameters())
         button_get.place(relx = 0.9, rely = 0.45)
@@ -996,31 +1013,27 @@ class SetGet(tk.Frame):
             self.preset.loc[0, 'num_widgets'] = self.num_widgets
             self.preset.to_csv(globals()['setget_path'], index = False)
           
-    def animate(self, i, heading):
+    def open_graph(self):
         
-        global filename_setget
+        global cur_animation_num
         
-        color = 'darkblue'
+        def return_range(x, n):
+            if x % n == 0:
+                return [x + p for p in range(n)]
+            elif x % n == n - 1:
+                return [x - p for p in range(n)][::-1]
+            else:
+                return return_range(x + 1, n)
         
-        ax = globals()[f'ax_setget{self.dict_num_heading[heading]}']
-        
-        data = pd.read_csv(filename_setget)
-        data = data.tail(len(data))        
-        t = data['Time'].values
-        if len(t) == 0:
-            t = []
-        y = data[heading].values
-        if len(y) == 0:
-            y = []
-        xlabel = ax.get_xlabel()
-        ylabel = ax.get_ylabel()
-        title = ax.get_title()
-        ax.clear()
-        ax.set_xlabel(xlabel, fontsize = 8)
-        ax.set_ylabel(ylabel, fontsize = 8)
-        ax.tick_params(axis='both', which='major', labelsize=8)
-        ax.set_title(title, fontsize = 8, pad = -5)
-        ax.plot(t, y, '-', color = color, lw = 1)
+        globals()[f'graph_object{globals()["cur_animation_num"]}'] = Graph(globals()['filename_setget'])
+        for i in return_range(cur_animation_num, 3):
+            globals()[f'x{i + 1}'] = []
+            globals()[f'x{i + 1}_status'] = 0
+            globals()[f'y{i + 1}'] = []
+            globals()[f'y{i + 1}_status'] = 0
+            globals()[f'ani{i+1}'] = StartAnimation
+            globals()[f'ani{i+1}'].start(globals()['filename_setget'])
+
           
     def heading_chosed(self, event):
         global parameters_to_read 
@@ -1056,6 +1069,7 @@ class SetGet(tk.Frame):
     def get_read_parameters(self):
         global setget_flag
         global filename_setget
+        global columns
         
         def get_key(val, my_dict):
             for key, value in my_dict.items():
@@ -1099,7 +1113,6 @@ class SetGet(tk.Frame):
             
             self.scrollbar_table.config(command=self.table_dataframe.xview)
             self.table_dataframe.config(xscrollcommand=self.scrollbar_table.set)
-            self.table_dataframe.bind ('<ButtonRelease-1>', self.heading_chosed)
             
             self.num_tw = 1
         
@@ -1335,8 +1348,6 @@ class Sweeper1d(tk.Frame):
             self, text = 'Browse...', command=lambda: self.set_filename_sweep())
         button_filename.place(relx=0.85, rely=0.9)
 
-        self.num_plots = 1
-
         graph_button = tk.Button(
             self, text='📊', font = SUPER_LARGE, command=lambda: self.open_graph())
         graph_button.place(relx=0.7, rely=0.76)
@@ -1447,7 +1458,7 @@ class Sweeper1d(tk.Frame):
         else:
             self.lstbox_height = 18 / 47
             self.lstbox_to_read.place(relx=0.3, rely=0.16, height = 300)
-            self.button_pause.place(relx = 0.3, rely = 0.25 + self.lstbox_height)
+            self.pause.place(relx = 0.3, rely = 0.25 + self.lstbox_height)
             self.button_stop.place(relx = 0.3375, rely = 0.25 + self.lstbox_height)
             self.button_start_sweeping.place(relx = 0.375, rely = 0.21 + self.lstbox_height)
             self.button_tozero.place(relx = 0.3, rely = 0.3 + self.lstbox_height)
@@ -1514,34 +1525,24 @@ class Sweeper1d(tk.Frame):
 
     def open_graph(self):
         
-        global num_opened_graphs
+        global cur_animation_num
         
         def return_range(x, n):
-            "return range of lenght n which includes x"
             if x % n == 0:
-                if n != 1:
-                    return [x + p for p in range(n)]
-                elif n == 1:
-                    return [x + p - 1 for p in range(n)]
+                return [x + p for p in range(n)]
             elif x % n == n - 1:
-                if n != 1:
-                    return [x - p for p in range(n)]
-                elif n == 1:
-                    return [x - p - 1 for p in range(n)]
+                return [x - p for p in range(n)][::-1]
             else:
                 return return_range(x + 1, n)
-            
-        num_opened_graphs += 1
         
-        globals()[f'graph_object{num_opened_graphs}'] = globals()[f'Graph{self.num_plots}']()
-        for i in return_range(cur_animation_num, self.num_plots):
-            print(f'i = {i}')
+        globals()[f'graph_object{globals()["cur_animation_num"]}'] = Graph(globals()['filename_sweep'])
+        for i in return_range(cur_animation_num, 3):
             globals()[f'x{i + 1}'] = []
             globals()[f'x{i + 1}_status'] = 0
             globals()[f'y{i + 1}'] = []
             globals()[f'y{i + 1}_status'] = 0
             globals()[f'ani{i+1}'] = StartAnimation
-            globals()[f'ani{i+1}'].start(self.num_plots, num_opened_graphs)
+            globals()[f'ani{i+1}'].start(globals()['filename_sweep'])
         
     def pause(self):
         global pause_flag
@@ -1973,8 +1974,6 @@ class Sweeper2d(tk.Frame):
             self, text = 'Browse...', command=lambda: self.set_filename_sweep())
         button_filename.place(relx=0.85, rely=0.9)
 
-        self.num_plots = 1
-
         graph_button = tk.Button(
             self, text='📊', font = SUPER_LARGE, command=lambda: self.open_graph())
         graph_button.place(relx=0.7, rely=0.8)
@@ -2272,34 +2271,24 @@ class Sweeper2d(tk.Frame):
 
     def open_graph(self):
         
-        global num_opened_graphs
+        global cur_animation_num
         
         def return_range(x, n):
-            "return range of lenght n which includes x"
             if x % n == 0:
-                if n != 1:
-                    return [x + p for p in range(n)]
-                elif n == 1:
-                    return [x + p - 1 for p in range(n)]
+                return [x + p for p in range(n)]
             elif x % n == n - 1:
-                if n != 1:
-                    return [x - p for p in range(n)]
-                elif n == 1:
-                    return [x - p - 1 for p in range(n)]
+                return [x - p for p in range(n)][::-1]
             else:
                 return return_range(x + 1, n)
-            
-        num_opened_graphs += 1
         
-        globals()[f'graph_object{num_opened_graphs}'] = globals()[f'Graph{self.num_plots}']()
-        for i in return_range(cur_animation_num, self.num_plots):
-            print(f'i = {i}')
+        globals()[f'graph_object{globals()["cur_animation_num"]}'] = Graph(globals()['filename_sweep'])
+        for i in return_range(cur_animation_num, 3):
             globals()[f'x{i + 1}'] = []
             globals()[f'x{i + 1}_status'] = 0
             globals()[f'y{i + 1}'] = []
             globals()[f'y{i + 1}_status'] = 0
             globals()[f'ani{i+1}'] = StartAnimation
-            globals()[f'ani{i+1}'].start(self.num_plots, num_opened_graphs)
+            globals()[f'ani{i+1}'].start(globals()['filename_filename_sweep'])
         
     def pause(self):
         global pause_flag
@@ -2872,8 +2861,6 @@ class Sweeper3d(tk.Frame):
             self, text = 'Browse...', command=lambda: self.set_filename_sweep())
         button_filename.place(relx=0.85, rely=0.9)
 
-        self.num_plots = 1
-
         graph_button = tk.Button(
             self, text='📊', font = SUPER_LARGE, command=lambda: self.open_graph())
         graph_button.place(relx=0.75, rely=0.8)
@@ -3298,31 +3285,24 @@ class Sweeper3d(tk.Frame):
 
     def open_graph(self):
         
-        global num_opened_graphs
         global cur_animation_num
         
         def return_range(x, n):
-            "return range of lenght n which includes x"
             if x % n == 0:
-                if n != 1:
-                    return [x + p for p in range(n)]
-                elif n == 1:
-                    return [x + p - 1 for p in range(n)]
+                return [x + p for p in range(n)]
             elif x % n == n - 1:
-                return [x - p for p in range(n)]
+                return [x - p for p in range(n)][::-1]
             else:
                 return return_range(x + 1, n)
-            
-        num_opened_graphs += 1
         
-        globals()[f'graph_object{num_opened_graphs}'] = globals()[f'Graph{self.num_plots}']()
-        for i in return_range(cur_animation_num, self.num_plots):
+        globals()[f'graph_object{globals()["cur_animation_num"]}'] = Graph(globals()['filename_sweep'])
+        for i in return_range(cur_animation_num, 3):
             globals()[f'x{i + 1}'] = []
             globals()[f'x{i + 1}_status'] = 0
             globals()[f'y{i + 1}'] = []
             globals()[f'y{i + 1}_status'] = 0
             globals()[f'ani{i+1}'] = StartAnimation
-            globals()[f'ani{i+1}'].start(self.num_plots, num_opened_graphs)
+            globals()[f'ani{i+1}'].start(globals()['filename_sweep'])
         
     def pause(self):
         global pause_flag
@@ -3638,17 +3618,6 @@ class Settings(tk.Frame):
             
             button_set_back_and_forth_slave_slave = tk.Button(self, text = 'Set', command = lambda: self.update_back_and_forth_slave_count(parent = parent))
             button_set_back_and_forth_slave_slave.place(relx = 0.68, rely = 0.39)
-            
-            label_graph_option = tk.Label(self, text = 'Choose graph layout', font = LARGE_FONT)
-            label_graph_option.place(relx = 0.6, rely = 0.5)
-            
-            self.combo_graph_option = ttk.Combobox(self, value = ['Single 2D plot', 'Triple 2D plot'])
-            if parent.num_plots == 1:
-                self.combo_graph_option.current(0)
-            elif parent.num_plots == 3:
-                self.combo_graph_option.current(1)
-            self.combo_graph_option.bind("<<ComboboxSelected>>", lambda event: self.graph_option(event, parent = parent))
-            self.combo_graph_option.place(relx = 0.6, rely = 0.55)
         
         elif hasattr(parent, 'back_and_forth_slave_count') and not hasattr(parent, 'back_and_forth_slave_slave_count'):
             
@@ -3670,17 +3639,6 @@ class Settings(tk.Frame):
             button_set_back_and_forth_slave = tk.Button(self, text = 'Set', command = lambda: self.update_back_and_forth_slave_count(parent = parent))
             button_set_back_and_forth_slave.place(relx = 0.68, rely = 0.29)
             
-            label_graph_option = tk.Label(self, text = 'Choose graph layout', font = LARGE_FONT)
-            label_graph_option.place(relx = 0.6, rely = 0.35)
-            
-            self.combo_graph_option = ttk.Combobox(self, value = ['Single 2D plot', 'Triple 2D plot'])
-            if parent.num_plots == 1:
-                self.combo_graph_option.current(0)
-            elif parent.num_plots == 3:
-                self.combo_graph_option.current(1)
-            self.combo_graph_option.bind("<<ComboboxSelected>>", lambda event: self.graph_option(event, parent = parent))
-            self.combo_graph_option.place(relx = 0.6, rely = 0.4)
-            
         else:
             
             label_back_and_forth_master = tk.Label(self, text = 'Set number of back and forth walks for master axis', font = LARGE_FONT)
@@ -3691,17 +3649,6 @@ class Settings(tk.Frame):
             
             button_set_back_and_forth_master = tk.Button(self, text = 'Set', command = lambda: self.update_back_and_forth_master_count(parent = parent))
             button_set_back_and_forth_master.place(relx = 0.68, rely = 0.19)
-            
-            label_graph_option = tk.Label(self, text = 'Choose graph layout', font = LARGE_FONT)
-            label_graph_option.place(relx = 0.6, rely = 0.25)
-            
-            self.combo_graph_option = ttk.Combobox(self, value = ['Single 2D plot', 'Triple 2D plot'])
-            if parent.num_plots == 1:
-                self.combo_graph_option.current(0)
-            elif parent.num_plots == 3:
-                self.combo_graph_option.current(1)
-            self.combo_graph_option.bind("<<ComboboxSelected>>", lambda event: self.graph_option(event, parent = parent))
-            self.combo_graph_option.place(relx = 0.6, rely = 0.3)
         
         for_text_loops = ''
         indent = '\t'
@@ -3744,6 +3691,7 @@ class Settings(tk.Frame):
         button_set_script = tk.Button(
             self, text = 'Apply script', font = LARGE_FONT, command = lambda: self.set_script(parent))
         button_set_script.place(relx = 0.525, rely = 0.56)
+        
         
     def set_type_to_adress(self, interval = 100):
         global adress_dict
@@ -3909,16 +3857,6 @@ class Settings(tk.Frame):
         
     def set_script(self, parent):
         parent.script = self.text_script.get(1.0, tk.END)[:-1]
-        
-    def graph_option(self, event, parent):
-
-        if self.combo_graph_option.current() == 0:
-            parent.num_plots = 1
-        elif self.combo_graph_option.current() == 1:
-            parent.num_plots = 3
-            
-        print(f'New graph option chosed, num_plots = {parent.num_plots}')
-        
 
 class Sweeper_write(threading.Thread):
 
@@ -4993,24 +4931,52 @@ class FigureSettings(object):
         self.x = self.y = 0
     
     def showsettings(self, ax):
-        x, y, cx, cy = self.widget.bbox('all')
+        x, y, _, _ = self.widget.bbox('all')
         x = x + self.widget.winfo_rootx()
         y = y + self.widget.winfo_rooty()
         self.settings_window = tw = tk.Toplevel(self.widget)
-        tw.wm_overrideredirect(1)
         tw.wm_geometry("+%d+%d" % (x, y))
         
+        self.position = var2str(ax)
+        self.position = self.position[self.position.find('ax') + 2:]
+        self.position = int(self.position)
+        
+        self.preset = pd.read_csv(globals()['graph_preset_path'], sep = ',')
+        self.preset = self.preset.fillna('')
+        self.title = str(self.preset[f'title{self.position}'].values[0])
+        self.x_current = int(self.preset[f'x{self.position}_current'].values[0])
+        self.y_current = int(self.preset[f'y{self.position}_current'].values[0])
+        self.x_log = int(self.preset[f'x{self.position}_log'].values[0])
+        self.y_log = int(self.preset[f'y{self.position}_log'].values[0])
+        self.x_lim_left = str(self.preset[f'x{self.position}_lim_left'].values[0])   
+        self.x_lim_right = str(self.preset[f'x{self.position}_lim_right'].values[0])  
+        self.x_autoscale = str(self.preset[f'x{self.position}_autoscale'].values[0])
+        self.y_lim_left = str(self.preset[f'y{self.position}_lim_left'].values[0])   
+        self.y_lim_right = str(self.preset[f'y{self.position}_lim_right'].values[0])  
+        self.y_autoscale = str(self.preset[f'y{self.position}_autoscale'].values[0])
+        self.x_label = str(self.preset[f'x{self.position}_label'].values[0])
+        self.y_label = str(self.preset[f'y{self.position}_label'].values[0])
+        self.x_transform = str(self.preset[f'x{self.position}_transform'].values[0])
+        self.y_transform = str(self.preset[f'y{self.position}_transform'].values[0])
+        
         self.entry_title = tk.Entry(tw)
-        self.entry_title.insert(index = 0, string = str(ax.get_title()))
+        self.entry_title.insert(index = 0, string = self.title)
         self.entry_title.grid(row = 0, column = 1, pady = 2)
         
-        button_close = tk.Button(tw, text = '❌', command = lambda: self.hidesettings(ax))
+        ax.set_title(self.entry_title.get(), fontsize = 8, pad = -5)
+        
+        button_close = tk.Button(tw, text = 'Save', command = lambda: self.hidesettings(ax))
         button_close.grid(row = 0, column = 5, pady = 2)
         
         label_x_device = tk.Label(tw, text = 'x')
         label_x_device.grid(row = 1, column = 0, pady = 2, sticky = tk.W)
         
         self.combo_x_device = ttk.Combobox(tw, values=globals()['columns'])
+        try:
+            self.combo_x_device.current(self.x_current)
+            self.ax_update(ax = ax, event = None)
+        except:
+            pass
         self.combo_x_device.bind("<<ComboboxSelected>>", lambda event: self.ax_update(ax, event))
         self.combo_x_device.grid(row = 1, column = 1, pady = 2)
         
@@ -5018,9 +4984,10 @@ class FigureSettings(object):
         label_log_x.grid(row = 1, column = 3, pady = 2)
         
         self.status_log_x = tk.IntVar()
-        self.status_log_x.set(0)
+        self.status_log_x.set(int(self.x_log))
         self.checkbox_log_x = tk.Checkbutton(tw, 
-                                             command= lambda: self.save_log_x_status(ax))
+                                             command= lambda: self.save_log_x_status(ax),
+                                             offvalue = 0, onvalue = 1)
         self.checkbox_log_x.grid(row = 1, column = 4, pady = 2)
         CreateToolTip(self.checkbox_log_x, 'Set x logscale')
         
@@ -5028,6 +4995,11 @@ class FigureSettings(object):
         label_y_device.grid(row = 2, column = 0, pady = 2, sticky = tk.W)
         
         self.combo_y_device = ttk.Combobox(tw, values=globals()['columns'])
+        try:
+            self.combo_y_device.current(self.y_current)
+            self.ax_update(ax = ax, event = None)
+        except:
+            pass
         self.combo_y_device.bind("<<ComboboxSelected>>", lambda event: self.ax_update(ax, event))
         self.combo_y_device.grid(row = 2, column = 1, pady = 2)
         
@@ -5035,44 +5007,48 @@ class FigureSettings(object):
         label_log_y.grid(row = 2, column = 3, pady = 2)
         
         self.status_log_y = tk.IntVar()
-        self.status_log_y.set(0)
+        self.status_log_y.set(int(self.y_log))
         self.checkbox_log_y = tk.Checkbutton(tw, 
                                              command=lambda: self.save_log_y_status(ax))
         self.checkbox_log_y.grid(row = 2, column = 4, pady = 2)
         CreateToolTip(self.checkbox_log_y, 'Set y logscale')
         
+        self.status_xlim = tk.IntVar()
+        self.status_xlim.set(int(self.x_autoscale))
+        
         label_xlim = tk.Label(tw, text = 'x lim = ')
         label_xlim.grid(row = 3, column = 0, pady = 2, sticky = tk.W)
         
-        self.status_xlim = tk.IntVar()
-        self.status_xlim.set(0)
-        
         self.entry_x_from = tk.Entry(tw, width = 8)
+        self.entry_x_from.insert(index = 0, string = self.x_lim_left)
         self.entry_x_from.grid(row = 3, column = 1, pady = 2, sticky = tk.W)
         
         label_dash_x = tk.Label(tw, text = ' - ')
         label_dash_x.grid(row = 3, column = 1, pady = 2)
         
         self.entry_x_to = tk.Entry(tw, width = 8)
+        self.entry_x_to.insert(index = 0, string = self.x_lim_right)
         self.entry_x_to.grid(row = 3, column = 1, pady = 2, sticky = tk.E)
         
         checkbox_xlim = tk.Checkbutton(tw, command = lambda: self.set_xlim(ax))
         checkbox_xlim.grid(row = 3, column = 3, pady = 2)
         CreateToolTip(checkbox_xlim, 'Set x autoscale off')
         
+        self.status_ylim = tk.IntVar()
+        self.status_ylim.set(int(self.y_autoscale))
+        
         label_ylim = tk.Label(tw, text = 'y lim = ')
         label_ylim.grid(row = 4, column = 0, pady = 2, sticky = tk.W)
         
-        self.status_ylim = tk.IntVar()
-        self.status_ylim.set(0)
-        
         self.entry_y_from = tk.Entry(tw, width = 8)
+        self.entry_y_from.insert(index = 0, string = self.y_lim_left)
         self.entry_y_from.grid(row = 4, column = 1, pady = 2, sticky = tk.W)
     
         label_dash_y = tk.Label(tw, text = ' - ')
         label_dash_y.grid(row = 4, column = 1, pady = 2)
         
         self.entry_y_to = tk.Entry(tw, width = 8)
+        self.entry_y_to.insert(index = 0, string = self.y_lim_right)
         self.entry_y_to.grid(row = 4, column = 1, pady = 2, sticky = tk.E)
         
         checkbox_ylim = tk.Checkbutton(tw, command = lambda: self.set_ylim(ax))
@@ -5083,14 +5059,14 @@ class FigureSettings(object):
         label_xlabel.grid(row = 5, column = 0, pady = 2, sticky = tk.W)
         
         self.entry_xlabel = tk.Entry(tw)
-        self.entry_xlabel.insert(index = 0, string = 'x')
+        self.entry_xlabel.insert(index = 0, string = self.x_label)
         self.entry_xlabel.grid(row = 5, column = 1)
     
         label_ylabel = tk.Label(tw, text = 'y label = ')
         label_ylabel.grid(row = 6, column = 0, pady = 2, sticky = tk.W)
         
         self.entry_ylabel = tk.Entry(tw)
-        self.entry_ylabel.insert(index = 0, string = 'y')
+        self.entry_ylabel.insert(index = 0, string = self.y_label)
         self.entry_ylabel.grid(row = 6, column = 1, pady = 2)
         
         label_x_transformation = tk.Label(tw, text = 'x = ')
@@ -5098,7 +5074,7 @@ class FigureSettings(object):
         CreateToolTip(label_x_transformation, 'X transformation')
         
         self.entry_x_transformation = tk.Entry(tw)
-        self.entry_x_transformation.insert(index = 0, string = globals()[f'x_transformation{var2str(ax)[len(var2str(ax)) - 1]}'])
+        self.entry_x_transformation.insert(index = 0, string = self.x_transform)
         self.entry_x_transformation.grid(row = 7, column = 1, pady = 2)
         
         label_y_transformation = tk.Label(tw, text = 'y = ')
@@ -5106,7 +5082,7 @@ class FigureSettings(object):
         CreateToolTip(label_y_transformation, 'Y transformation')
         
         self.entry_y_transformation = tk.Entry(tw)
-        self.entry_y_transformation.insert(index = 0, string = globals()[f'y_transformation{var2str(ax)[len(var2str(ax)) - 1]}'])
+        self.entry_y_transformation.insert(index = 0, string = self.y_transform)
         self.entry_y_transformation.grid(row = 8, column = 1, pady = 2)
         
     def save_log_x_status(self, ax):
@@ -5128,21 +5104,21 @@ class FigureSettings(object):
     def set_xlim(self, ax):
         if self.status_xlim.get() == 0:
             ax.autoscale(enable = False, axis = 'x')
-            globals()[f'x{var2str(ax)[len(var2str(ax)) - 1]}_autoscale'] = False
+            globals()[f'x{var2str(ax)[2:]}_autoscale'] = False
             self.status_xlim.set(1)
         elif self.status_xlim.get() == 1:
             ax.autoscale(enable = True, axis = 'x')
-            globals()[f'x{var2str(ax)[len(var2str(ax)) - 1]}_autoscale'] = True
+            globals()[f'x{var2str(ax)[2:]}_autoscale'] = True
             self.status_xlim.set(0)
         
     def set_ylim(self, ax):
         if self.status_ylim.get() == 0:
             ax.autoscale(enable = False, axis = 'y')
-            globals()[f'y{var2str(ax)[len(var2str(ax)) - 1]}_autoscale'] = False
+            globals()[f'y{var2str(ax)[2:]}_autoscale'] = False
             self.status_ylim.set(1)
         elif self.status_ylim.get() == 1:
             ax.autoscale(enable = True, axis = 'y')
-            globals()[f'y{var2str(ax)[len(var2str(ax)) - 1]}_autoscale'] = True
+            globals()[f'y{var2str(ax)[2:]}_autoscale'] = True
             self.status_ylim.set(0)
         
     def ax_update(self, ax, event):
@@ -5173,6 +5149,25 @@ class FigureSettings(object):
         ax.set_ylim(ylims)
         ax.autoscale(enable = globals()[f'x{order}_autoscale'], axis = 'x')
         ax.autoscale(enable = globals()[f'y{order}_autoscale'], axis = 'y')
+    
+    def rewrite_preset(self):
+        
+        self.preset.loc[0, f'title{self.position}'] = self.entry_title.get()
+        self.preset.loc[0, f'x{self.position}_current'] = self.combo_x_device.current()
+        self.preset.loc[0, f'y{self.position}_current'] = self.combo_y_device.current()
+        self.preset.loc[0, f'x{self.position}_log'] = self.status_log_x.get()
+        self.preset.loc[0, f'y{self.position}_log'] = self.status_log_y.get()
+        self.preset.loc[0, f'x{self.position}_lim_left'] = self.entry_x_from.get()
+        self.preset.loc[0, f'x{self.position}_lim_right'] = self.entry_x_to.get()
+        self.preset.loc[0, f'x{self.position}_autoscale'] = self.status_xlim.get()
+        self.preset.loc[0, f'y{self.position}_lim_left'] = self.entry_y_from.get()
+        self.preset.loc[0, f'y{self.position}_lim_right'] = self.entry_y_to.get()
+        self.preset.loc[0, f'y{self.position}_autoscale'] = self.status_ylim.get()
+        self.preset.loc[0, f'x{self.position}_label'] = self.entry_xlabel.get()
+        self.preset.loc[0, f'y{self.position}_label'] = self.entry_ylabel.get()
+        self.preset.loc[0, f'x{self.position}_transform'] = self.entry_x_transformation.get()
+        self.preset.loc[0, f'y{self.position}_transform'] = self.entry_y_transformation.get()
+        self.preset.to_csv(globals()['graph_preset_path'], index = False)
     
     def hidesettings(self, ax):
         global x_transformation
@@ -5215,6 +5210,8 @@ class FigureSettings(object):
         except:
             pass
         
+        self.rewrite_preset()
+        
         if tw:
             tw.destroy()
         
@@ -5227,141 +5224,30 @@ def CreateFigureSettings(widget, ax):
     
 class StartAnimation:
     
-    def start(num_plots, num_opened_graphs, *args, **kwargs):
+    def start(filename):
         global cur_animation_num
         i = cur_animation_num
         globals()[f'animation{i}'] = animation.FuncAnimation(
-            fig = globals()[f'fig{i}'], func = lambda x: my_animate(x, n = i, num_plots = num_plots, num_opened_graphs = num_opened_graphs), interval=interval, blit = False)
+            fig = globals()[f'fig{i}'], func = lambda x: my_animate(x, n = i, filename = filename), interval=interval, blit = False)
         cur_animation_num += 1
 
-class Graph1():
+class Graph():
     
-    def __init__(self):
+    def __init__(self, filename):
+        
+        self.filename = filename
+        
         self.tw = tk.Toplevel(globals()['Sweeper_object'])
         
         self.tw.geometry("1920x1080")
         self.tw.title("Graph")
         
-        self.order = globals()['cur_animation_num'] 
-
-        self.create_fig(self.order, (2.8, 1.65))
-
-        label_x1 = tk.Label(self.tw, text='x', font=LARGE_FONT)
-        label_x1.place(relx=0.02, rely=0.76)
-
-        label_y1 = tk.Label(self.tw, text='y', font=LARGE_FONT)
-        label_y1.place(relx=0.15, rely=0.76)
-
-        self.combo_x1 = ttk.Combobox(self.tw, values=columns)
-        self.combo_x1.bind("<<ComboboxSelected>>", lambda event: self.ax_update(1, event))
-        self.combo_x1.place(relx=0.035, rely=0.76)
-
-        self.combo_y1 = ttk.Combobox(self.tw, values=columns)
-        self.combo_y1.bind("<<ComboboxSelected>>", lambda event: self.ax_update(1, event))
-        self.combo_y1.place(relx=0.165, rely=0.76)
-
-        globals()[f'self.plot{self.order}'] = FigureCanvasTkAgg(globals()[f'fig{self.order}'], self.tw)
-        globals()[f'self.plot{self.order}'].draw()
-        globals()[f'self.plot{self.order}'].get_tk_widget().place(relx=0, rely=0)
-        CreateFigureSettings(globals()[f'self.plot{self.order}'].get_tk_widget(), globals()[f'ax{self.order}'])
-        CreateToolTip(globals()[f'self.plot{self.order}'].get_tk_widget(), 'Right click to configure')
-
-        globals()[f'self.toolbar{self.order}'] = VerticalNavigationToolbar2Tk(globals()[f'self.plot{self.order}'], self.tw)
-        globals()[f'self.toolbar{self.order}'].config(background = 'White')
-        globals()[f'self.toolbar{self.order}'].update()
-        globals()[f'self.toolbar{self.order}'].place(relx=0, rely=0)
-        globals()[f'self.plot{self.order}']._tkcanvas.place(relx=0, rely=0)
-        
-        self.table_dataframe = ttk.Treeview(self.tw, columns = columns, show = 'headings', height = 1)
-        self.table_dataframe.place(relx = 0.28, rely = 0.76)
-        
-        self.initial_value = []
-        
-        for ind, heading in enumerate(columns):
-            self.table_dataframe.heading(ind, text = heading)
-            self.table_dataframe.column(ind,anchor=tk.CENTER, stretch=tk.NO, width=80)
-            self.initial_value.append(heading)
-                
-        self.table_dataframe.insert('', tk.END, 'Current dataframe', text = 'Current dataframe', values = self.initial_value)
-        
-        self.update_item('Current dataframe')
-        
-        self.button_pause = tk.Button(self.tw, text = '⏸️', font = LARGE_FONT, command = lambda: globals()['Sweeper_object'].pause())
-        self.button_pause.place(relx = 0.02, rely = 0.82)
-        CreateToolTip(self.button_pause, 'Pause\Continue sweep')
-        
-        self.button_stop = tk.Button(self.tw, text = '⏹️', font = LARGE_FONT, command = lambda: globals()['Sweeper_object'].stop())
-        self.button_stop.place(relx = 0.06, rely = 0.82)
-        CreateToolTip(self.button_stop, 'Stop sweep')
-        
-        self.button_tozero = tk.Button(self.tw, text = 'To zero', width = 11, command = lambda: globals()['Sweeper_object'].tozero())
-        self.button_tozero.place(relx = 0.1, rely = 0.82, width = 48, height = 32)
-        
-    def axes_settings(self, i, pad = 0, tick_size = 4, label_size = 6, x_pad =0, y_pad = 1, title_size = 8, title_pad = -5):
-        globals()[f'ax{i}'].tick_params(axis='y', which='major', length = 0, pad=pad, labelsize=tick_size)
-        globals()[f'ax{i}'].tick_params(axis='x', which='major', length = 0, pad=pad + 1, labelsize=tick_size)
-        globals()[f'ax{i}'].set_xlabel('x', fontsize = label_size, labelpad = x_pad)
-        globals()[f'ax{i}'].set_ylabel('y', fontsize = label_size, labelpad = y_pad)
-        globals()[f'ax{i}'].set_title(f'Plot {i}', fontsize = title_size, pad = title_pad)
-        
-
-    def create_fig(self, i, figsize, pad = 0, tick_size = 4, label_size = 6, x_pad =0, y_pad = 1, title_size = 8, title_pad = -5):
-        globals()[f'fig{i}'] = Figure(figsize, dpi=300)
-        globals()[f'ax{i}'] = globals()[f'fig{i}'].add_subplot(111)
-        globals()[f'fig{i}'].subplots_adjust(left = 0.25, bottom = 0.25)
-        globals()[f'x_transformation{i}'] = 'x'
-        globals()[f'y_transformation{i}'] = 'y'
-        globals()[f'x{i}_autoscale'] = True
-        globals()[f'y{i}_autoscale'] = True
-        ax = globals()[f'ax{i}']
-        ax.bbox.union([label.get_window_extent() for label in ax.get_xticklabels()])
-        self.axes_settings(i, pad, tick_size, label_size, x_pad, y_pad, title_size, title_pad)
-
-    def update_idletasks(self):
-        self.tw.update_idletasks()
-        
-    def update(self):
-        self.tw.update()
-
-    def ax_update(self, n, event):
-        '''n - order of figure'''
-        globals()[f'x{self.order}_status'] = self.combo_x1.current()
-        globals()[f'y{self.order}_status'] = self.combo_y1.current()
-        
-        ax = globals()[f'ax{self.order}']
-        order = self.order + n - 1
-        
-        xscale_status = ax.get_xscale()
-        yscale_status = ax.get_yscale()
-        xlims = ax.get_xlim()
-        ylims = ax.get_ylim()
-        ax.clear()
-        ax.set_xscale(xscale_status)
-        ax.set_yscale(yscale_status)
-        self.axes_settings(i = order)
-        ax.set_xlim(xlims)
-        ax.set_ylim(ylims)
-        ax.autoscale(enable = globals()[f'x{order}_autoscale'], axis = 'x')
-        ax.autoscale(enable = globals()[f'y{order}_autoscale'], axis = 'y')
-        
-    def update_item(self, item):
-        try:
-            dataframe = pd.read_csv(filename_sweep).tail(1).values.flatten().round(2)
-            self.table_dataframe.item(item, values=tuple(dataframe))
-            self.table_dataframe.after(250, self.update_item, item)
-        except FileNotFoundError:
-            self.table_dataframe.after(250, self.update_item, item)
-
-class Graph3():
-    
-    def __init__(self):
-        self.tw = tk.Toplevel(globals()['Sweeper_object'])
-        
-        self.tw.geometry("1920x1080")
-        self.tw.title("Graph")
+        self.preset = pd.read_csv(globals()['graph_preset_path'], sep = ',')
+        self.preset = self.preset.fillna('')
+        self.num_plots = int(self.preset['num_plots'].values[0])
         
         self.order = globals()['cur_animation_num'] 
-
+        
         self.create_fig(self.order, (2.5, 1.65))
         self.create_fig(self.order + 1, (1.5, 0.8))
         self.create_fig(self.order + 2, (1.5, 0.8))
@@ -5406,6 +5292,31 @@ class Graph3():
         CreateToolTip(globals()[f'self.plot{self.order + 2}'].get_tk_widget(), 'Right click to configure')
         globals()[f'self.plot{self.order + 2}']._tkcanvas.place(relx=0.62, rely=0.39)
         
+        self.button_add = tk.Button(self.tw, text = 'Add graph', font = LARGE_FONT, command = lambda: self.add_graph())
+        self.button_close = tk.Button(self.tw, text = r'🗙', font = LARGE_FONT, command = lambda: self.close_graph())
+        
+        if self.num_plots == 1:
+            globals()[f'self.plot{self.order + 1}'].get_tk_widget().place_forget()
+            globals()[f'self.plot{self.order + 1}']._tkcanvas.place_forget()
+            
+            globals()[f'self.plot{self.order + 2}'].get_tk_widget().place_forget()
+            globals()[f'self.plot{self.order + 2}']._tkcanvas.place_forget()
+            
+            self.button_add.place(relx = 0.7, rely = 0.1)
+            
+        elif self.num_plots == 2:
+            globals()[f'self.plot{self.order + 2}'].get_tk_widget().place_forget()
+            globals()[f'self.plot{self.order + 2}']._tkcanvas.place_forget()
+            
+            self.button_add.place(relx = 0.7, rely = 0.6)
+            self.button_close.place(relx = 0.95, rely = 0)
+            
+        else:
+            
+            self.button_close.place(relx = 0.95, rely = 0.38)
+            
+        self.update_layout()
+        
         self.table_dataframe = ttk.Treeview(self.tw, columns = columns, show = 'headings', height = 1)
         self.table_dataframe.place(relx = 0.28, rely = 0.76)
         
@@ -5431,6 +5342,57 @@ class Graph3():
         self.button_tozero = tk.Button(self.tw, text = 'To zero', width = 11, command = lambda: globals()['Sweeper_object'].tozero())
         self.button_tozero.place(relx = 0.1, rely = 0.82, width = 48, height = 32)
         
+    def update_layout(self):
+        
+        if self.num_plots == 3 and not (globals()[f'self.plot{self.order + 2}']._tkcanvas.winfo_ismapped() or globals()[f'self.plot{self.order + 2}'].get_tk_widget().winfo_ismapped()):
+            globals()[f'self.plot{self.order + 2}'].get_tk_widget().place(relx=0.02, rely=0.50)
+            globals()[f'self.plot{self.order + 2}']._tkcanvas.place(relx=0.62, rely=0.39)
+            
+        if self.num_plots == 2 and not (globals()[f'self.plot{self.order + 1}']._tkcanvas.winfo_ismapped() or globals()[f'self.plot{self.order + 1}'].get_tk_widget().winfo_ismapped()):
+            globals()[f'self.plot{self.order + 1}'].get_tk_widget().place(relx=0.52, rely=0)
+            globals()[f'self.plot{self.order + 1}']._tkcanvas.place(relx=0.62, rely=0)
+        elif self.num_plots == 2 and (globals()[f'self.plot{self.order + 2}']._tkcanvas.winfo_ismapped() or globals()[f'self.plot{self.order + 2}'].get_tk_widget().winfo_ismapped()):
+            globals()[f'self.plot{self.order + 2}'].get_tk_widget().place_forget()
+            globals()[f'self.plot{self.order + 2}']._tkcanvas.place_forget()
+            
+        if self.num_plots == 1 and (globals()[f'self.plot{self.order + 1}']._tkcanvas.winfo_ismapped() or globals()[f'self.plot{self.order + 1}'].get_tk_widget().winfo_ismapped()):
+            globals()[f'self.plot{self.order + 1}'].get_tk_widget().place_forget()
+            globals()[f'self.plot{self.order + 1}']._tkcanvas.place_forget()
+            
+    def add_graph(self):
+        
+        if self.num_plots < 3:
+            self.num_plots += 1
+            
+        if self.num_plots == 3:
+            self.button_add.place_forget()
+            self.button_close.place(relx = 0.95, rely = 0.38)
+        elif self.num_plots == 2:
+            self.button_add.place(relx = 0.7, rely = 0.6)
+            self.button_close.place(relx = 0.95, rely = 0)
+            
+        self.preset.loc[0, 'num_plots'] = self.num_plots
+        self.preset.to_csv(globals()['graph_preset_path'], index = False)
+        
+        self.update_layout()
+        
+    def close_graph(self):
+        if self.num_plots > 1:
+            self.num_plots -= 1
+            
+        if self.num_plots == 2:
+            self.button_add.place(relx = 0.7, rely = 0.6)
+            self.button_close.place(relx = 0.95, rely = 0)
+            
+        elif self.num_plots == 1:
+            self.button_add.place(relx = 0.7, rely = 0.1)
+            self.button_close.place_forget()
+        
+        self.preset.loc[0, 'num_plots'] = self.num_plots
+        self.preset.to_csv(globals()['graph_preset_path'], index = False)
+        
+        self.update_layout()
+        
     def axes_settings(self, i, pad = 0, tick_size = 4, label_size = 6, x_pad =0, y_pad = 1, title_size = 8, title_pad = -5):
         globals()[f'ax{i}'].tick_params(axis='y', which='major', length = 0, pad=pad, labelsize=tick_size)
         globals()[f'ax{i}'].tick_params(axis='x', which='major', length = 0, pad=pad + 1, labelsize=tick_size)
@@ -5439,7 +5401,7 @@ class Graph3():
         globals()[f'ax{i}'].set_title(f'Plot {i}', fontsize = title_size, pad = title_pad)
         
 
-    def create_fig(self, i, figsize, pad = 0, tick_size = 4, label_size = 6, x_pad =0, y_pad = 1, title_size = 8, title_pad = -5):
+    def create_fig(self, i, figsize, pad = 0, tick_size = 4, label_size = 6, x_pad = 0, y_pad = 1, title_size = 8, title_pad = -5):
         globals()[f'fig{i}'] = Figure(figsize, dpi=300)
         globals()[f'ax{i}'] = globals()[f'fig{i}'].add_subplot(111)
         globals()[f'fig{i}'].subplots_adjust(left = 0.25, bottom = 0.25)
@@ -5480,7 +5442,7 @@ class Graph3():
         
     def update_item(self, item):
         try:
-            dataframe = pd.read_csv(filename_sweep).tail(1).values.flatten().round(2)
+            dataframe = pd.read_csv(self.filename).tail(1).values.flatten().round(2)
             self.table_dataframe.item(item, values=tuple(dataframe))
             self.table_dataframe.after(250, self.update_item, item)
         except FileNotFoundError:
