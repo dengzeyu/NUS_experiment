@@ -1,4 +1,4 @@
-from pymeasure.instruments.srs import SR830
+from pymeasure.instruments.srs import SR860
 
 import pyvisa as visa
 
@@ -11,11 +11,11 @@ def get(device, command):
     #return np.round(np.random.random(1), 1) #to test the program without device it would return random numbers
     return device.query(command)
 
-class sr830():
+class sr860():
 
     def __init__(self, adress='GPIB0::11::INSTR'):
 
-        self.sr830 = SR830(adress)
+        self.sr860 = SR860(adress)
 
         self.set_options = ['amplitude', 'frequency', 'phase', 'sensitivity', 
                             'time_constant', 'low_pass_filter_slope', 'synchronous_filter_status',
@@ -32,7 +32,7 @@ class sr830():
         answer = get(device, '*IDN?')
         device.close()
         return answer
-
+    
     def Write(self):
         return self.Read()
     
@@ -44,55 +44,55 @@ class sr830():
         return answer
 
     def x(self):
-        return self.sr830.x
+        return self.sr860.x
 
     def y(self):
-        return self.sr830.y
+        return self.sr860.y
 
     def r(self):
-        return self.sr830.magnitude
+        return self.sr860.magnitude
 
     def Θ(self):
-        return self.sr830.theta
+        return self.sr860.theta
 
     def frequency(self):
-        return self.sr830.frequency
+        return self.sr860.frequency
 
     def phase(self):
-        return self.sr830.phase
+        return self.sr860.phase
 
     def amplitude(self):
-        return self.sr830.sine_voltage
+        return self.sr860.sine_voltage
 
     def sensitivity(self):
-        return self.sr830.sensitivity
+        return self.sr860.sensitivity
 
     def time_constant(self):
-        return self.sr830.time_constant
+        return self.sr860.time_constant
 
     def low_pass_filter_slope(self):
-        return self.sr830.filter_slope
+        return self.sr860.filter_slope
 
     def synchronous_filter_status(self):
-        return self.sr830.filter_synchronous
+        return self.sr860.filter_synchronous
 
     def ch1(self):
-        return self.sr830.channel1
+        return self.sr860.channel1
 
     def ch2(self):
-        return self.sr830.channel2
+        return self.sr860.channel2
 
     def AUX1_input(self):
-        return self.sr830.aux_in_1
+        return self.sr860.aux_in_1
 
     def AUX2_input(self):
-        return self.sr830.aux_in_2
+        return self.sr860.aux_in_2
 
     def AUX3_input(self):
-        return self.sr830.aux_in_3
+        return self.sr860.aux_in_3
 
     def AUX4_input(self):
-        return self.sr830.aux_in_4
+        return self.sr860.aux_in_4
     
     def set_write(self, value):
         device = rm.open_resource(
@@ -101,40 +101,40 @@ class sr830():
         device.close()
 
     def set_frequency(self, value=30.0):
-        self.sr830.frequency = value
+        self.sr860.frequency = value
 
     def set_phase(self, value=0.0):
-        self.sr830.phase = value
+        self.sr860.phase = value
 
     def set_amplitude(self, value=0.5):
-        self.sr830.sine_voltage = value
+        self.sr860.sine_voltage = value
 
     def set_sensitivity(self, value=24):
-        self.sr830.sensitivity = value
+        self.sr860.sensitivity = value
 
     def set_time_constant(self, value=19):
-        self.sr830.time_constant = value
+        self.sr860.time_constant = value
 
     def set_low_pass_filter_slope(self, value=3):
-        self.sr830.filter_slope = value
+        self.sr860.filter_slope = value
 
     def set_synchronous_filter_status(self, value=0):
-        self.sr830.filter_synchronous = value
+        self.sr860.filter_synchronous = value
 
     def set_AUX1_output(self, value=0):
-        self.sr830.aux_out_1 = value
+        self.sr860.aux_out_1 = value
 
     def set_AUX2_output(self, value=0):
-        self.sr830.aux_out_2 = value
+        self.sr860.aux_out_2 = value
 
     def set_AUX3_output(self, value=0):
-        self.sr830.aux_out_3 = value
+        self.sr860.aux_out_3 = value
 
     def set_AUX4_output(self, value=0):
-        self.sr830.aux_out_4 = value
+        self.sr860.aux_out_4 = value
         
 def main():
-    device = sr830()
+    device = sr860()
     print(device.IDN())
     
 if __name__ == '__main__':
