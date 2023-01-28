@@ -317,9 +317,15 @@ def new_parameters_to_read():
             for option in get_options:
                 parameters_to_read.append(adress + '.' + option)
     return parameters_to_read
-                
+
 parameters_to_read = new_parameters_to_read()
 parameters_to_read_copy = parameters_to_read.copy()
+
+list_of_devices_addresses = list_of_devices.copy()
+for ind, device in enumerate(list_of_devices_addresses):
+    if types_of_devices[ind] != 'Not a class':
+        list_of_devices[ind] = str_to_class(types_of_devices[ind])(adress =  list_of_devices_addresses[ind])
+
 
 zero_time = time.perf_counter()
 
@@ -510,7 +516,7 @@ class Devices(tk.Frame):
             
             adress_dict[list(self.combo_adresses['values'])[self.combo_adresses.current()]] = list(self.combo_types['values'])[self.combo_types.current()]
             
-            with open(cur_dir + '\\config\\adress_dictionary.txt', "w") as outfile:
+            with open(os.path.join(core_dir, 'config', 'adress_dictionary.txt'), "w") as outfile:
                 json.dump(adress_dict, outfile)
                 
             parameters_to_read = new_parameters_to_read()
@@ -1454,7 +1460,13 @@ class Sweeper1d(tk.Frame):
                                          height=len(parameters_to_read) * 1)
         
         if len(parameters_to_read) < 10:
+            self.lstbox_height = len(parameters_to_read) / 47
             self.lstbox_to_read.place(relx=0.3, rely=0.16)
+            self.pause.place(relx = 0.3, rely = 0.25 + self.lstbox_height)
+            self.button_stop.place(relx = 0.3375, rely = 0.25 + self.lstbox_height)
+            self.button_start_sweeping.place(relx = 0.375, rely = 0.21 + self.lstbox_height)
+            self.button_tozero.place(relx = 0.3, rely = 0.3 + self.lstbox_height)
+            self.button_update_sweep.place(relx = 0.3, rely = 0.21 + self.lstbox_height)
         else:
             self.lstbox_height = 18 / 47
             self.lstbox_to_read.place(relx=0.3, rely=0.16, height = 300)
@@ -2187,16 +2199,29 @@ class Sweeper2d(tk.Frame):
         global parameters_to_read
         self.devices = tk.StringVar()
         self.devices.set(value=parameters_to_read)
-        self.lstbox_to_read.configure(listvariable = self.devices,
-                                         height=len(parameters_to_read) * 1)
         
-        self.lstbox_height = len(parameters_to_read) / 47
-        
-        self.button_pause.place(relx = 0.45, rely = 0.25 + self.lstbox_height)
-        self.button_stop.place(relx = 0.4875, rely = 0.25 + self.lstbox_height)
-        self.button_start_sweeping.place(relx = 0.525, rely = 0.21 + self.lstbox_height)
-        self.button_tozero.place(relx = 0.45, rely = 0.3 + self.lstbox_height)
-        self.button_update_sweep.place(relx = 0.45, rely = 0.21 + self.lstbox_height)
+        if len(parameters_to_read) < 10:
+            self.lstbox_to_read.configure(listvariable = self.devices,
+                                             height=len(parameters_to_read) * 1)
+            
+            self.lstbox_height = len(parameters_to_read) / 47
+            
+            self.button_pause.place(relx = 0.45, rely = 0.25 + self.lstbox_height)
+            self.button_stop.place(relx = 0.4875, rely = 0.25 + self.lstbox_height)
+            self.button_start_sweeping.place(relx = 0.525, rely = 0.21 + self.lstbox_height)
+            self.button_tozero.place(relx = 0.45, rely = 0.3 + self.lstbox_height)
+            self.button_update_sweep.place(relx = 0.45, rely = 0.21 + self.lstbox_height)
+        else:
+            self.lstbox_to_read.configure(listvariable = self.devices,
+                                             height=300)
+            
+            self.lstbox_height = 18 / 47
+            
+            self.button_pause.place(relx = 0.45, rely = 0.25 + self.lstbox_height)
+            self.button_stop.place(relx = 0.4875, rely = 0.25 + self.lstbox_height)
+            self.button_start_sweeping.place(relx = 0.525, rely = 0.21 + self.lstbox_height)
+            self.button_tozero.place(relx = 0.45, rely = 0.3 + self.lstbox_height)
+            self.button_update_sweep.place(relx = 0.45, rely = 0.21 + self.lstbox_height)
 
     def save_manual_status(self, i):
         if self.manual_sweep_flags[i - 1] != getattr(self, 'status_manual' + str(i)).get():
@@ -3193,16 +3218,29 @@ class Sweeper3d(tk.Frame):
         global parameters_to_read
         self.devices = tk.StringVar()
         self.devices.set(value=parameters_to_read)
-        self.lstbox_to_read.configure(listvariable = self.devices,
-                                         height=len(parameters_to_read) * 1)
         
-        self.lstbox_height = len(parameters_to_read) / 47
-        
-        self.button_pause.place(relx = 0.6, rely = 0.25 + self.lstbox_height)
-        self.button_stop.place(relx = 0.6375, rely = 0.25 + self.lstbox_height)
-        self.button_start_sweeping.place(relx = 0.675, rely = 0.21 + self.lstbox_height)
-        self.button_tozero.place(relx = 0.6, rely = 0.3 + self.lstbox_height)
-        self.button_update_sweep.place(relx = 0.6, rely = 0.21 + self.lstbox_height)
+        if len(parameters_to_read) < 10:
+            self.lstbox_to_read.configure(listvariable = self.devices,
+                                             height=len(parameters_to_read) * 1)
+            
+            self.lstbox_height = len(parameters_to_read) / 47
+            
+            self.button_pause.place(relx = 0.6, rely = 0.25 + self.lstbox_height)
+            self.button_stop.place(relx = 0.6375, rely = 0.25 + self.lstbox_height)
+            self.button_start_sweeping.place(relx = 0.675, rely = 0.21 + self.lstbox_height)
+            self.button_tozero.place(relx = 0.6, rely = 0.3 + self.lstbox_height)
+            self.button_update_sweep.place(relx = 0.6, rely = 0.21 + self.lstbox_height)
+        else:
+            self.lstbox_to_read.configure(listvariable = self.devices,
+                                             height=300)
+            
+            self.lstbox_height = 18 / 47
+            
+            self.button_pause.place(relx = 0.6, rely = 0.25 + self.lstbox_height)
+            self.button_stop.place(relx = 0.6375, rely = 0.25 + self.lstbox_height)
+            self.button_start_sweeping.place(relx = 0.675, rely = 0.21 + self.lstbox_height)
+            self.button_tozero.place(relx = 0.6, rely = 0.3 + self.lstbox_height)
+            self.button_update_sweep.place(relx = 0.6, rely = 0.21 + self.lstbox_height)
 
     def save_manual_status(self, i):
         if self.manual_sweep_flags[i - 1] != getattr(self, 'status_manual' + str(i)).get():
@@ -3706,7 +3744,7 @@ class Settings(tk.Frame):
             
             adress_dict[list(self.combo_adresses['values'])[self.combo_adresses.current()]] = list(self.combo_types['values'])[self.combo_types.current()]
             
-            with open(cur_dir + '\\config\\adress_dictionary.txt', "w") as outfile:
+            with open(os.path.join(core_dir, 'config', 'adress_dictionary.txt'), "w") as outfile:
                 json.dump(adress_dict, outfile)
                 
             parameters_to_read = new_parameters_to_read()
@@ -5441,12 +5479,17 @@ class Graph():
         ax.autoscale(enable = globals()[f'y{order}_autoscale'], axis = 'y')
         
     def update_item(self, item):
+        name = self.filename
+        if not 'setget' in self.filename:
+            name = globals()['filename_sweep']
+
         try:
-            dataframe = pd.read_csv(self.filename).tail(1).values.flatten().round(2)
+            dataframe = pd.read_csv(name).tail(1).values.flatten().round(2)
             self.table_dataframe.item(item, values=tuple(dataframe))
             self.table_dataframe.after(250, self.update_item, item)
         except FileNotFoundError:
             self.table_dataframe.after(250, self.update_item, item)
+
 
 interval = 100
 
