@@ -491,7 +491,7 @@ class Devices(tk.Frame):
         label_adress = tk.Label(self, text = 'Set device type:', font = LARGE_FONT)
         label_adress.place(relx = 0.05, rely = 0.05)
         
-        self.combo_adresses = ttk.Combobox(self, value = list_of_devices)
+        self.combo_adresses = ttk.Combobox(self, value = list_of_devices_addresses)
         self.combo_adresses.current(0)
         self.combo_adresses.place(relx = 0.05, rely = 0.1)
         
@@ -566,7 +566,7 @@ class SetGet(tk.Frame):
             globals()[f'label_devices{i}'] = tk.Label(self, text = 'Devices:', font=LARGE_FONT)
             globals()[f'label_devices{i}'].place(relx = 0.05 + (i - int(i / 5) * 4 - 1) * 7/30, rely = 0.21 + int(i / 5) * 0.35)
     
-            globals()[f'self.combo_to_sweep{i}'] = ttk.Combobox(self, value=list_of_devices)
+            globals()[f'self.combo_to_sweep{i}'] = ttk.Combobox(self, value=list_of_devices_addresses)
             globals()[f'self.combo_to_sweep{i}'].bind(
                 "<<ComboboxSelected>>", getattr(self, f'update_sweep_parameters{i}'))
             globals()[f'self.combo_to_sweep{i}'].place(relx=0.15 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.21 + int(i / 5) * 0.35)
@@ -684,7 +684,7 @@ class SetGet(tk.Frame):
         i = 1
         class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
         device_to_sweep = list_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
-        parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](), 'set_options')
+        parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[globals()[f'self.sweep_options{i}'].current()]
         value = float(globals()[f'self.entry_set{i}'].get())
         
@@ -692,8 +692,7 @@ class SetGet(tk.Frame):
         self.preset.to_csv(globals()['setget_path'], index = False)
         
         if class_of_sweeper_device != 'Not a class':
-            getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
-                adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value)
+            getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
             
     def update_sweep_parameters2(self, event, interval=100):
         global types_of_devices
@@ -730,7 +729,7 @@ class SetGet(tk.Frame):
         i = 2
         class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
         device_to_sweep = list_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
-        parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](), 'set_options')
+        parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[globals()[f'self.sweep_options{i}'].current()]
         value = float(globals()[f'self.entry_set{i}'].get())
         
@@ -738,8 +737,7 @@ class SetGet(tk.Frame):
         self.preset.to_csv(globals()['setget_path'], index = False)
         
         if class_of_sweeper_device != 'Not a class':
-            getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
-                adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value)
+            getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
             
     def update_sweep_parameters3(self, event, interval=100):
         global types_of_devices
@@ -776,7 +774,7 @@ class SetGet(tk.Frame):
         i = 3
         class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
         device_to_sweep = list_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
-        parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](), 'set_options')
+        parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[globals()[f'self.sweep_options{i}'].current()]
         value = float(globals()[f'self.entry_set{i}'].get())
         
@@ -784,8 +782,7 @@ class SetGet(tk.Frame):
         self.preset.to_csv(globals()['setget_path'], index = False)
         
         if class_of_sweeper_device != 'Not a class':
-            getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
-                adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value)
+            getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
             
     def update_sweep_parameters4(self, event, interval=100):
         global types_of_devices
@@ -822,7 +819,7 @@ class SetGet(tk.Frame):
         i = 4
         class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
         device_to_sweep = list_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
-        parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](), 'set_options')
+        parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[globals()[f'self.sweep_options{i}'].current()]
         value = float(globals()[f'self.entry_set{i}'].get())
         
@@ -830,8 +827,7 @@ class SetGet(tk.Frame):
         self.preset.to_csv(globals()['setget_path'], index = False)
         
         if class_of_sweeper_device != 'Not a class':
-            getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
-                adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value)
+            getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
             
     def update_sweep_parameters5(self, event, interval=100):
         global types_of_devices
@@ -868,7 +864,7 @@ class SetGet(tk.Frame):
         i = 5
         class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
         device_to_sweep = list_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
-        parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](), 'set_options')
+        parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[globals()[f'self.sweep_options{i}'].current()]
         value = float(globals()[f'self.entry_set{i}'].get())
         
@@ -876,8 +872,7 @@ class SetGet(tk.Frame):
         self.preset.to_csv(globals()['setget_path'], index = False)
         
         if class_of_sweeper_device != 'Not a class':
-            getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
-                adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value)
+            getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
             
     def update_sweep_parameters6(self, event, interval=100):
         global types_of_devices
@@ -914,7 +909,7 @@ class SetGet(tk.Frame):
         i = 6
         class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
         device_to_sweep = list_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
-        parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](), 'set_options')
+        parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[globals()[f'self.sweep_options{i}'].current()]
         value = float(globals()[f'self.entry_set{i}'].get())
         
@@ -922,8 +917,7 @@ class SetGet(tk.Frame):
         self.preset.to_csv(globals()['setget_path'], index = False)
         
         if class_of_sweeper_device != 'Not a class':
-            getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
-                adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value)
+            getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
             
     def set_all(self):
         for i in range(1, self.num_widgets):
@@ -943,7 +937,7 @@ class SetGet(tk.Frame):
         globals()[f'label_devices{i}'] = tk.Label(self, text = 'Devices:', font=LARGE_FONT)
         globals()[f'label_devices{i}'].place(relx = 0.05 + (i - int(i / 5) * 4 - 1) * 7/30, rely = 0.21 + int(i / 5) * 0.35)
 
-        globals()[f'self.combo_to_sweep{i}'] = ttk.Combobox(self, value=list_of_devices)
+        globals()[f'self.combo_to_sweep{i}'] = ttk.Combobox(self, value=list_of_devices_addresses)
         globals()[f'self.combo_to_sweep{i}'].bind(
             "<<ComboboxSelected>>", getattr(self, f'update_sweep_parameters{i}'))
         globals()[f'self.combo_to_sweep{i}'].place(relx=0.15 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.21 + int(i / 5) * 0.35)
@@ -1199,7 +1193,7 @@ class Sweeper1d(tk.Frame):
         label_devices.place(relx = 0.05, rely = 0.16)
 
         self.combo_to_sweep1 = ttk.Combobox(
-            self, value=list_of_devices)
+            self, value=list_of_devices_addresses)
         self.combo_to_sweep1.bind(
             "<<ComboboxSelected>>", self.update_sweep_parameters)
         self.combo_to_sweep1.place(relx=0.15, rely=0.16)
@@ -1624,7 +1618,7 @@ class Sweeper1d(tk.Frame):
 
         # creating columns
         device_to_sweep1 = list_of_devices[self.combo_to_sweep1.current()]
-        parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](), 'set_options')
+        parameters = device_to_sweep1.set_options
         parameter_to_sweep1 = parameters[self.sweep_options1.current()]
         columns_device = self.combo_to_sweep1['values'][self.combo_to_sweep1.current()]
         columns_parameters = self.sweep_options1['values'][self.sweep_options1.current()]
@@ -1735,7 +1729,7 @@ class Sweeper2d(tk.Frame):
         label_devices = tk.Label(self, text = 'Devices:', font=LARGE_FONT)
         label_devices.place(relx = 0.05, rely = 0.21)
 
-        self.combo_to_sweep1 = ttk.Combobox(self, value=list_of_devices)
+        self.combo_to_sweep1 = ttk.Combobox(self, value=list_of_devices_addresses)
         self.combo_to_sweep1.bind(
             "<<ComboboxSelected>>", self.update_sweep_parameters1)
         self.combo_to_sweep1.place(relx=0.15, rely=0.21)
@@ -1758,7 +1752,7 @@ class Sweeper2d(tk.Frame):
             if self.combo_to_sweep1['values'][0] != '':
                 self.update_sweep_parameters1(event = None)
 
-        self.combo_to_sweep2 = ttk.Combobox(self, value=list_of_devices)
+        self.combo_to_sweep2 = ttk.Combobox(self, value=list_of_devices_addresses)
         self.combo_to_sweep2.bind(
             "<<ComboboxSelected>>", self.update_sweep_parameters2)
         self.combo_to_sweep2.place(relx=0.3, rely=0.21)
@@ -2388,11 +2382,11 @@ class Sweeper2d(tk.Frame):
 
         # creating columns
         device_to_sweep1 = list_of_devices[self.combo_to_sweep1.current()]
-        parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](), 'set_options')
+        parameters = device_to_sweep1.set_options
         parameter_to_sweep1 = parameters[self.sweep_options1.current()]
         
         device_to_sweep2 = list_of_devices[self.combo_to_sweep2.current()]
-        parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](), 'set_options')
+        parameters = device_to_sweep2.set_options
         parameter_to_sweep2 = parameters[self.sweep_options2.current()]
         
         if self.combo_master1['value'][self.combo_master1.current()] == 'Slave' and self.combo_master2['value'][self.combo_maste2.current()] == 'Master':
@@ -2574,7 +2568,7 @@ class Sweeper3d(tk.Frame):
         self.button_start_sweeping.place(relx=0.675, rely=0.21 + self.lstbox_height, height= 90, width=30)
         CreateToolTip(self.button_start_sweeping, 'Start sweeping')
 
-        self.combo_to_sweep1 = ttk.Combobox(self, value=list_of_devices)
+        self.combo_to_sweep1 = ttk.Combobox(self, value=list_of_devices_addresses)
         self.combo_to_sweep1.bind(
             "<<ComboboxSelected>>", self.update_sweep_parameters1)
         self.combo_to_sweep1.place(relx=0.15, rely=0.21)
@@ -2617,7 +2611,7 @@ class Sweeper3d(tk.Frame):
         label_back_and_forth_master.place(relx = 0.2335, rely = 0.61)
         CreateToolTip(label_back_and_forth_master, 'Back and forth sweep\nfor this axis')
 
-        self.combo_to_sweep2 = ttk.Combobox(self, value=list_of_devices)
+        self.combo_to_sweep2 = ttk.Combobox(self, value=list_of_devices_addresses)
         self.combo_to_sweep2.bind(
             "<<ComboboxSelected>>", self.update_sweep_parameters2)
         self.combo_to_sweep2.place(relx=0.3, rely=0.21)
@@ -2641,7 +2635,7 @@ class Sweeper3d(tk.Frame):
         label_back_and_forth_slave.place(relx = 0.3635, rely = 0.61)
         CreateToolTip(label_back_and_forth_slave, 'Back and forth sweep\nfor this axis')
 
-        self.combo_to_sweep3 = ttk.Combobox(self, value=list_of_devices)
+        self.combo_to_sweep3 = ttk.Combobox(self, value=list_of_devices_addresses)
         self.combo_to_sweep3.current(0)
         self.combo_to_sweep3.bind(
             "<<ComboboxSelected>>", self.update_sweep_parameters3)
@@ -3420,15 +3414,15 @@ class Sweeper3d(tk.Frame):
 
         # creating columns
         device_to_sweep1 = list_of_devices[self.combo_to_sweep1.current()]
-        parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](), 'set_options')
+        parameters = device_to_sweep1.set_options
         parameter_to_sweep1 = parameters[self.sweep_options1.current()]
         
         device_to_sweep2 = list_of_devices[self.combo_to_sweep2.current()]
-        parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](), 'set_options')
+        parameters = device_to_sweep2.set_options
         parameter_to_sweep2 = parameters[self.sweep_options2.current()]
         
         device_to_sweep3 = list_of_devices[self.combo_to_sweep3.current()]
-        parameters = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep3)]](), 'set_options')
+        parameters = device_to_sweep3.set_options
         parameter_to_sweep3 = parameters[self.sweep_options3.current()]
         
         if self.combo_master1['value'][self.combo_master1.current()] == 'Slave-slave' and self.combo_master2['value'][self.combo_master2.current()] == 'Slave' and self.combo_master3['value'][self.combo_master3.current()] == 'Master':
@@ -3563,7 +3557,7 @@ class Settings(tk.Frame):
         label_adress = tk.Label(self, text = 'Set device type:', font = LARGE_FONT)
         label_adress.place(relx = 0.05, rely = 0.05)
         
-        self.combo_adresses = ttk.Combobox(self, value = list_of_devices)
+        self.combo_adresses = ttk.Combobox(self, value = list_of_devices_addresses)
         self.combo_adresses.current(0)
         self.combo_adresses.place(relx = 0.05, rely = 0.1)
         
@@ -3914,21 +3908,16 @@ class Sweeper_write(threading.Thread):
         self.ratio_sweep1 = float(ratio_sweep1)
         self.delay_factor1 = float(delay_factor1)
         self.value1 = float(from_sweep1)
-        if parameter_to_sweep1 in getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](
-            adress=device_to_sweep1), 'get_options'):
-            self.value1 = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](
-                adress=device_to_sweep1), parameter_to_sweep1)()
+        if parameter_to_sweep1 in device_to_sweep1.get_options:
+            self.value1 = getattr(device_to_sweep1, parameter_to_sweep1)()
         self.condition = condition
         self.time1 = (float(from_sweep1) - float(to_sweep1)) / float(ratio_sweep1)
         self.filename_sweep = filename_sweep
         self.columns = columns
         self.sweepable1 = False
         
-        if hasattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](
-            adress=device_to_sweep1), 'sweepable'):
-            if getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](
-                adress=device_to_sweep1), 'sweepable')[getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep1)]](
-                    adress=device_to_sweep1), 'set_options').index(parameter_to_sweep1)]:
+        if hasattr(device_to_sweep1, 'sweepable'):
+            if device_to_sweep1.sweepable[device_to_sweep1.set_options.index(parameter_to_sweep1)]:
                         self.sweepable1 = True
                         globals()['upcoming_value1'] = self.value1
         
@@ -3960,10 +3949,8 @@ class Sweeper_write(threading.Thread):
             self.delay_factor2 = float(delay_factor2)
             self.filename_sweep = filename_sweep
             self.value2 = float(from_sweep2)
-            if parameter_to_sweep2 in getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
-                adress=device_to_sweep2), 'get_options'):
-                self.value2 = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
-                    adress=device_to_sweep2), parameter_to_sweep2)()
+            if parameter_to_sweep2 in device_to_sweep2.get_options:
+                self.value2 = getattr(device_to_sweep2, parameter_to_sweep2)()
             self.columns = columns
             self.time2 = (float(from_sweep2) - float(to_sweep2)) / float(ratio_sweep2)
             
@@ -3975,11 +3962,8 @@ class Sweeper_write(threading.Thread):
                 
             self.sweepable2 = False
                 
-            if hasattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
-                adress=device_to_sweep2), 'sweepable'):
-                if getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
-                    adress=device_to_sweep2), 'sweepable')[getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
-                        adress=device_to_sweep2), 'set_options').index(parameter_to_sweep2)]:
+            if hasattr(device_to_sweep2, 'sweepable'):
+                if device_to_sweep2.sweepable[device_to_sweep2.set_options.index(parameter_to_sweep2)]:
                             self.sweepable2 = True
                             globals()['upcoming_value2'] = self.value2
                             
@@ -4017,15 +4001,11 @@ class Sweeper_write(threading.Thread):
             self.delay_factor3 = float(delay_factor3)
             self.filename_sweep = filename_sweep
             self.value2 = float(from_sweep2)
-            if parameter_to_sweep2 in getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
-                adress=device_to_sweep2), 'get_options'):
-                self.value2 = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
-                    adress=device_to_sweep2), parameter_to_sweep2)()
+            if parameter_to_sweep2 in device_to_sweep2.get_options:
+                self.value2 = getattr(device_to_sweep2, parameter_to_sweep2)()
             self.value3 = float(from_sweep3)
-            if parameter_to_sweep3 in getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep3)]](
-                adress=device_to_sweep3), 'get_options'):
-                self.value3 = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep3)]](
-                    adress=device_to_sweep3), parameter_to_sweep3)()
+            if parameter_to_sweep3 in device_to_sweep3.get_options:
+                self.value3 = getattr(device_to_sweep3, parameter_to_sweep3)()
             self.columns = columns
             self.step2 = float(delay_factor2) * float(ratio_sweep2)
             self.step3 = float(delay_factor3) * float(ratio_sweep3)
@@ -4048,19 +4028,13 @@ class Sweeper_write(threading.Thread):
             
             self.sweepable3 = False
                 
-            if hasattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
-                adress=device_to_sweep2), 'sweepable'):
-                if getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
-                    adress=device_to_sweep2), 'sweepable')[getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep2)]](
-                        adress=device_to_sweep2), 'set_options').index(parameter_to_sweep2)]:
+            if hasattr(device_to_sweep2, 'sweepable'):
+                if device_to_sweep2.sweepable[device_to_sweep2.set_options.index(parameter_to_sweep2)]:
                             self.sweepable2 = True
                             globals()['upcoming_value2'] = self.value2
                             
-            if hasattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep3)]](
-                adress=device_to_sweep3), 'sweepable'):
-                if getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep3)]](
-                    adress=device_to_sweep3), 'sweepable')[getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep3)]](
-                        adress=device_to_sweep3), 'set_options').index(parameter_to_sweep3)]:
+            if hasattr(device_to_sweep3, 'sweepable'):
+                if device_to_sweep3.sweepable[device_to_sweep3.set_options.index(parameter_to_sweep3)]:
                             self.sweepable3 = True
                             globals()['upcoming_value3'] = self.value3
                             
@@ -4374,8 +4348,8 @@ class Sweeper_write(threading.Thread):
                     adress = parameter[:index_dot]
                     option = parameter[index_dot + 1:]
                     try:
-                        parameter_value = getattr(globals()[
-                                     types_of_devices[list_of_devices.index(str(adress))]](adress=adress), option)()
+                        parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
+                                                  option)()
                         dataframe.append(parameter_value)
                     except:
                         dataframe.append(None)
@@ -4404,8 +4378,8 @@ class Sweeper_write(threading.Thread):
                 adress = parameter[:index_dot]
                 option = parameter[index_dot + 1:]
                 try:
-                    parameter_value = getattr(globals()[
-                                 types_of_devices[list_of_devices.index(str(adress))]](adress=adress), option)()
+                    parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
+                                              option)()
                     dataframe.append(parameter_value)
                 except:
                     dataframe.append(None)
@@ -4462,8 +4436,7 @@ class Sweeper_write(threading.Thread):
                 def try_go(axis, value):
                     axis = str(axis)
                     value = float(value)
-                    getattr(globals()[types_of_devices[list_of_devices.index(globals()[f'device_to_sweep{axis}'])]](
-                        adress=globals()[f'device_to_sweep{axis}']), 'set_' + str(globals()[f'parameter_to_sweep{axis}']))(value=value)
+                    getattr(globals()[f'device_to_sweep{axis}'], 'set_' + str(globals()[f'parameter_to_sweep{axis}']))(value=value)
                 
                 try_go(1, 0)
                 try:
@@ -4500,8 +4473,7 @@ class Sweeper_write(threading.Thread):
                     if getattr(self, f'sweepable{str(axis)}') == False:
                         if manual_sweep_flags[axis - 1] == 0:
                             value = getattr(self, 'value' + str(axis))
-                            getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
-                                adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value)
+                            getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
                             dataframe.append(round(getattr(self, 'value' + str(axis)), 4))
                             if back == False:
                                 setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) + getattr(self, 'step' + str(axis)))
@@ -4509,8 +4481,7 @@ class Sweeper_write(threading.Thread):
                                 setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) - getattr(self, 'step' + str(axis)))
                         else:
                             value = getattr(self, 'value' + str(axis))
-                            getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
-                                adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value)
+                            getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
                             dataframe.append(round(value, 4))
                         
                         delay_factor = globals()['delay_factor' + str(axis)]
@@ -4523,19 +4494,15 @@ class Sweeper_write(threading.Thread):
                         if manual_sweep_flags[axis - 1] == 0:
                             value = globals()['upcoming_value' + str(axis)]
                             if value - getattr(self, 'value' + str(axis)) > getattr(self, 'step' + str(axis)):
-                                if hasattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
-                                    adress=device_to_sweep), 'maxsweep'):
-                                    speed = getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
-                                        adress=device_to_sweep), 'maxspeed')[getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
-                                            adress=device_to_sweep), 'set_options').find(parameter_to_sweep)]
+                                if hasattr(device_to_sweep, 'maxsweep'):
+                                    speed = device_to_sweep.maxspeed[device_to_sweep.set_options.find(parameter_to_sweep)]
                                 else:
                                     speed = float(globals()['ratio_sweep' + str(axis)])
                                             
                             else:
                                 speed = float(globals()['ratio_sweep' + str(axis)])
                                 
-                            getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
-                                adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
+                            getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
                             dataframe.append(round(getattr(self, 'value' + str(axis)), 4))
                             if back == False:
                                 setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) + getattr(self, 'step' + str(axis)))
@@ -4546,8 +4513,7 @@ class Sweeper_write(threading.Thread):
                         else:
                             value = getattr(self, 'value' + str(axis))
                             speed = float(globals()['ratio_sweep' + str(axis)])
-                            getattr(globals()[types_of_devices[list_of_devices.index(device_to_sweep)]](
-                                adress=device_to_sweep), 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
+                            getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
                             dataframe.append(round(value, 4))
                         globals()['self'] = self
                         exec(script, globals())
