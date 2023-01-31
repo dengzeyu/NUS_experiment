@@ -351,6 +351,9 @@ def my_animate(i, n, filename):
         color = 'crimson'
     else:
         color = 'black'
+        
+    if not 'setget' in filename:
+        filename = globals()['filename_sweep']
 
     try:
         data = pd.read_csv(filename)
@@ -2307,7 +2310,7 @@ class Sweeper2d(tk.Frame):
             globals()[f'y{i + 1}'] = []
             globals()[f'y{i + 1}_status'] = 0
             globals()[f'ani{i+1}'] = StartAnimation
-            globals()[f'ani{i+1}'].start(globals()['filename_filename_sweep'])
+            globals()[f'ani{i+1}'].start(globals()['filename_sweep'])
         
     def pause(self):
         global pause_flag
@@ -4108,7 +4111,7 @@ class Sweeper_write(threading.Thread):
         condition_str - python-like condition, written by user in a form of string
         sweep_dimension - 2 or 3: how many sweep parameters are there
         #############
-        return 1 if point in fase space with coordinates in tup included in condition
+        return 1 if point (in phase space with coordinates in tup) included in condition
         np.nan if not included'''
         
         def isequal(a, b):
@@ -4135,130 +4138,37 @@ class Sweeper_write(threading.Thread):
             '''if one lement is less or equal than other with tolerance'''
             return (a-b) <= 0
         
-        def insert(string, index, ins):
-            A_l = string[:index]
-            A_r = string[index + 1:]
-            return A_l + ins + A_r
-        
         result = 1
-        rows_ends = [0]
-        for index, elem in enumerate(condition_str):
-            if elem == '\n':
-                rows_ends.append(index)
-        if len(rows_ends) == 0:
-            rows_ends.append(-1)
+        
+        conditions = condition_str.split('\n')
         
         dict_operations = {' == ': isequal, ' != ': notequal, ' > ': ismore, 
                            ' < ': isless, ' >= ': ismoreequal, ' <= ': islessequal, 
                              '==': isequal, '!=': notequal, '>': ismore, 
                              '<': isless, '>=': ismoreequal, '<=': islessequal}
-        list_operations = list(dict_operations.keys())
         
-        for rows_end in rows_ends:
-            indexes = []
-            try:
-                for eq_operation in list_operations:
-                    cur_index = condition_str[rows_end:rows_ends[rows_ends.index(rows_end) + 1]].find(eq_operation)
-                    if cur_index > 0:
-                        indexes.append([cur_index, eq_operation])
-                        break
-                lhs = condition_str[rows_end:rows_ends[rows_ends.index(rows_end) + 1]][:indexes[0][0]]
-                rhs = condition_str[rows_end:rows_ends[rows_ends.index(rows_end) + 1]][indexes[0][0] + len(indexes[0][1]):]
-            except IndexError:
-                for eq_operation in list_operations:
-                    cur_index = condition_str[rows_end:].find(eq_operation)
-                    if cur_index > 0:
-                        indexes.append([cur_index, eq_operation])
-                        break
-                lhs = condition_str[rows_end:][:indexes[0][0]]
-                rhs = condition_str[rows_end:][indexes[0][0] + len(indexes[0][1]):]
-                
-            if sweep_dimension == 2:
-                
-                x_in_lhs = []
-                x_in_rhs = []
-                y_in_lhs = []
-                y_in_rhs = []
-                
-                for index, elem in enumerate(lhs):
-                    if elem == 'x' or elem == 'X' or elem == 'master' or elem == 'Master':
-                        x_in_lhs.append(index)
-                for index, elem in enumerate(rhs):
-                    if elem == 'x' or elem == 'X' or elem == 'master' or elem == 'Master':
-                        x_in_rhs.append(index)
-                for i in x_in_lhs:
-                    lhs = insert(lhs, i, 'tup[0]')
-                for i in x_in_rhs:
-                    rhs = insert(rhs, i, 'tup[0]')
-                for index, elem in enumerate(lhs):
-                    if elem == 'y' or elem == 'Y' or elem == 'slave' or elem == 'Slave':
-                        y_in_lhs.append(index)
-                for index, elem in enumerate(rhs):
-                    if elem == 'y' or elem == 'Y' or elem == 'slave' or elem == 'Slave':
-                        y_in_rhs.append(index)
-                for i in y_in_lhs:
-                    lhs = insert(lhs, i, 'tup[1]')
-                for i in y_in_rhs:
-                    rhs = insert(rhs, i, 'tup[1]')
-                
-                if lhs != '' and rhs != '':
-                
-                    if dict_operations[indexes[0][1]](eval(lhs, locals()), eval(rhs, locals())):
-                        result *= 1
-                    else:
-                        result *= np.nan
-                
-                else:
-                    result *= 1
+        dict_variables = {'x': 'tup[0]', 'X': 'tup[0]', 'y': 'tup[1]', 'Y': 'tup[1]',
+                          'z': 'tup[2]', 'Z': 'tup[2]', 'Master': 'tup[0]', 'Slave': 'tup[1]',
+                          'SlaveSlave': 'tup[2]'}
+        
+        for condition in conditions:
+            for variable in list(dict_variables.keys()):
+                condition = condition.replace(variable, dict_variables[variable])
             
-            elif sweep_dimension == 3:
-                x_in_lhs = []
-                x_in_rhs = []
-                y_in_lhs = []
-                y_in_rhs = []
-                z_in_lhs = []
-                z_in_rhs = []
+            for operation in list(dict_operations):
+                if operation in condition:
                 
-                for index, elem in enumerate(lhs):
-                    if elem == 'x' or elem == 'X':
-                        x_in_lhs.append(index)
-                for index, elem in enumerate(rhs):
-                    if elem == 'x' or elem == 'X':
-                        x_in_rhs.append(index)
-                for i in x_in_lhs:
-                    lhs = insert(lhs, i, 'tup[0]')
-                for i in x_in_rhs:
-                    rhs = insert(rhs, i, 'tup[0]')
-                for index, elem in enumerate(lhs):
-                    if elem == 'y' or elem == 'Y':
-                        y_in_lhs.append(index)
-                for index, elem in enumerate(rhs):
-                    if elem == 'y' or elem == 'Y':
-                        y_in_rhs.append(index)
-                for i in y_in_lhs:
-                    lhs = insert(lhs, i, 'tup[1]')
-                for i in y_in_rhs:
-                    rhs = insert(rhs, i, 'tup[1]')
-                for index, elem in enumerate(lhs):
-                    if elem == 'z' or elem == 'Z':
-                        z_in_lhs.append(index)
-                for index, elem in enumerate(rhs):
-                    if elem == 'z' or elem == 'Z':
-                        z_in_rhs.append(index)
-                for i in z_in_lhs:
-                    lhs = insert(lhs, i, 'tup[2]')
-                for i in z_in_rhs:
-                    rhs = insert(rhs, i, 'tup[2]')
-                
-                if lhs != '' and rhs != '':
-                    if dict_operations[indexes[0][1]](eval(lhs, locals()), eval(rhs, locals())):
+                    lhs = condition.split(operation)[0]
+                    rhs = condition.split(operation)[1]
+                    
+                    if dict_operations[operation](eval(lhs, locals()), eval(rhs, locals())):
                         result *= 1
                     else:
                         result *= np.nan
-                else:
-                    result *= 1
-            else:
+                
+            if sweep_dimension == 1 or rhs == '' or lhs == '':
                 return 1
+            
         return result
 
     def transposition(self, a, b):
@@ -4474,6 +4384,8 @@ class Sweeper_write(threading.Thread):
                         if manual_sweep_flags[axis - 1] == 0:
                             value = getattr(self, 'value' + str(axis))
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
+                            delay_factor = globals()['delay_factor' + str(axis)]
+                            time.sleep(delay_factor)
                             dataframe.append(round(getattr(self, 'value' + str(axis)), 4))
                             if back == False:
                                 setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) + getattr(self, 'step' + str(axis)))
@@ -4481,11 +4393,12 @@ class Sweeper_write(threading.Thread):
                                 setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) - getattr(self, 'step' + str(axis)))
                         else:
                             value = getattr(self, 'value' + str(axis))
+                            
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
+                            delay_factor = globals()['delay_factor' + str(axis)]
+                            time.sleep(delay_factor)
                             dataframe.append(round(value, 4))
                         
-                        delay_factor = globals()['delay_factor' + str(axis)]
-                        time.sleep(delay_factor)
                         ###################
                         globals()['self'] = self
                         exec(script, globals())
@@ -4503,6 +4416,8 @@ class Sweeper_write(threading.Thread):
                                 speed = float(globals()['ratio_sweep' + str(axis)])
                                 
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
+                            delay_factor = globals()['delay_factor' + str(axis)]
+                            time.sleep(delay_factor)
                             dataframe.append(round(getattr(self, 'value' + str(axis)), 4))
                             if back == False:
                                 setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) + getattr(self, 'step' + str(axis)))
@@ -4514,6 +4429,8 @@ class Sweeper_write(threading.Thread):
                             value = getattr(self, 'value' + str(axis))
                             speed = float(globals()['ratio_sweep' + str(axis)])
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
+                            delay_factor = globals()['delay_factor' + str(axis)]
+                            time.sleep(delay_factor)
                             dataframe.append(round(value, 4))
                         globals()['self'] = self
                         exec(script, globals())
@@ -5446,6 +5363,7 @@ class Graph():
         
     def update_item(self, item):
         name = self.filename
+        
         if not 'setget' in self.filename:
             name = globals()['filename_sweep']
 
