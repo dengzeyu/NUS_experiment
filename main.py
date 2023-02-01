@@ -66,12 +66,7 @@ def var2str(var, vars_data=locals()):
 
 # assigning variables for sweeping
 
-device_to_sweep1 = 'Time'
-device_to_sweep2 = 'Time'
-device_to_sweep3 = 'Time'
-parameter_to_sweep1 = ''
-parameter_to_sweep2 = ''
-parameter_to_sweep3 = ''
+
 from_sweep1 = 0
 to_sweep1 = 1
 ratio_sweep1 = 1
@@ -85,6 +80,7 @@ to_sweep3 = float
 ratio_sweep3 = float
 delay_factor3 = float
 stepper_flag = False
+
 
 month_dictionary = {'01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr', '05': 'May', '06': 'Jun', 
                     '07': 'Jul', '08': 'Aug', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'}
@@ -4426,7 +4422,7 @@ class Sweeper_write(threading.Thread):
                             
                             globals()['upcoming_value' + str(axis)] = getattr(self, 'value' + str(axis))
                         else:
-                            value = getattr(self, 'value' + str(axis))
+                            value = globals()[f'value{str(axis)}']
                             speed = float(globals()['ratio_sweep' + str(axis)])
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
                             delay_factor = globals()['delay_factor' + str(axis)]
