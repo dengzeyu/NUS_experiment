@@ -166,6 +166,7 @@ if not exists(adress_dictionary_path):
             
 def create_preset(dimension):
     global cur_dir
+    global filename_sweep
     dimension = str(dimension)
     globals()['sweeper' + dimension + 'd_path'] = os.path.join(core_dir, 'config', f'sweeper{dimension}d_preset.csv')
     if not exists(globals()[f'sweeper{dimension}d_path']):
@@ -183,6 +184,7 @@ def create_preset(dimension):
              dic['manual_filename' + str(i+1)] = ''
              dic['master_option' + str(i+1)] = 0
         dic['condition'] = ''
+        dic['filename_sweep'] = filename_sweep
         dataframe = pd.DataFrame(dic)
         dataframe.to_csv(globals()[f'sweeper{dimension}d_path'], index = False)
 
@@ -329,8 +331,8 @@ def my_animate(i, n, filename):
     # function to animate graph on each step
     
     def axes_settings(i, pad = 0, tick_size = 4, label_size = 6, x_pad =0, y_pad = 1, title_size = 8, title_pad = -5):
-        globals()[f'ax{i}'].tick_params(axis='y', which='major', length = 0, pad=pad, labelsize=tick_size)
-        globals()[f'ax{i}'].tick_params(axis='x', which='major', length = 0, pad=pad + 1, labelsize=tick_size)
+        globals()[f'ax{i}'].tick_params(axis='y', which='both', length = 0, pad=pad, labelsize=tick_size)
+        globals()[f'ax{i}'].tick_params(axis='x', which='both', length = 0, pad=pad + 1, labelsize=tick_size)
         globals()[f'ax{i}'].set_xlabel('x', fontsize = label_size, labelpad = x_pad)
         globals()[f'ax{i}'].set_ylabel('y', fontsize = label_size, labelpad = y_pad)
         globals()[f'ax{i}'].set_title(f'Plot {i}', fontsize = title_size, pad = title_pad)
@@ -1172,6 +1174,14 @@ class Sweeper1d(tk.Frame):
         self.status_back_and_forth_master = tk.IntVar(value = int(self.preset['status_back_and_forth1'].values[0]))
         self.status_manual = tk.IntVar(value = int(self.preset['status_manual1'].values[0]))
         self.manual_filenames = [self.preset['manual_filename1'].values[0]]
+        self.filename_sweep = self.preset['filename_sweep'][0]
+
+        try:
+            if int(self.filename_sweep[-6:-4]) in np.arange(100) and len(self.filename_sweep[len(self.filename_sweep) - self.filename_sweep[::-1].find('\\'):-4]) == 7 and self.filename_sweep[-9:-6] in list(month_dictionary.values()) and self.filename_sweep != os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}.csv'): 
+                self.filename_sweep = os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}.csv')
+        except:
+            pass
+        
         globals()['setget_flag'] = False
         globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
 
@@ -1331,7 +1341,7 @@ class Sweeper1d(tk.Frame):
         button_explore_manual.place(relx=0.15, rely=0.56)
         CreateToolTip(button_explore_manual, 'Explore existing sweep instruction')
 
-        self.filename_textvariable = tk.StringVar(self, value = filename_sweep)
+        self.filename_textvariable = tk.StringVar(self, value = self.filename_sweep)
         width = int(len(self.filename_textvariable.get()) * 0.95)
         self.entry_filename = tk.Entry(self, textvariable = self.filename_textvariable, font = LARGE_FONT, 
                                        width = width)
@@ -1409,6 +1419,9 @@ class Sweeper1d(tk.Frame):
             self.preset.to_csv(globals()['sweeper1d_path'], index = False)
         if self.entry_delay_factor.get() != self.delay_factor1_init:
             self.preset.loc[0, 'delay_factor1'] = self.entry_delay_factor.get()
+            self.preset.to_csv(globals()['sweeper1d_path'], index = False)
+        if self.entry_filename.get() != self.filename_sweep:
+            self.preset.loc[0, 'filename_sweep'] = self.entry_filename.get()
             self.preset.to_csv(globals()['sweeper1d_path'], index = False)
 
     def update_sweep_configuration(self):
@@ -1517,7 +1530,7 @@ class Sweeper1d(tk.Frame):
         global filename_sweep
 
         filename_sweep = tk.filedialog.asksaveasfilename(title='Save the file',
-                                                         initialfile=cur_dir + '\data_files',
+                                                         initialfile=cur_dir,
                                                          defaultextension='.csv')
         
         self.entry_filename.delete(0, tk.END)
@@ -1689,6 +1702,12 @@ class Sweeper2d(tk.Frame):
         self.status_manual2 = tk.IntVar(value = int(self.preset['status_manual2'].values[0]))
         self.master_option2 = int(self.preset['master_option2'].values[0])
         self.condition = str(self.preset['condition'].values[0])
+        self.filename_sweep = self.preset['filename_sweep'][0]
+        try:
+            if int(self.filename_sweep[-6:-4]) in np.arange(100) and len(self.filename_sweep[len(self.filename_sweep) - self.filename_sweep[::-1].find('\\'):-4]) == 7 and self.filename_sweep[-9:-6] in list(month_dictionary.values()) and self.filename_sweep != os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}.csv'): 
+                self.filename_sweep = os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}.csv')
+        except:
+            pass
         globals()['setget_flag'] = False
         globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
 
@@ -1963,7 +1982,7 @@ class Sweeper2d(tk.Frame):
         self.text_condition.insert(tk.END, self.condition)
         self.text_condition.place(relx = 0.12, rely = 0.7)
 
-        self.filename_textvariable = tk.StringVar(self, value = filename_sweep)
+        self.filename_textvariable = tk.StringVar(self, value = self.filename_sweep)
         width = int(len(self.filename_textvariable.get()) * 0.95)
         self.entry_filename = tk.Entry(self, textvariable = self.filename_textvariable, font = LARGE_FONT, 
                                        width = width)
@@ -2120,6 +2139,9 @@ class Sweeper2d(tk.Frame):
             self.preset.to_csv(globals()['sweeper2d_path'], index = False)
         if self.entry_delay_factor2.get() != self.delay_factor2_init:
             self.preset.loc[0, 'delay_factor2'] = self.entry_delay_factor2.get()
+            self.preset.to_csv(globals()['sweeper2d_path'], index = False)
+        if self.entry_filename.get() != self.filename_sweep:
+            self.preset.loc[0, 'filename_sweep'] = self.entry_filename.get()
             self.preset.to_csv(globals()['sweeper2d_path'], index = False)
         self.preset.loc[0, 'condition'] = self.text_condition.get(1.0, tk.END)[:-1]
         self.preset.to_csv(globals()['sweeper2d_path'], index = False)
@@ -2279,8 +2301,7 @@ class Sweeper2d(tk.Frame):
         global filename_sweep
 
         filename_sweep = tk.filedialog.asksaveasfilename(title='Save the file',
-                                                         initialfile=cur_dir + '\data_files\sweep' + datetime.today().strftime(
-                                                             '%H_%M_%d_%m_%Y'),
+                                                         initialfile=cur_dir,
                                                          defaultextension='.csv')
         
         self.entry_filename.delete(0, tk.END)
@@ -2499,7 +2520,13 @@ class Sweeper3d(tk.Frame):
         self.status_back_and_forth_slave_slave = tk.IntVar(value = int(self.preset['status_back_and_forth3'].values[0]))
         self.status_manual3 = tk.IntVar(value = int(self.preset['status_manual3'].values[0]))
         self.master_option3 = int(self.preset['master_option3'].values[0])
+        self.filename_sweep = self.preset['filename_sweep'].values[0]
         self.condition = str(self.preset['condition'].values[0])
+        try:
+            if int(self.filename_sweep[-6:-4]) in np.arange(100) and len(self.filename_sweep[len(self.filename_sweep) - self.filename_sweep[::-1].find('\\'):-4]) == 7 and self.filename_sweep[-9:-6] in list(month_dictionary.values()) and self.filename_sweep != os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}.csv'): 
+                self.filename_sweep = os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}.csv')
+        except:
+            pass
         globals()['setget_flag'] = False
         globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
         
@@ -2863,7 +2890,7 @@ class Sweeper3d(tk.Frame):
         self.text_condition.insert(tk.END, self.condition)
         self.text_condition.place(relx = 0.12, rely = 0.7)
 
-        self.filename_textvariable = tk.StringVar(self, value = filename_sweep)
+        self.filename_textvariable = tk.StringVar(self, value = self.filename_sweep)
         width = int(len(self.filename_textvariable.get()) * 0.95)
         self.entry_filename = tk.Entry(self, textvariable = self.filename_textvariable, font = LARGE_FONT, 
                                        width = width)
@@ -3110,6 +3137,9 @@ class Sweeper3d(tk.Frame):
         if self.entry_delay_factor3.get() != self.delay_factor3_init:
             self.preset.loc[0, 'delay_factor3'] = self.entry_delay_factor3.get()
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
+        if self.entry_filename.get() != self.filename_sweep:
+            self.preset.loc[0, 'filename_sweep'] = self.entry_filename.get()
+            self.preset.to_csv(globals()['sweeper3d_path'], index = False)
         self.preset.loc[0, 'condition'] = self.text_condition.get(1.0, tk.END)[:-1]
         self.preset.to_csv(globals()['sweeper3d_path'], index = False)
             
@@ -3306,8 +3336,7 @@ class Sweeper3d(tk.Frame):
         global filename_sweep
 
         filename_sweep = tk.filedialog.asksaveasfilename(title='Save the file',
-                                                         initialfile=cur_dir + '\data_files\sweep' + datetime.today().strftime(
-                                                             '%H_%M_%d_%m_%Y'),
+                                                         initialfile=cur_dir,
                                                          defaultextension='.csv')
         
         self.entry_filename.delete(0, tk.END)
@@ -3424,6 +3453,9 @@ class Sweeper3d(tk.Frame):
         parameters = device_to_sweep3.set_options
         parameter_to_sweep3 = parameters[self.sweep_options3.current()]
         
+        manual_filenames = self.manual_filenames
+        manual_sweep_flags = self.manual_sweep_flags
+        
         if self.combo_master1['value'][self.combo_master1.current()] == 'Slave-slave' and self.combo_master2['value'][self.combo_master2.current()] == 'Slave' and self.combo_master3['value'][self.combo_master3.current()] == 'Master':
             master_lock = True
             '''change 1, 2, 3 -> 3, 2, 1'''
@@ -3534,8 +3566,6 @@ class Sweeper3d(tk.Frame):
         sweeper_flag3 = True
         condition = self.text_condition.get(1.0, tk.END)[:-1]
         script = self.script
-        manual_filenames = self.manual_filenames
-        manual_sweep_flags = self.manual_sweep_flags
         
         self.rewrite_preset()
 
@@ -3882,8 +3912,7 @@ class Settings(tk.Frame):
         
     def save_script(self):
         self.script_filename = tk.filedialog.asksaveasfilename(title='Save the file',
-                                                         initialfile=cur_dir + '\config\script' + datetime.today().strftime(
-                                                             '%H_%M_%d_%m_%Y'),
+                                                         initialfile=os.path.join(core_dir, 'config', f'script{datetime.today().strftime("%H_%M_%d_%m_%Y")}'),
                                                          defaultextension='.csv')
         
     def set_script(self, parent):
@@ -4286,7 +4315,7 @@ class Sweeper_write(threading.Thread):
                 try:
                     parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
                                               option)()
-                    dataframe.append(parameter_value)
+                    dataframe.append("{:.3e}".format(parameter_value))
                 except:
                     dataframe.append(None)
         
@@ -4364,9 +4393,9 @@ class Sweeper_write(threading.Thread):
             global tozero_flag
             
             if len(dataframe) == 0:
-                dataframe = [time.perf_counter() - zero_time]
+                dataframe = [np.round(i, 2) for i in [time.perf_counter() - zero_time]]
             else:
-                dataframe[0] = [time.perf_counter() - zero_time][0]
+                dataframe[0] = [np.round(i, 2) for i in [time.perf_counter() - zero_time]][0]
                 
             device_to_sweep = globals()[f'device_to_sweep{str(axis)}']
             parameter_to_sweep = globals()[f'parameter_to_sweep{str(axis)}']
@@ -4382,7 +4411,7 @@ class Sweeper_write(threading.Thread):
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
                             delay_factor = globals()['delay_factor' + str(axis)]
                             time.sleep(delay_factor)
-                            dataframe.append(round(getattr(self, 'value' + str(axis)), 4))
+                            dataframe.append("{:.3e}".format(getattr(self, 'value' + str(axis))))
                             if back == False:
                                 setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) + getattr(self, 'step' + str(axis)))
                             else:
@@ -4393,7 +4422,7 @@ class Sweeper_write(threading.Thread):
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
                             delay_factor = globals()['delay_factor' + str(axis)]
                             time.sleep(delay_factor)
-                            dataframe.append(round(value, 4))
+                            dataframe.append("{:.3e}".format(value))
                         
                         ###################
                         globals()['self'] = self
@@ -4414,7 +4443,7 @@ class Sweeper_write(threading.Thread):
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
                             delay_factor = globals()['delay_factor' + str(axis)]
                             time.sleep(delay_factor)
-                            dataframe.append(round(getattr(self, 'value' + str(axis)), 4))
+                            dataframe.append("{:.3e}".format(getattr(self, 'value' + str(axis))))
                             if back == False:
                                 setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) + getattr(self, 'step' + str(axis)))
                             else:
@@ -4427,7 +4456,7 @@ class Sweeper_write(threading.Thread):
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
                             delay_factor = globals()['delay_factor' + str(axis)]
                             time.sleep(delay_factor)
-                            dataframe.append(round(value, 4))
+                            dataframe.append("{:.3e}".format(value))
                         globals()['self'] = self
                         exec(script, globals())
                         return 
@@ -4532,7 +4561,7 @@ class Sweeper_write(threading.Thread):
             '''Create dataframe duplicate for further update
             sure = True only for 3D sweep for axis = 2'''
             if len(manual_sweep_flags) == 1:
-                globals()['dataframe'] = [time.perf_counter() - zero_time]
+                globals()['dataframe'] = [np.round(i, 2) for i in [time.perf_counter() - zero_time]]
             if len(manual_sweep_flags) == 2 or sure == True:
                 globals()['dataframe'] = [*globals()['dataframe_after']]
             if len(manual_sweep_flags) == 3 and sure == None:
@@ -4907,6 +4936,7 @@ class FigureSettings(object):
                                              offvalue = 0, onvalue = 1)
         self.checkbox_log_x.grid(row = 1, column = 4, pady = 2)
         CreateToolTip(self.checkbox_log_x, 'Set x logscale')
+        self.save_log_x_status(ax)
         
         label_y_device = tk.Label(tw, text = 'y')
         label_y_device.grid(row = 2, column = 0, pady = 2, sticky = tk.W)
@@ -4930,6 +4960,8 @@ class FigureSettings(object):
         self.checkbox_log_y.grid(row = 2, column = 4, pady = 2)
         CreateToolTip(self.checkbox_log_y, 'Set y logscale')
         
+        self.save_log_y_status(ax)
+        
         self.status_xlim = tk.IntVar()
         self.status_xlim.set(int(self.x_autoscale))
         
@@ -4949,7 +4981,9 @@ class FigureSettings(object):
         
         checkbox_xlim = tk.Checkbutton(tw, command = lambda: self.set_xlim(ax))
         checkbox_xlim.grid(row = 3, column = 3, pady = 2)
-        CreateToolTip(checkbox_xlim, 'Set x autoscale off')
+        CreateToolTip(checkbox_xlim, 'Set x autoscale on')
+        
+        self.set_xlim(ax)
         
         self.status_ylim = tk.IntVar()
         self.status_ylim.set(int(self.y_autoscale))
@@ -4970,7 +5004,9 @@ class FigureSettings(object):
         
         checkbox_ylim = tk.Checkbutton(tw, command = lambda: self.set_ylim(ax))
         checkbox_ylim.grid(row = 4, column = 3, pady = 2)
-        CreateToolTip(checkbox_ylim, 'Set y autoscale off')
+        CreateToolTip(checkbox_ylim, 'Set y autoscale on')
+        
+        self.set_xlim(ax)
         
         label_xlabel = tk.Label(tw, text = 'x label = ')
         label_xlabel.grid(row = 5, column = 0, pady = 2, sticky = tk.W)
@@ -5019,24 +5055,24 @@ class FigureSettings(object):
             ax.set_yscale('linear')
             
     def set_xlim(self, ax):
-        if self.status_xlim.get() == 0:
+        if self.status_xlim.get() == 1:
             ax.autoscale(enable = False, axis = 'x')
             globals()[f'x{var2str(ax)[2:]}_autoscale'] = False
-            self.status_xlim.set(1)
-        elif self.status_xlim.get() == 1:
+            self.status_xlim.set(0)
+        elif self.status_xlim.get() == 0:
             ax.autoscale(enable = True, axis = 'x')
             globals()[f'x{var2str(ax)[2:]}_autoscale'] = True
-            self.status_xlim.set(0)
+            self.status_xlim.set(1)
         
     def set_ylim(self, ax):
-        if self.status_ylim.get() == 0:
+        if self.status_ylim.get() == 1:
             ax.autoscale(enable = False, axis = 'y')
             globals()[f'y{var2str(ax)[2:]}_autoscale'] = False
-            self.status_ylim.set(1)
-        elif self.status_ylim.get() == 1:
+            self.status_ylim.set(0)
+        elif self.status_ylim.get() == 0:
             ax.autoscale(enable = True, axis = 'y')
             globals()[f'y{var2str(ax)[2:]}_autoscale'] = True
-            self.status_ylim.set(0)
+            self.status_ylim.set(1)
         
     def ax_update(self, ax, event):
         
@@ -5364,7 +5400,9 @@ class Graph():
             name = globals()['filename_sweep']
 
         try:
-            dataframe = pd.read_csv(name).tail(1).values.flatten().round(2)
+            dataframe = pd.read_csv(name).tail(1).values.flatten()
+            
+            dataframe = ["{:.3e}".format(i) for i in list(dataframe)]
             self.table_dataframe.item(item, values=tuple(dataframe))
             self.table_dataframe.after(250, self.update_item, item)
         except FileNotFoundError:
