@@ -13,16 +13,16 @@ def get(device, command):
 
 class sr860():
 
-    def __init__(self, adress='GPIB0::11::INSTR'):
+    def __init__(self, adress='GPIB0::3::INSTR'):
 
         self.sr860 = SR860(adress)
-
+        
         self.set_options = ['amplitude', 'frequency', 'phase', 'sensitivity', 
-                            'time_constant', 'low_pass_filter_slope', 'synchronous_filter_status',
+                            'time_constant', 'input_range', 'low_pass_filter_slope', 'synchronous_filter_status',
                             'AUX1_output', 'AUX2_output', 'AUX3_output', 'AUX4_output', 'Write']
 
-        self.get_options = ['x', 'y', 'r', 'Θ', 'ch1', 'ch2', 'sensitivity', 
-                            'time_constant', 'low_pass_filter_slope', 'synchronous_filter_status',
+        self.get_options = ['x', 'y', 'r', 'Θ', 'xnoize', 'ynoize', 'ch1', 'ch2', 'FFT', 'sensitivity', 
+                            'time_constant', 'input_range', 'low_pass_filter_slope', 'synchronous_filter_status',
                             'AUX1_input', 'AUX2_input', 'AUX3_input', 'AUX4_input', 
                             'amplitude', 'frequency', 'phase', 'Read']
 
@@ -54,6 +54,15 @@ class sr860():
 
     def Θ(self):
         return self.sr860.theta
+    
+    def FFT(self):
+        return self.sr860.FFT
+    
+    def xnoize(self):
+        return self.sr860.xnoize
+    
+    def ynoize(self):
+        return self.sr860.ynoize
 
     def frequency(self):
         return self.sr860.frequency
@@ -69,6 +78,9 @@ class sr860():
 
     def time_constant(self):
         return self.sr860.time_constant
+    
+    def input_range(self):
+        return self.sr860.input_range
 
     def low_pass_filter_slope(self):
         return self.sr860.filter_slope
@@ -114,6 +126,9 @@ class sr860():
 
     def set_time_constant(self, value=19):
         self.sr860.time_constant = value
+        
+    def set_input_range(self, value = 3):
+        self.sr830.input_range = value
 
     def set_low_pass_filter_slope(self, value=3):
         self.sr860.filter_slope = value
@@ -135,7 +150,7 @@ class sr860():
         
 def main():
     device = sr860()
-    print(device.IDN())
+    device.set_time_constant(2.49)
     
 if __name__ == '__main__':
     main()
