@@ -9,15 +9,15 @@ def get(device, command):
 
 class Keithley2400():
     
-    def __init__(self, adress = 'GPIB0::4::INSTR'):
+    def __init__(self, adress = 'GPIB0::7::INSTR'):
         self.sm = rm.open_resource(
             adress)
         
         self.sm.write(':SOUR:CLE:AUTO OFF') # auto on/off
         
-        self.set_options = ['V', 'I', 'V_NPLC', 'I_NPLC', 'R_NPLC']
+        self.set_options = ['V', 'I', 'compl_curr', 'V_NPLC', 'I_NPLC', 'R_NPLC']
         
-        self.get_options = ['V', 'I', 'R', 'V_NPLC', 'I_NPLC', 'R_NPLC', 'line_freq', 'Sdelay', 'TDelay']
+        self.get_options = ['V', 'I', 'R', 'compl_curr', 'V_NPLC', 'I_NPLC', 'R_NPLC', 'line_freq', 'Sdelay', 'TDelay']
         
     def IDN(self):
         return get(self.sm, '*IDN?')
@@ -69,6 +69,9 @@ class Keithley2400():
         self.sm.write(':SOUR:VOLT:MODE FIXED')
         self.sm.write(':SOUR:VOLT ' + str(round(float(value), 5))) 
         
+    def set_compl_curr(self, value = 0):
+        self.sm.write(f':SENS:CURR:PROT {str(round(float(value), 5))}')
+        
     def V_NPLC(self):
         return float(get(self.sm, ':SENS:VOLT:NPLC?'))
         
@@ -87,6 +90,10 @@ class Keithley2400():
     def set_R_NPLC(self, value = 1):
         self.sm.write(':SENS:RES:NPLC ' + str(round(float(value), 2)))
         
+    def compl_curr(self):
+        answer = get(self.sm, ':SENS:CURR:PROT?')
+        return answer
+        
     def line_freq(self):
         return float(get(self.sm, ':SYST:LFR?'))
     
@@ -98,6 +105,7 @@ class Keithley2400():
     
 def main():
     device = Keithley2400()
+    device.set_compl_curr(1e-5)
     print(device.IDN())
     
 if __name__ == '__main__':

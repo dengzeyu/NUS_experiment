@@ -1,4 +1,5 @@
 import pyvisa as visa
+import time
 rm = visa.ResourceManager()
 
 def get(device, command):
@@ -8,11 +9,11 @@ def get(device, command):
     #return np.random.random(1)
     
 class sim900():
-    def __init__(self, adress):
+    def __init__(self, adress = 'GPIB0::2::INSTR'):
         self.adress = adress
         self.sim900 = self.sim928 = rm.open_resource(self.adress)
-        self.set_options = ['volt1', 'volt2', 'vol3', 'volt4', 'volt5', 'volt6', 'volt7', 'volt8']
-        self.get_options = ['volt1', 'volt2', 'vol3', 'volt4', 'volt5', 'volt6', 'volt7', 'volt8']
+        self.set_options = ['volt1', 'volt2', 'volt3', 'volt4', 'volt5', 'volt6', 'volt7', 'volt8']
+        self.get_options = ['volt1', 'volt2', 'volt3', 'volt4', 'volt5', 'volt6', 'volt7', 'volt8']
         
     def idn(self):
         value = get(self.sim900, '*IDN?')
@@ -21,111 +22,151 @@ class sim900():
     def volt1(self):
         ''' returns voltage of 1st port
         '''
+        time.sleep(0.02)
         self.sim900.write('CONN 1, "\n"')
         value = get(self.sim900, 'VOLT?')
         self.sim900.write('\n')
-        return value
+        return float(value)
     
     def volt2(self):
         ''' returns voltage of 2nd port
         '''
+        time.sleep(0.02)
         self.sim900.write('CONN 2, "\n"')
         value = get(self.sim900, 'VOLT?')
         self.sim900.write('\n')
-        return value
+        return float(value)
     
     def volt3(self):
         ''' returns voltage of 3rd port
         '''
+        time.sleep(0.02)
         self.sim900.write('CONN 3, "\n"')
         value = get(self.sim900, 'VOLT?')
         self.sim900.write('\n')
-        return value
+        return float(value)
     
     def volt4(self):
         ''' returns voltage of 4th port
         '''
+        time.sleep(0.02)
         self.sim900.write('CONN 4, "\n"')
         value = get(self.sim900, 'VOLT?')
         self.sim900.write('\n')
-        return value
+        return float(value)
 
-    def get_volt5(self):
+    def volt5(self):
         ''' returns voltage of 5th port
         '''
+        time.sleep(0.02)
         self.sim900.write('CONN 5, "\n"')
         value = get(self.sim900, 'VOLT?')
         self.sim900.write('\n')
-        return value
+        return float(value)
     
-    def get_volt6(self):
+    def volt6(self):
         ''' returns voltage of 6th port
         '''
         self.sim900.write('CONN 6, "\n"')
         value = get(self.sim900, 'VOLT?')
         self.sim900.write('\n')
-        return value
+        return float(value)
     
-    def get_volt7(self):
+    def volt7(self):
         ''' returns voltage of 7th port
         '''
+        time.sleep(0.02)
         self.sim900.write('CONN 7, "\n"')
         value = get(self.sim900, 'VOLT?')
         self.sim900.write('\n')
-        return value
+        return float(value)
     
-    def get_volt8(self):
+    def volt8(self):
         ''' returns voltage of 8th port
         '''
+        time.sleep(0.02)
         self.sim900.write('CONN 8, "\n"')
         value = get(self.sim900, 'VOLT?')
         self.sim900.write('\n')
-        return value
+        return float(value)
     
     def set_volt1(self, value):
         ''' sets voltage
         '''
-        self.sim900.write(f'SNDT 1, "VOLT {str(value)}"')
+        value = round(float(value), 3)
+        time.sleep(0.02)
+        self.sim900.write('CONN 1, "\n"')
+        self.sim900.write(f'VOLT {str(value)}')
+        self.sim900.write("\n")
         
     def set_volt2(self, value):
         ''' sets voltage
         '''
-        self.sim900.write(f'SNDT 2, "VOLT {str(value)}"')
+        time.sleep(0.02)
+        value = round(float(value), 3)
+        self.sim900.write('CONN 2, "\n"')
+        self.sim900.write(f'VOLT {str(value)}')
+        self.sim900.write("\n")
     
     def set_volt3(self, value):
         ''' sets voltage
         '''
-        self.sim900.write(f'SNDT 3, "VOLT {str(value)}"')
+        time.sleep(0.02)
+        value = round(float(value), 3)
+        self.sim900.write('CONN 3, "\n"')
+        self.sim900.write(f'VOLT {str(value)}')
+        self.sim900.write("\n")
         
     def set_volt4(self, value):
         ''' sets voltage
         '''
-        self.sim900.write(f'SNDT 4, "VOLT {str(value)}"')
+        time.sleep(0.02)
+        value = round(float(value), 3)
+        self.sim900.write('CONN 4 "\n"')
+        self.sim900.write(f'VOLT {str(value)}')
+        self.sim900.write("\n")
         
     def set_volt5(self, value):
         ''' sets voltage
         '''
-        self.sim900.write(f'SNDT 5, "VOLT {str(value)}"')
+        time.sleep(0.02)
+        value = round(float(value), 3)
+        self.sim900.write('CONN 5, "\n"')
+        self.sim900.write(f'VOLT {str(value)}')
+        self.sim900.write("\n")
         
     def set_volt6(self, value):
         ''' sets voltage
         '''
-        self.sim900.write(f'SNDT 6, "VOLT {str(value)}"')
+        time.sleep(0.02)
+        value = round(float(value), 3)
+        self.sim900.write('CONN 6, "\n"')
+        self.sim900.write(f'VOLT {str(value)}')
+        self.sim900.write("\n")
     
     def set_volt7(self, value):
         ''' sets voltage
         '''
-        self.sim900.write(f'SNDT 7, "VOLT {str(value)}"')
+        time.sleep(0.02)
+        value = round(float(value), 3)
+        self.sim900.write('CONN 7, "\n"')
+        self.sim900.write(f'VOLT {str(value)}')
+        self.sim900.write("\n")
         
     def set_volt8(self, value):
         ''' sets voltage
         '''
-        self.sim900.write(f'SNDT 8, "VOLT {str(value)}"')
+        time.sleep(0.02)
+        value = round(float(value), 3)
+        self.sim900.write('CONN 8, "\n"')
+        self.sim900.write(f'VOLT {str(value)}')
+        self.sim900.write("\n")
     
     
 def main():
     device = sim900('GPIB0::2::INSTR')
-    print(device.get_volt2())
+    device.set_volt2(0.1)
+    print(device.volt2())
     
 if __name__ == '__main__':
     main()
