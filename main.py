@@ -66,7 +66,9 @@ def var2str(var, vars_data=locals()):
 
 # assigning variables for sweeping
 
-
+parameter_to_sweep1 = ''
+parameter_to_sweep2 = ''
+parameter_to_sweep3 = ''
 from_sweep1 = 0
 to_sweep1 = 1
 ratio_sweep1 = 1
@@ -118,8 +120,6 @@ if flag_setget == False:
     filename_setget = os.path.join(cur_dir, f'setget_{DAY}{MONTH}{YEAR}-1.csv')
 else:
     filename_setget = os.path.join(cur_dir, f'setget_{DAY}{MONTH}{YEAR}-{np.max(ind_setget) + 1}.csv')
-
-settings_flag = False
 
 sweeper_flag1 = False
 sweeper_flag2 = False
@@ -324,6 +324,9 @@ for ind, device in enumerate(list_of_devices_addresses):
     if types_of_devices[ind] != 'Not a class':
         list_of_devices[ind] = str_to_class(types_of_devices[ind])(adress =  list_of_devices_addresses[ind])
 
+device_to_sweep1 = list_of_devices[0]
+device_to_sweep2 = list_of_devices[0]
+device_to_sweep3 = list_of_devices[0]
 
 zero_time = time.perf_counter()
 
@@ -1505,9 +1508,11 @@ class Sweeper1d(tk.Frame):
         global back_and_forth_master
         
         if self.status_back_and_forth_master.get() == 0:
+            print(f'huh is {back_and_forth_master}')
             back_and_forth_master = 1
         else:
             back_and_forth_master = self.back_and_forth_master_count
+            print(f'back_and_forth_master is {back_and_forth_master}')
             
         self.preset.loc[0, 'status_back_and_forth1'] = self.status_back_and_forth_master.get()
         self.preset.to_csv(globals()['sweeper1d_path'], index = False)
@@ -1645,15 +1650,13 @@ class Sweeper1d(tk.Frame):
             self.list_to_read.append(get_key(entrada, self.dict_lstbox))
         parameters_to_read = self.list_to_read
 
-        self.rewrite_preset()
-
         # creating columns
         device_to_sweep1 = list_of_devices[self.combo_to_sweep1.current()]
         parameters = device_to_sweep1.set_options
         parameter_to_sweep1 = parameters[self.sweep_options1.current()]
         columns_device = self.combo_to_sweep1['values'][self.combo_to_sweep1.current()]
         columns_parameters = self.sweep_options1['values'][self.sweep_options1.current()]
-        columns = ['time', columns_device + '.' + columns_parameters]
+        columns = ['time', columns_device + '.' + columns_parameters + '_sweep']
         for option in parameters_to_read:
             columns.append(option)
 
@@ -1681,9 +1684,12 @@ class Sweeper1d(tk.Frame):
         sweeper_flag2 = False
         sweeper_flag3 = False
         self.save_manual_status()
+        self.save_back_and_forth_master_status()
         manual_filenames = self.manual_filenames
         manual_sweep_flags = self.manual_sweep_flags
         script = self.script
+        
+        self.rewrite_preset()
 
         zero_time = time.perf_counter()
         stop_flag = False
@@ -1808,7 +1814,7 @@ class Sweeper2d(tk.Frame):
         back_and_forth_master = 1
         back_and_forth_slave = 1
         
-        self.back_and_forth_master = 2
+        self.back_and_forth_master_count = 2
         self.back_and_forth_slave_count = 2
     
         self.checkbox_back_and_forth_master = ttk.Checkbutton(self,
@@ -2429,8 +2435,6 @@ class Sweeper2d(tk.Frame):
             entrada = self.lstbox_to_read.get(i)
             self.list_to_read.append(get_key(entrada, self.dict_lstbox))
         parameters_to_read = self.list_to_read
-        
-        self.rewrite_preset()
 
         # creating columns
         device_to_sweep1 = list_of_devices[self.combo_to_sweep1.current()]
@@ -2463,8 +2467,8 @@ class Sweeper2d(tk.Frame):
         columns_device2 = self.combo_to_sweep2['values'][self.combo_to_sweep2.current()]
         columns_parameters2 = self.sweep_options2['values'][self.sweep_options2.current()]
         
-        columns = ['Time', columns_device1 + '.' + columns_parameters1,
-                   columns_device2 + '.' + columns_parameters2]
+        columns = ['Time', columns_device1 + '.' + columns_parameters1 + '_sweep',
+                   columns_device2 + '.' + columns_parameters2 + '_sweep']
         
         if self.combo_master1['value'][self.combo_master1.current()] == 'Master' and self.combo_master2['value'][self.combo_master2.current()] == 'Slave':
             master_lock = True
@@ -2502,6 +2506,9 @@ class Sweeper2d(tk.Frame):
         sweeper_flag1 = False
         sweeper_flag2 = True
         sweeper_flag3 = False
+        #self.save_manual_status()
+        self.save_back_and_forth_master_status()
+        self.save_back_and_forth_slave_status()
         condition = self.text_condition.get(1.0, tk.END)[:-1]
         script = self.script
         manual_sweep_flags = self.manual_sweep_flags
@@ -2509,6 +2516,7 @@ class Sweeper2d(tk.Frame):
 
         zero_time = time.perf_counter()
         stop_flag = False
+        self.rewrite_preset()
         Sweeper_write()
         self.open_graph()
 
@@ -3064,7 +3072,7 @@ class Sweeper3d(tk.Frame):
             self.sweep_options3.after(interval)
             
     def update_sweep_options1(self, event):
-        if self.sweep_options1.current() != self.sweep_options21_current:
+        if self.sweep_options1.current() != self.sweep_options1_current:
             self.preset.loc[0, 'sweep_options2'] = self.sweep_options2.current()
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
     
@@ -3560,9 +3568,9 @@ class Sweeper3d(tk.Frame):
         columns_device3 = self.combo_to_sweep3['values'][self.combo_to_sweep3.current()]
         columns_parameters3 = self.sweep_options3['values'][self.sweep_options3.current()]
         
-        columns = ['Time', columns_device1 + '.' + columns_parameters1,
-                   columns_device2 + '.' + columns_parameters2,
-                   columns_device3 + '.' + columns_parameters3]
+        columns = ['Time', columns_device1 + '.' + columns_parameters1 + '_sweep',
+                   columns_device2 + '.' + columns_parameters2 + '_sweep',
+                   columns_device3 + '.' + columns_parameters3 + '_sweep']
         
         for option in parameters_to_read:
             columns.append(option)
@@ -3609,8 +3617,14 @@ class Sweeper3d(tk.Frame):
         sweeper_flag1 = False
         sweeper_flag2 = False
         sweeper_flag3 = True
+        self.save_manual_status()
+        self.save_back_and_forth_master_status()
+        self.save_back_and_forth_slave_status()
+        self.save_back_and_forth_slave_slave_status()
         condition = self.text_condition.get(1.0, tk.END)[:-1]
         script = self.script
+        manual_sweep_flags = self.manual_sweep_flags
+        manual_filenames = self.manual_filenames 
         
         self.rewrite_preset()
 
@@ -3982,7 +3996,7 @@ class Sweeper_write(threading.Thread):
         self.delay_factor1 = float(delay_factor1)
         self.value1 = float(from_sweep1)
         if parameter_to_sweep1 in device_to_sweep1.get_options:
-            self.value1 = getattr(device_to_sweep1, parameter_to_sweep1)()
+            self.value1 = float(getattr(device_to_sweep1, parameter_to_sweep1)())
         self.condition = condition
         self.time1 = (float(from_sweep1) - float(to_sweep1)) / float(ratio_sweep1)
         self.filename_sweep = filename_sweep
@@ -4000,7 +4014,7 @@ class Sweeper_write(threading.Thread):
             self.step1 = float(delay_factor1) * float(ratio_sweep1)
         else:
             if stepper_flag == False:
-                self.step1 = (self.value1 - float(to_sweep1))
+                self.step1 = (float(to_sweep1) - float(self.value1))
             else:
                 self.step1 = float(delay_factor1) * float(ratio_sweep1)
         
@@ -4024,7 +4038,7 @@ class Sweeper_write(threading.Thread):
             self.filename_sweep = filename_sweep
             self.value2 = float(from_sweep2)
             if parameter_to_sweep2 in device_to_sweep2.get_options:
-                self.value2 = getattr(device_to_sweep2, parameter_to_sweep2)()
+                self.value2 = float(getattr(device_to_sweep2, parameter_to_sweep2)())
             self.columns = columns
             self.time2 = (float(from_sweep2) - float(to_sweep2)) / float(ratio_sweep2)
             
@@ -4045,7 +4059,7 @@ class Sweeper_write(threading.Thread):
                 self.step2 = float(delay_factor2) * float(ratio_sweep2)
             else:
                 if stepper_flag == False:
-                    self.step2 = (self.value2 - float(to_sweep2))
+                    self.step2 = (float(to_sweep2) - float(self.value2))
                 else:
                     self.step2 = float(delay_factor2) * float(ratio_sweep2)
                 
@@ -4076,10 +4090,10 @@ class Sweeper_write(threading.Thread):
             self.filename_sweep = filename_sweep
             self.value2 = float(from_sweep2)
             if parameter_to_sweep2 in device_to_sweep2.get_options:
-                self.value2 = getattr(device_to_sweep2, parameter_to_sweep2)()
+                self.value2 = float(getattr(device_to_sweep2, parameter_to_sweep2)())
             self.value3 = float(from_sweep3)
             if parameter_to_sweep3 in device_to_sweep3.get_options:
-                self.value3 = getattr(device_to_sweep3, parameter_to_sweep3)()
+                self.value3 = float(getattr(device_to_sweep3, parameter_to_sweep3)())
             self.columns = columns
             self.step2 = float(delay_factor2) * float(ratio_sweep2)
             self.step3 = float(delay_factor3) * float(ratio_sweep3)
@@ -4116,7 +4130,7 @@ class Sweeper_write(threading.Thread):
                 self.step3 = float(delay_factor3) * float(ratio_sweep3)
             else:
                 if stepper_flag == False:
-                    self.step3 = (self.value3 - float(to_sweep3))
+                    self.step3 = (float(to_sweep3) - float(self.value3))
                 else:
                     self.step3 = float(delay_factor3) * float(ratio_sweep3)
                 
@@ -4132,6 +4146,17 @@ class Sweeper_write(threading.Thread):
                 self.nstep3 = 1
             
         print(f'Manual_sweep_flags are {manual_sweep_flags}\nrange1 = [{from_sweep1}:{to_sweep1}), ratio_sweep1 = {ratio_sweep1}\nrange2 = [{from_sweep2}:{to_sweep2}), ratio_sweep2 = {ratio_sweep2}\nrange3 = [{from_sweep3}:{to_sweep3}), ratio_sweep3 = {ratio_sweep3}')
+
+        print(f'Step1 is {self.step1}, nstep1 is {self.nstep1}')
+        try: 
+            print(f'step2 is {self.step2}, nstep2 is {self.nstep2}')
+        except:
+            pass
+        try:
+            print(f'step3 is {self.step3}, nstep3 is {self.nstep3}')
+        except:
+            pass
+
 
         try:
             threading.Thread.__init__(self)
@@ -4358,6 +4383,7 @@ class Sweeper_write(threading.Thread):
                 index_dot = parameter.find('.')
                 adress = parameter[:index_dot]
                 option = parameter[index_dot + 1:]
+                
                 try:
                     parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
                                               option)()
@@ -4390,25 +4416,42 @@ class Sweeper_write(threading.Thread):
             
             '''Determine if current value is in sweep borders of axis'''
             
-            axis = str(axis)
-            value = getattr(self, 'value' + axis)
-            to_sweep = float(globals()['to_sweep' + axis])
-            from_sweep = float(globals()['from_sweep' + axis])
-            speed = float(globals()['ratio_sweep' + axis])
-            
             if stop_flag == True:
                 for i in [1, 2, 3]:
                     globals()['sweeper_flag' + str(i)] = False
                 return False
             
-            if speed >= 0:
-                result = value >= from_sweep and value <= to_sweep
-                print('Condition checked, result is ' + str(result) + f'\nBoundaries are [{from_sweep};{to_sweep}), Value is {value}, Ratio is positive')
-                return result
+            axis = str(axis)
+            value = float(getattr(self, 'value' + axis))
+            to_sweep = float(globals()['to_sweep' + axis])
+            from_sweep = float(globals()['from_sweep' + axis])
+            speed = float(globals()['ratio_sweep' + axis])
+            device_to_sweep = globals()[f'device_to_sweep{axis}']
+            parameter_to_sweep = globals()[f'parameter_to_sweep{axis}']
+            result = True
+            
+                
+            if getattr(self, f'sweepable{axis}') == True:
+                current_value = float(getattr(device_to_sweep, parameter_to_sweep)())
+                print(f'Current value is {current_value}')
+                print(f'Sweep value is {value}')
+                if (speed > 0 and current_value > value) or ((speed < 0 and current_value < value)):
+                    result = False
+                else:
+                    result = True
+                    setattr(self, f'value{axis}', to_sweep - getattr(self, f'step{axis}'))
             else:
-                result = value >= to_sweep and value <= from_sweep
+                if speed >= 0:
+                    result = value >= from_sweep and value <= to_sweep
+                else:
+                    result = value >= to_sweep and value <= from_sweep
+                
+            if speed > 0:
+                print('Condition checked, result is ' + str(result) + f'\nBoundaries are [{from_sweep};{to_sweep}), Value is {value}, Ratio is positive')
+            else:
                 print('Condition checked, result is ' + str(result) + f'\nBoundaries are [{from_sweep};{to_sweep}), Value is {value}, Ratio is negative')
-                return result
+                
+            return result
             
         def step(axis = 1, value = None, back = False):
             
