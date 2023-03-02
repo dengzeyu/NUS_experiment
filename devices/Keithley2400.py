@@ -7,7 +7,7 @@ def get(device, command):
     # return np.round(np.random.random(1), 1)
     return device.query(command)
 
-class Keithley2400():
+class keithley2400():
     
     def __init__(self, adress = 'GPIB0::7::INSTR'):
         self.sm = rm.open_resource(
