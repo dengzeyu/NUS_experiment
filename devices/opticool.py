@@ -10,6 +10,7 @@ class opticool():
         self._field_driven = self.device.field.set_driven
         self._chamber_state = self.device.chamber.set_mode
         self.set_options = ['T', 'field', 'T_approach', 'field_approach', 'field_driven', 'chamber_state']
+        self.get_options = ['T', 'field', 'T_approach', 'field_approach', 'field_driven', 'chamber_state']
     
     def field(self):
         self.field, self.state_field = self.device.get_field()
@@ -26,7 +27,7 @@ class opticool():
         
         return self._field_approach
     
-    def field_driven_mode(self):
+    def field_driven(self):
         
         """
         persistent = 0
