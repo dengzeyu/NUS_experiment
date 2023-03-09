@@ -1,8 +1,10 @@
 from MultiPyVu import MultiVuClient as mvc
 
 class opticool():
-    def __init__(self, adress = '192.168.1.207'):
-        self.device = mvc.MultiVuClient(host=adress)
+    def __init__(self, adress = '192.168.1.207:5000'):
+        host, port = adress.split(':')
+        port = int(port)
+        self.device = mvc.MultiVuClient(host=host, port = port)
         self.device.open()
         self.T_states = self.device.temperature.state_code_dict()
         self._T_approach = self.device.temperature.set_approach

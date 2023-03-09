@@ -25,15 +25,16 @@ import numpy as np
 
 if not exists(os.path.join(core_dir, 'devices')):
     os.mkdir(os.path.join(core_dir, 'devices'))
-    
+      
 sys.path.insert(0, os.path.join(core_dir, 'devices'))
 
 def str_to_class(classname):
     return getattr(sys.modules[__name__], classname)
 
 device_classes = os.listdir(os.path.join(core_dir, 'devices'))
-if '__pycache__' in device_classes:
-    device_classes.remove('__pycache__')
+for i in device_classes:
+    if not i.endswith('.py'):
+        device_classes.remove(i)
     
 for ind, device in enumerate(device_classes):
     exec(f'from {device[:-3]} import {device[:-3]}')
@@ -134,6 +135,17 @@ condition = ''
 
 if not exists(os.path.join(core_dir, 'config')):
     os.mkdir(os.path.join(core_dir, 'config'))
+    
+remote_devices_path = os.path.join(core_dir, 'config', 'remote_devices.txt')
+if not exists(remote_devices_path):
+    with open(remote_devices_path, 'w') as file:
+        try:
+            file.write('{}')
+            file.close()
+        except:
+            file.close()
+        finally:
+            file.close()
 
 manual_sweep_flags = [0]
 manual_filenames = [os.path.join(cur_dir, 'manual' + datetime.today().strftime(
@@ -290,7 +302,18 @@ for i in range (len(list_of_devices)):
         
 list_of_devices.insert(0, 'Time')
 types_of_devices.insert(0, 'Time')
-        
+
+with open(remote_devices_path) as file:
+    remote_devices = file.readlines()
+    
+for ind, _ in enumerate(remote_devices):
+    if remote_devices[ind].endswith('\n'):
+        remote_devices[ind] = remote_devices[ind][:-1]
+    list_of_devices.append(remote_devices[ind])
+    types_of_devices.append('Not a class')
+    
+print(f'Remote devices: {remote_devices}')
+
 with open(os.path.join(core_dir, 'config', 'adress_dictionary.txt'), 'r') as file:
     adress_dict = file.read()
 adress_dict = json.loads(adress_dict)
@@ -304,12 +327,19 @@ for ind_, type_ in enumerate(types_of_devices):
 def new_parameters_to_read():
     global types_of_devices
     global list_of_devices
+    global list_of_devices_addresses
+    
+    if 'list_of_devices_addresses' in list(globals().keys()):
+        new_list_for_parameters = list_of_devices_addresses.copy()
+    else:
+        new_list_for_parameters = list_of_devices.copy()
+    
     parameters_to_read = []
     for ind, device_type in enumerate(types_of_devices):
         if device_type == 'Not a class':
             pass
         else:
-            adress = list_of_devices[ind]
+            adress = new_list_for_parameters[ind]
             get_options = getattr(globals()[device_type](
                 adress=adress), 'get_options')
             for option in get_options:
@@ -3990,6 +4020,7 @@ class Sweeper_write(threading.Thread):
         self.device_to_sweep1 = device_to_sweep1
         self.parameter_to_sweep1 = parameter_to_sweep1
         self.parameters_to_read = parameters_to_read
+        print(f'Parameters to read are {self.parameters_to_read}')
         self.from_sweep1 = float(from_sweep1)
         self.to_sweep1 = float(to_sweep1)
         self.ratio_sweep1 = float(ratio_sweep1)
@@ -4350,7 +4381,8 @@ class Sweeper_write(threading.Thread):
                 dataframe.append(round(time.perf_counter() - zero_time, 2))
                 
                 for parameter in self.parameters_to_read:
-                    index_dot = parameter.find('.')
+                    index_dot = parameter[::-1].find('.')
+                    index_dot = len(parameter) - index_dot - 1
                     adress = parameter[:index_dot]
                     option = parameter[index_dot + 1:]
                     try:
@@ -4380,16 +4412,14 @@ class Sweeper_write(threading.Thread):
             global dataframe
             
             for parameter in self.parameters_to_read:
-                index_dot = parameter.find('.')
+                index_dot = parameter[::-1].find('.')
+                index_dot = len(parameter) - index_dot - 1
                 adress = parameter[:index_dot]
                 option = parameter[index_dot + 1:]
-                
-                try:
-                    parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
+
+                parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
                                               option)()
-                    dataframe.append("{:.3e}".format(parameter_value))
-                except:
-                    dataframe.append(None)
+                dataframe.append("{:.3e}".format(parameter_value))
         
         def tofile():
             '''appends file with new row - dataframe'''
@@ -5610,7 +5640,11 @@ class Graph():
         try:
             dataframe = pd.read_csv(name).tail(1).values.flatten()
             
-            dataframe = ["{:.3e}".format(i) for i in list(dataframe)]
+            for ind, value in enumerate(dataframe):
+                try:
+                    dataframe[ind] = "{:.3e}".format(value)
+                except:
+                    pass
             self.table_dataframe.item(item, values=tuple(dataframe))
             self.table_dataframe.after(250, self.update_item, item)
         except FileNotFoundError:

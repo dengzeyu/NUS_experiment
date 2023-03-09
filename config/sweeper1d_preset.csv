@@ -1,2 +1,2 @@
-combo_to_sweep1,sweep_options1,from1,to1,count_option1,ratio1,delay_factor1,status_back_and_forth1,status_manual1,manual_filename1,master_option1,condition
-0,0,0,10,step,1,1,0,0,,0,
+combo_to_sweep1,sweep_options1,from1,to1,count_option1,ratio1,delay_factor1,status_back_and_forth1,status_manual1,manual_filename1,master_option1,condition,filename_sweep
+0,0,1,10,ratio,0.01,1,0,0,,0,,D:\Program_sweep\NUS_experiment\09Mar23\data_files\09Mar23.csv
