@@ -133,7 +133,7 @@ def main():
     print(device.T())
     print(device.T_approach())
     print(device.field())
-    print(device.chamber())
+    print(device.chamber_state())
     device.stop()
     
 if __name__ == '__main__':

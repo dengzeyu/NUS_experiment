@@ -1475,3 +1475,75 @@
 2023-03-02 21:47:12,138     MultiVuClient        INFO     Closing connection to ('192.168.1.107', 56351)
 2023-03-02 21:47:12,138     MultiVuClient        INFO     Closing connection to ('192.168.1.107', 56351)
 2023-03-02 21:47:12,138     MultiVuClient        INFO     Closing connection to ('192.168.1.107', 56351)
+2023-03-03 14:48:40,861     MultiVuClient        INFO     Starting connection to ('192.168.1.207', 5000)
+2023-03-03 14:48:41,174     MultiVuClient        DEBUG    ;to ('192.168.1.107', 63821); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 46}{"action": "START", "query": "", "result": ""}'
+2023-03-03 14:48:41,174     MultiVuClient        DEBUG    ;from ('192.168.1.107', 63821); Received request {'action': 'START', 'query': '', 'result': "Connected to OPTICOOL MultiVuServer at ('192.168.1.107', 63821)"}
+2023-03-03 14:48:41,174     MultiVuClient        DEBUG    ;from ('192.168.1.107', 63821); Received request Connected to OPTICOOL MultiVuServer at ('192.168.1.107', 63821)
+2023-03-03 14:48:41,174     MultiVuClient        INFO     Connected to OPTICOOL MultiVuServer at ('192.168.1.107', 63821)
+2023-03-03 14:48:41,174     MultiVuClient        DEBUG    ;to ('192.168.1.107', 63821); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 46}{"action": "TEMP?", "query": "", "result": ""}'
+2023-03-03 14:48:41,268     MultiVuClient        DEBUG    ;from ('192.168.1.107', 63821); Received request {'action': 'TEMP?', 'query': '', 'result': 'TEMP?,299.8405,K,Standby'}
+2023-03-03 14:48:41,268     MultiVuClient        DEBUG    ;from ('192.168.1.107', 63821); Received request TEMP?,299.8405,K,Standby
+2023-03-03 14:48:41,268     MultiVuClient        DEBUG    ;to ('192.168.1.107', 63821); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 47}{"action": "FIELD?", "query": "", "result": ""}'
+2023-03-03 14:48:41,283     MultiVuClient        DEBUG    ;from ('192.168.1.107', 63821); Received request {'action': 'FIELD?', 'query': '', 'result': 'FIELD?,nan,Oe,Stable'}
+2023-03-03 14:48:41,283     MultiVuClient        DEBUG    ;from ('192.168.1.107', 63821); Received request FIELD?,nan,Oe,Stable
+2023-03-03 14:48:41,283     MultiVuClient        DEBUG    ;to ('192.168.1.107', 63821); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 49}{"action": "CHAMBER?", "query": "", "result": ""}'
+2023-03-03 14:48:41,283     MultiVuClient        DEBUG    ;from ('192.168.1.107', 63821); Received request {'action': 'CHAMBER?', 'query': '', 'result': 'CHAMBER?,,,Sealed (condition unknown)'}
+2023-03-03 14:48:41,283     MultiVuClient        DEBUG    ;from ('192.168.1.107', 63821); Received request CHAMBER?,,,Sealed (condition unknown)
+2023-03-03 14:48:41,283     MultiVuClient        DEBUG    ;to ('192.168.1.107', 63821); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 46}{"action": "CLOSE", "query": "", "result": ""}'
+2023-03-03 14:48:41,283     MultiVuClient        DEBUG    ;from ('192.168.1.107', 63821); Received request {'action': 'CLOSE', 'query': 'CLOSE', 'result': "Client ('192.168.1.107', 63821) disconnected."}
+2023-03-03 14:48:41,283     MultiVuClient        DEBUG    ;from ('192.168.1.107', 63821); Received request Client ('192.168.1.107', 63821) disconnected.
+2023-03-03 14:48:41,283     MultiVuClient        INFO     Closing connection to ('192.168.1.107', 63821)
+2023-03-03 15:13:03,840     MultiVuClient        INFO     Starting connection to ('192.168.1.207', 5000)
+2023-03-03 15:13:04,168     MultiVuClient        DEBUG    ;to ('192.168.1.107', 65508); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 46}{"action": "START", "query": "", "result": ""}'
+2023-03-03 15:13:04,168     MultiVuClient        DEBUG    ;from ('192.168.1.107', 65508); Received request {'action': 'START', 'query': '', 'result': "Connected to OPTICOOL MultiVuServer at ('192.168.1.107', 65508)"}
+2023-03-03 15:13:04,168     MultiVuClient        DEBUG    ;from ('192.168.1.107', 65508); Received request Connected to OPTICOOL MultiVuServer at ('192.168.1.107', 65508)
+2023-03-03 15:13:04,168     MultiVuClient        INFO     Connected to OPTICOOL MultiVuServer at ('192.168.1.107', 65508)
+2023-03-03 15:13:04,168     MultiVuClient        DEBUG    ;to ('192.168.1.107', 65508); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 46}{"action": "TEMP?", "query": "", "result": ""}'
+2023-03-03 15:13:04,168     MultiVuClient        DEBUG    ;from ('192.168.1.107', 65508); Received request {'action': 'TEMP?', 'query': '', 'result': 'TEMP?,300.4303,K,Standby'}
+2023-03-03 15:13:04,168     MultiVuClient        DEBUG    ;from ('192.168.1.107', 65508); Received request TEMP?,300.4303,K,Standby
+2023-03-03 15:13:04,168     MultiVuClient        DEBUG    ;to ('192.168.1.107', 65508); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 47}{"action": "FIELD?", "query": "", "result": ""}'
+2023-03-03 15:13:04,168     MultiVuClient        DEBUG    ;from ('192.168.1.107', 65508); Received request {'action': 'FIELD?', 'query': '', 'result': 'FIELD?,nan,Oe,Stable'}
+2023-03-03 15:13:04,168     MultiVuClient        DEBUG    ;from ('192.168.1.107', 65508); Received request FIELD?,nan,Oe,Stable
+2023-03-03 15:13:04,168     MultiVuClient        DEBUG    ;to ('192.168.1.107', 65508); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 49}{"action": "CHAMBER?", "query": "", "result": ""}'
+2023-03-03 15:13:04,177     MultiVuClient        DEBUG    ;from ('192.168.1.107', 65508); Received request {'action': 'CHAMBER?', 'query': '', 'result': 'CHAMBER?,,,Sealed (condition unknown)'}
+2023-03-03 15:13:04,177     MultiVuClient        DEBUG    ;from ('192.168.1.107', 65508); Received request CHAMBER?,,,Sealed (condition unknown)
+2023-03-03 15:13:04,177     MultiVuClient        DEBUG    ;to ('192.168.1.107', 65508); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 46}{"action": "CLOSE", "query": "", "result": ""}'
+2023-03-03 15:13:04,177     MultiVuClient        DEBUG    ;from ('192.168.1.107', 65508); Received request {'action': 'CLOSE', 'query': 'CLOSE', 'result': "Client ('192.168.1.107', 65508) disconnected."}
+2023-03-03 15:13:04,177     MultiVuClient        DEBUG    ;from ('192.168.1.107', 65508); Received request Client ('192.168.1.107', 65508) disconnected.
+2023-03-03 15:13:04,177     MultiVuClient        INFO     Closing connection to ('192.168.1.107', 65508)
+2023-03-03 15:21:59,867     MultiVuClient        INFO     Starting connection to ('192.168.1.207', 5000)
+2023-03-03 15:22:00,184     MultiVuClient        DEBUG    ;to ('192.168.1.107', 49183); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 46}{"action": "START", "query": "", "result": ""}'
+2023-03-03 15:22:00,185     MultiVuClient        DEBUG    ;from ('192.168.1.107', 49183); Received request {'action': 'START', 'query': '', 'result': "Connected to OPTICOOL MultiVuServer at ('192.168.1.107', 49183)"}
+2023-03-03 15:22:00,186     MultiVuClient        DEBUG    ;from ('192.168.1.107', 49183); Received request Connected to OPTICOOL MultiVuServer at ('192.168.1.107', 49183)
+2023-03-03 15:22:00,186     MultiVuClient        INFO     Connected to OPTICOOL MultiVuServer at ('192.168.1.107', 49183)
+2023-03-03 15:22:00,187     MultiVuClient        DEBUG    ;to ('192.168.1.107', 49183); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 46}{"action": "TEMP?", "query": "", "result": ""}'
+2023-03-03 15:22:00,189     MultiVuClient        DEBUG    ;from ('192.168.1.107', 49183); Received request {'action': 'TEMP?', 'query': '', 'result': 'TEMP?,300.2526,K,Standby'}
+2023-03-03 15:22:00,189     MultiVuClient        DEBUG    ;from ('192.168.1.107', 49183); Received request TEMP?,300.2526,K,Standby
+2023-03-03 15:22:00,190     MultiVuClient        DEBUG    ;to ('192.168.1.107', 49183); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 47}{"action": "FIELD?", "query": "", "result": ""}'
+2023-03-03 15:22:00,192     MultiVuClient        DEBUG    ;from ('192.168.1.107', 49183); Received request {'action': 'FIELD?', 'query': '', 'result': 'FIELD?,nan,Oe,Stable'}
+2023-03-03 15:22:00,193     MultiVuClient        DEBUG    ;from ('192.168.1.107', 49183); Received request FIELD?,nan,Oe,Stable
+2023-03-03 15:22:00,193     MultiVuClient        DEBUG    ;to ('192.168.1.107', 49183); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 49}{"action": "CHAMBER?", "query": "", "result": ""}'
+2023-03-03 15:22:00,194     MultiVuClient        DEBUG    ;from ('192.168.1.107', 49183); Received request {'action': 'CHAMBER?', 'query': '', 'result': 'CHAMBER?,,,Sealed (condition unknown)'}
+2023-03-03 15:22:00,194     MultiVuClient        DEBUG    ;from ('192.168.1.107', 49183); Received request CHAMBER?,,,Sealed (condition unknown)
+2023-03-03 15:22:00,195     MultiVuClient        DEBUG    ;to ('192.168.1.107', 49183); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 46}{"action": "CLOSE", "query": "", "result": ""}'
+2023-03-03 15:22:00,195     MultiVuClient        DEBUG    ;from ('192.168.1.107', 49183); Received request {'action': 'CLOSE', 'query': 'CLOSE', 'result': "Client ('192.168.1.107', 49183) disconnected."}
+2023-03-03 15:22:00,195     MultiVuClient        DEBUG    ;from ('192.168.1.107', 49183); Received request Client ('192.168.1.107', 49183) disconnected.
+2023-03-03 15:22:00,195     MultiVuClient        INFO     Closing connection to ('192.168.1.107', 49183)
+2023-03-03 15:32:39,540     MultiVuClient        INFO     Starting connection to ('192.168.1.207', 5000)
+2023-03-03 15:32:39,851     MultiVuClient        DEBUG    ;to ('192.168.1.107', 64609); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 46}{"action": "START", "query": "", "result": ""}'
+2023-03-03 15:32:39,851     MultiVuClient        DEBUG    ;from ('192.168.1.107', 64609); Received request {'action': 'START', 'query': '', 'result': "Connected to OPTICOOL MultiVuServer at ('192.168.1.107', 64609)"}
+2023-03-03 15:32:39,851     MultiVuClient        DEBUG    ;from ('192.168.1.107', 64609); Received request Connected to OPTICOOL MultiVuServer at ('192.168.1.107', 64609)
+2023-03-03 15:32:39,851     MultiVuClient        INFO     Connected to OPTICOOL MultiVuServer at ('192.168.1.107', 64609)
+2023-03-03 15:32:39,851     MultiVuClient        DEBUG    ;to ('192.168.1.107', 64609); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 46}{"action": "TEMP?", "query": "", "result": ""}'
+2023-03-03 15:32:39,851     MultiVuClient        DEBUG    ;from ('192.168.1.107', 64609); Received request {'action': 'TEMP?', 'query': '', 'result': 'TEMP?,300.0746,K,Standby'}
+2023-03-03 15:32:39,851     MultiVuClient        DEBUG    ;from ('192.168.1.107', 64609); Received request TEMP?,300.0746,K,Standby
+2023-03-03 15:32:39,851     MultiVuClient        DEBUG    ;to ('192.168.1.107', 64609); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 47}{"action": "FIELD?", "query": "", "result": ""}'
+2023-03-03 15:32:39,851     MultiVuClient        DEBUG    ;from ('192.168.1.107', 64609); Received request {'action': 'FIELD?', 'query': '', 'result': 'FIELD?,nan,Oe,Stable'}
+2023-03-03 15:32:39,851     MultiVuClient        DEBUG    ;from ('192.168.1.107', 64609); Received request FIELD?,nan,Oe,Stable
+2023-03-03 15:32:39,851     MultiVuClient        DEBUG    ;to ('192.168.1.107', 64609); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 49}{"action": "CHAMBER?", "query": "", "result": ""}'
+2023-03-03 15:32:39,851     MultiVuClient        DEBUG    ;from ('192.168.1.107', 64609); Received request {'action': 'CHAMBER?', 'query': '', 'result': 'CHAMBER?,,,Sealed (condition unknown)'}
+2023-03-03 15:32:39,851     MultiVuClient        DEBUG    ;from ('192.168.1.107', 64609); Received request CHAMBER?,,,Sealed (condition unknown)
+2023-03-03 15:32:39,867     MultiVuClient        DEBUG    ;to ('192.168.1.107', 64609); Sending b'\x00g{"byteorder": "little", "content-type": "text/json", "content-encoding": "utf-8", "content-length": 46}{"action": "CLOSE", "query": "", "result": ""}'
+2023-03-03 15:32:39,867     MultiVuClient        DEBUG    ;from ('192.168.1.107', 64609); Received request {'action': 'CLOSE', 'query': 'CLOSE', 'result': "Client ('192.168.1.107', 64609) disconnected."}
+2023-03-03 15:32:39,867     MultiVuClient        DEBUG    ;from ('192.168.1.107', 64609); Received request Client ('192.168.1.107', 64609) disconnected.
+2023-03-03 15:32:39,867     MultiVuClient        INFO     Closing connection to ('192.168.1.107', 64609)
