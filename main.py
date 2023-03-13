@@ -2,7 +2,6 @@ import os
 from os.path import exists
 core_dir = os.getcwd() 
 import sys
-import re
 import json
 from csv import writer
 import threading
@@ -25,19 +24,24 @@ import numpy as np
 
 if not exists(os.path.join(core_dir, 'devices')):
     os.mkdir(os.path.join(core_dir, 'devices'))
-    
+      
 sys.path.insert(0, os.path.join(core_dir, 'devices'))
 
 def str_to_class(classname):
     return getattr(sys.modules[__name__], classname)
 
 device_classes = os.listdir(os.path.join(core_dir, 'devices'))
-if '__pycache__' in device_classes:
-    device_classes.remove('__pycache__')
+_device_classes = []
+for i in device_classes:
+    if i[-3:] == '.py':
+        _device_classes.append(i)
+device_classes = _device_classes.copy()
     
 for ind, device in enumerate(device_classes):
     exec(f'from {device[:-3]} import {device[:-3]}')
     device_classes[ind] = str_to_class(device[:-3])
+
+print('Devices import succes')
 
 #import random
 
@@ -134,6 +138,17 @@ condition = ''
 
 if not exists(os.path.join(core_dir, 'config')):
     os.mkdir(os.path.join(core_dir, 'config'))
+    
+remote_devices_path = os.path.join(core_dir, 'config', 'remote_devices.txt')
+if not exists(remote_devices_path):
+    with open(remote_devices_path, 'w') as file:
+        try:
+            file.write('{}')
+            file.close()
+        except:
+            file.close()
+        finally:
+            file.close()
 
 manual_sweep_flags = [0]
 manual_filenames = [os.path.join(cur_dir, 'manual' + datetime.today().strftime(
@@ -145,7 +160,6 @@ back_and_forth_master = 1
 back_and_forth_slave = 1
 back_and_forth_slave_slave = 1
 
-data = []
 columns = []
 
 # variables for plotting
@@ -291,7 +305,18 @@ for i in range (len(list_of_devices)):
         
 list_of_devices.insert(0, 'Time')
 types_of_devices.insert(0, 'Time')
-        
+
+with open(remote_devices_path) as file:
+    remote_devices = file.readlines()
+    
+for ind, _ in enumerate(remote_devices):
+    if remote_devices[ind].endswith('\n'):
+        remote_devices[ind] = remote_devices[ind][:-1]
+    list_of_devices.append(remote_devices[ind])
+    types_of_devices.append('Not a class')
+    
+print(f'Remote devices: {remote_devices}')
+
 with open(os.path.join(core_dir, 'config', 'adress_dictionary.txt'), 'r') as file:
     adress_dict = file.read()
 adress_dict = json.loads(adress_dict)
@@ -305,12 +330,19 @@ for ind_, type_ in enumerate(types_of_devices):
 def new_parameters_to_read():
     global types_of_devices
     global list_of_devices
+    global list_of_devices_addresses
+    
+    if 'list_of_devices_addresses' in list(globals().keys()):
+        new_list_for_parameters = list_of_devices_addresses.copy()
+    else:
+        new_list_for_parameters = list_of_devices.copy()
+    
     parameters_to_read = []
     for ind, device_type in enumerate(types_of_devices):
         if device_type == 'Not a class':
             pass
         else:
-            adress = list_of_devices[ind]
+            adress = new_list_for_parameters[ind]
             get_options = getattr(globals()[device_type](
                 adress=adress), 'get_options')
             for option in get_options:
@@ -370,7 +402,7 @@ def my_animate(i, n, filename):
         pass
     x = globals()[f'x{n}']
     y = globals()[f'y{n}']
-
+    
     try:
         x = eval(globals()[f'x_transformation{n}'], locals())
     except:
@@ -382,6 +414,7 @@ def my_animate(i, n, filename):
         pass
     
     ax = globals()[f'ax{n}']
+    
     
     xscale_status = ax.get_xscale()
     yscale_status = ax.get_yscale()
@@ -399,13 +432,14 @@ def my_animate(i, n, filename):
     ax.set_ylim(ylims)
     ax.set_xlabel(xlabel, fontsize = 8)
     ax.set_ylabel(ylabel, fontsize = 8)
+    
     ax.autoscale(enable = globals()[f'x{n}_autoscale'], axis = 'x')
     ax.autoscale(enable = globals()[f'y{n}_autoscale'], axis = 'y')
     
     ax.plot(x, y, '-', lw=1, color=color)
     
-    globals()[f'graph_object{globals()["cur_animation_num"] - 3}'].update()
-    globals()[f'graph_object{globals()["cur_animation_num"] - 3}'].update_idletasks()
+    #globals()[f'graph_object{globals()["cur_animation_num"] - 3}'].update()
+    #globals()[f'graph_object{globals()["cur_animation_num"] - 3}'].update_idletasks()
     return [ax]
 
 zero_time = time.perf_counter()
@@ -702,7 +736,10 @@ class SetGet(tk.Frame):
         self.preset.to_csv(globals()['setget_path'], index = False)
         
         if class_of_sweeper_device != 'Not a class':
-            getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
+            try:
+                getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = 'SetGet')
+            except TypeError:
+                getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
             
     def update_sweep_parameters2(self, event, interval=100):
         global types_of_devices
@@ -747,7 +784,10 @@ class SetGet(tk.Frame):
         self.preset.to_csv(globals()['setget_path'], index = False)
         
         if class_of_sweeper_device != 'Not a class':
-            getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
+            try:
+                getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = 'SetGet')
+            except TypeError:
+                getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
             
     def update_sweep_parameters3(self, event, interval=100):
         global types_of_devices
@@ -792,7 +832,10 @@ class SetGet(tk.Frame):
         self.preset.to_csv(globals()['setget_path'], index = False)
         
         if class_of_sweeper_device != 'Not a class':
-            getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
+            try:
+                getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = 'SetGet')
+            except TypeError:
+                getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
             
     def update_sweep_parameters4(self, event, interval=100):
         global types_of_devices
@@ -837,7 +880,10 @@ class SetGet(tk.Frame):
         self.preset.to_csv(globals()['setget_path'], index = False)
         
         if class_of_sweeper_device != 'Not a class':
-            getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
+            try:
+                getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = 'SetGet')
+            except TypeError:
+                getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
             
     def update_sweep_parameters5(self, event, interval=100):
         global types_of_devices
@@ -882,7 +928,10 @@ class SetGet(tk.Frame):
         self.preset.to_csv(globals()['setget_path'], index = False)
         
         if class_of_sweeper_device != 'Not a class':
-            getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
+            try:
+                getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = 'SetGet')
+            except TypeError:
+                getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
             
     def update_sweep_parameters6(self, event, interval=100):
         global types_of_devices
@@ -927,7 +976,10 @@ class SetGet(tk.Frame):
         self.preset.to_csv(globals()['setget_path'], index = False)
         
         if class_of_sweeper_device != 'Not a class':
-            getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
+            try:
+                getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = 'SetGet')
+            except TypeError:
+                getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
             
     def set_all(self):
         for i in range(1, self.num_widgets):
@@ -1509,6 +1561,7 @@ class Sweeper1d(tk.Frame):
         global back_and_forth_master
         
         if self.status_back_and_forth_master.get() == 0:
+            print(f'huh is {back_and_forth_master}')
             back_and_forth_master = 1
         else:
             back_and_forth_master = self.back_and_forth_master_count
@@ -3990,6 +4043,7 @@ class Sweeper_write(threading.Thread):
         self.device_to_sweep1 = device_to_sweep1
         self.parameter_to_sweep1 = parameter_to_sweep1
         self.parameters_to_read = parameters_to_read
+        print(f'Parameters to read are {self.parameters_to_read}')
         self.from_sweep1 = float(from_sweep1)
         self.to_sweep1 = float(to_sweep1)
         self.ratio_sweep1 = float(ratio_sweep1)
@@ -4350,7 +4404,7 @@ class Sweeper_write(threading.Thread):
                 dataframe.append(round(time.perf_counter() - zero_time, 2))
                 
                 for parameter in self.parameters_to_read:
-                    index_dot = parameter.find('.')
+                    index_dot = len(parameter) - parameter[::-1].find('.') - 1
                     adress = parameter[:index_dot]
                     option = parameter[index_dot + 1:]
                     try:
@@ -4381,7 +4435,7 @@ class Sweeper_write(threading.Thread):
             global data
             
             for parameter in self.parameters_to_read:
-                index_dot = parameter.find('.')
+                index_dot = len(parameter) - parameter[::-1].find('.') - 1
                 adress = parameter[:index_dot]
                 option = parameter[index_dot + 1:]
                 
@@ -4702,7 +4756,7 @@ class Sweeper_write(threading.Thread):
                     
             print('Current point was determined')
             return point
-
+    
         def inner_step(value1 = None, value2 = None, value3 = None):
             global manual_sweep_flags
             '''Performs single step in a slave-axis'''
@@ -4857,13 +4911,13 @@ class Sweeper_write(threading.Thread):
                     
             else:
                 raise Exception(f'{flags_dict[len(manual_sweep_flags)]} is not correct, needs > 1, but got ', walks)
-
+    
             print('External loop was made back and forth')
-
+    
         def master_loop_single(direction = 1):
             '''perform sequence of steps through master (3-d) axis
             with external_loop_back_and_forth on each step'''
-
+    
             if manual_sweep_flags[0] == 0:
                 while condition(1) and manual_sweep_flags[0] == 0:
                     step(1)
@@ -4885,7 +4939,7 @@ class Sweeper_write(threading.Thread):
                 raise Exception('manual_sweep_flag is not correct, needs 0 or 1, but got ', manual_sweep_flags[-2])
             
             print('Single master loop was made')
-
+    
         def master_loop_back_and_forth():
             '''travels through a master axis back and forth as many times, as was given'''
             global back_and_forth_master
@@ -4906,7 +4960,7 @@ class Sweeper_write(threading.Thread):
                     
             else:
                 raise Exception('back_and_forth_master is not correct, needs > 1, but got ', walks)
-
+    
             print('External loop was made back and forth')
         
         if self.sweeper_flag1 == True:
@@ -4918,11 +4972,11 @@ class Sweeper_write(threading.Thread):
             if len(manual_sweep_flags) == 1:        
                 inner_loop_back_and_forth()
                 self.sweeper_flag1 == False
-
+    
         if self.sweeper_flag2 == True:
             
             zero_time = time.perf_counter()
-
+    
             '''
             if self.time1 > self.time2 and master_lock == False:
                 self.transposition(1, 2)
@@ -4932,15 +4986,15 @@ class Sweeper_write(threading.Thread):
             '''
             
             update_filename()
-
+    
             if len(manual_sweep_flags) == 2:        
                 external_loop_back_and_forth()
                 self.sweeper_flag2 == False
-
+    
             self.sweeper_flag2 == False
-
+    
         if self.sweeper_flag3 == True:
-
+    
             '''
             if self.time1 > self.time2 and master_lock == False:
                 self.transposition(1, 2)
@@ -4958,9 +5012,9 @@ class Sweeper_write(threading.Thread):
                 manual_filenames[1:3] = manual_filenames[1:3][::-1]
                 columns[2:4] = columns[1:3][:-1]
             '''
-
+    
             update_filename()
-
+    
             if len(manual_sweep_flags) == 3:
                 master_loop_back_and_forth()
                 self.sweeper_flag3 == False
@@ -5257,12 +5311,12 @@ class FigureSettings(object):
         tw = self.settings_window
         if self.status_xlim.get() == 1:
             try:
-                ax.set_xlim(left = float(self.entry_x_from.get()), right = float(self.entry_x_to.get()))
+                ax.set_xlim((float(self.entry_x_from.get()), float(self.entry_x_to.get())))
             except:
                 pass
         if self.status_ylim.get() == 1:
             try:
-                ax.set_ylim(bottom = float(self.entry_y_from.get()), top = float(self.entry_y_to.get()))
+                ax.set_ylim((float(self.entry_y_from.get()), float(self.entry_y_to.get())))
             except:
                 pass
         
@@ -5462,6 +5516,13 @@ class Graph():
         globals()[f'self.toolbar{self.order}'].update()
         globals()[f'self.toolbar{self.order}'].place(relx=0, rely=0)
         globals()[f'self.plot{self.order}']._tkcanvas.place(relx=0, rely=0)
+        #globals()[f'self.toolbar{self.order}'].children['!button4'].bind('<Button-1>', self.disable_autoscale)
+        #globals()[f'self.toolbar{self.order}'].children['!button5'].bind('<Button-1>', self.disable_autoscale)
+        #print(globals()[f'self.toolbar{self.order}'].children)
+        #print(globals()[f'self.toolbar{self.order}'].children['!frame2'].__dict__)
+        from matplotlib import backend_bases
+        print(backend_bases.NavigationToolbar2.toolitems)
+        globals()[f'self.toolbar{self.order}'].children['!button'].bind('<Button-1>', self.enable_autoscale)
 
         globals()[f'self.plot{self.order + 1}'] = FigureCanvasTkAgg(globals()[f'fig{self.order + 1}'], self.tw)
         globals()[f'self.plot{self.order + 1}'].draw()
@@ -5640,6 +5701,14 @@ class Graph():
         self.preset.loc[0, f'y{self.order}_current'] = self.combo_y1.current()
         self.preset.to_csv(globals()['graph_preset_path'], index = False)
         
+    def disable_autoscale(self, event):
+        print(f'autoscale for {self.order} axis disabled')
+        globals()[f'y{self.order}_autoscale'] = False
+        
+    def enable_autoscale(self, event):
+        print(f'autoscale for {self.order} axis enabled')
+        globals()[f'y{self.order}_autoscale'] = True
+        
     def update_item(self, item):
         name = self.filename
         
@@ -5649,7 +5718,11 @@ class Graph():
         try:
             dataframe = pd.read_csv(name).tail(1).values.flatten()
             
-            dataframe = ["{:.3e}".format(i) for i in list(dataframe)]
+            for ind, value in enumerate(dataframe):
+                try:
+                    dataframe[ind] = "{:.3e}".format(value)
+                except:
+                    pass
             self.table_dataframe.item(item, values=tuple(dataframe))
             self.table_dataframe.after(250, self.update_item, item)
         except FileNotFoundError:
@@ -5660,6 +5733,8 @@ interval = 100
 
 
 def main():
+    #write_config_parameters()
+    #write_config_channels()
     app = Universal_frontend(classes=(StartPage, Devices, SetGet, Sweeper1d, Sweeper2d, Sweeper3d),
                              start=StartPage)
     app.mainloop()

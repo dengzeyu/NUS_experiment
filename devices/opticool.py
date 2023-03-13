@@ -15,8 +15,8 @@ class opticool():
         self.get_options = ['T', 'field', 'T_approach', 'field_approach', 'field_driven', 'chamber_state']
     
     def field(self):
-        self.field, self.state_field = self.device.get_field()
-        result = self.field
+        self.cur_field, self.state_field = self.device.get_field()
+        result = self.cur_field
         return result
 
     def field_approach(self):
@@ -133,10 +133,12 @@ class opticool():
     
 def main():
     device = opticool()
-    print(device.T())
-    print(device.T_approach())
     print(device.field())
-    print(device.chamber_state())
+    import time
+    time.sleep(1)
+    print(device.field())
+    time.sleep(1)
+    print(device.field())
     device.stop()
     
 if __name__ == '__main__':
