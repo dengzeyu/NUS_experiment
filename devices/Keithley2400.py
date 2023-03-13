@@ -9,7 +9,7 @@ def get(device, command):
     # return np.round(np.random.random(1), 1)
     return device.query(command)
 
-class Keithley2400():
+class keithley2400():
     
     def __init__(self, adress = 'GPIB0::7::INSTR'):
         self.sm = rm.open_resource(
@@ -126,13 +126,20 @@ class Keithley2400():
         self.tdelay = float(get(self.sm, ':TRIG:DEL?'))
         return answer
     
-    def set_Volt(self, value, speed):
+    def set_Volt(self, value, speed = None):
         """ Ramps to a target voltage from the set voltage value over
         a certain number of linear steps, each separated by a pause duration.
         """
         
         self.Volt()
         
+        maxspeed = self.maxspeed[self.set_options.index('Volt')]
+        
+        if speed == None or speed == 'SetGet':
+            speed = maxspeed
+        else:
+            speed = max(speed, maxspeed)
+            
         if not hasattr(self, 'freq'):
             self.line_freq()
             
@@ -151,7 +158,7 @@ class Keithley2400():
         
         dt = dv / speed
         dt = dt / nsteps
-        
+    
         voltages = np.linspace(
             self.cur_volt,
             value,
@@ -197,7 +204,7 @@ class Keithley2400():
             time.sleep(dt)
     
 def main():
-    device = Keithley2400()
+    device = keithley2400()
     device.set_compl_curr(1e-5)
     print(device.IDN())
     

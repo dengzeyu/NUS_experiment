@@ -16,6 +16,8 @@ class mercuryITC_VTI():
         self.set_options = ['T_VTI', 'T_sample', 'T_VTI_rate', 'T_sample_rate']
         self.sweepable = [True, True, False, False]
         self.maxspeed = [20, 20, None, None]
+        self.speed_VTI 
+        self.speed_sample
         
     def T_VTI(self):
         answer = get(self.device, 'READ:DEV:MB1.T1 :TEMP:SIG:TEMP')
@@ -35,24 +37,38 @@ class mercuryITC_VTI():
         
     def set_T_VTI(self, value, speed = None):
         maxspeed = float(self.maxspeed[self.set_options.index('T_VTI')])
-        if speed > maxspeed:
-            speed = maxspeed
         if speed == None:
             self.set_T_VTI_rate(maxspeed)
             self.device.write(f'SET:DEV:MB1.T1 :TEMP:LOOP:TSET:{round(float(value), 3)}')
+        elif speed == 'SetGet':
+            if hasattr(self, 'speed_VTI'):
+                speed = self.speed_VTI
+            else:
+                speed = maxspeed
+            self.set_T_VTI_rate(speed)
+            self.device.write(f'SET:DEV:MB1.T1 :TEMP:LOOP:TSET:{round(float(value), 3)}')
         else:
+            speed = max(maxspeed, speed)
+            self.speed_VTI = speed
             self.set_T_VTI_rate(speed)
             self.device.write(f'SET:DEV:MB1.T1 :TEMP:LOOP:TSET:{round(float(value), 3)}')
     
     def set_T_sample(self, value, speed = None):
         maxspeed = float(self.maxspeed[self.set_options.index('T_sample')])
-        if speed > maxspeed:
-            speed = maxspeed
         if speed == None:
-            self.set_T_VTI_rate(maxspeed)
+            self.set_T_sample_rate(maxspeed)
+            self.device.write(f'SET:DEV:DB8.T1 :TEMP:LOOP:TSET:{round(float(value), 3)}')
+        elif speed == 'SetGet':
+            if hasattr(self, 'speed_sample'):
+                speed = self.speed_sample
+            else:
+                speed = maxspeed
+            self.set_T_sample_rate(speed)
             self.device.write(f'SET:DEV:DB8.T1 :TEMP:LOOP:TSET:{round(float(value), 3)}')
         else:
-            self.set_T_VTI_rate(speed)
+            speed = max(speed, maxspeed)
+            self.speed_sample = speed
+            self.set_T_sample_rate(speed)
             self.device.write(f'SET:DEV:DB8.T1 :TEMP:LOOP:TSET:{round(float(value), 3)}')
     
     def set_T_VTI_rate(self, value):
