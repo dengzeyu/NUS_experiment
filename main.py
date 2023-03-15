@@ -439,7 +439,7 @@ def my_animate(i, n, filename):
     ax.plot(x, y, '-', lw=1, color=color)
     
     #globals()[f'graph_object{globals()["cur_animation_num"] - 3}'].update()
-    #globals()[f'graph_object{globals()["cur_animation_num"] - 3}'].update_idletasks()
+    globals()[f'graph_object{globals()["cur_animation_num"] - 3}'].update_idletasks()
     return [ax]
 
 zero_time = time.perf_counter()
@@ -1511,7 +1511,10 @@ class Sweeper1d(tk.Frame):
             pass
         
         if self.count_option1 == 'step':
+            step1 = ratio_sweep1 
             ratio_sweep1 = ratio_sweep1 / delay_factor1
+            if globals()['sweeper_write'].sweepable1 != True:
+                globals()['sweeper_write'].step1 = step1
         
         if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
             ratio_sweep1 = -ratio_sweep1
@@ -2273,10 +2276,16 @@ class Sweeper2d(tk.Frame):
             pass
         
         if self.count_option1 == 'step':
+            step1 = ratio_sweep1 
             ratio_sweep1 = ratio_sweep1 / delay_factor1
+            if globals()['sweeper_write'].sweepable1 != True:
+                globals()['sweeper_write'].step1 = step1
             
         if self.count_option2 == 'step':
+            step2 = ratio_sweep2 
             ratio_sweep2 = ratio_sweep2 / delay_factor2
+            if globals()['sweeper_write'].sweepable2 != True:
+                globals()['sweeper_write'].step2 = step2
         
         if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
             ratio_sweep1 = -ratio_sweep1
@@ -3308,13 +3317,22 @@ class Sweeper3d(tk.Frame):
             pass
         
         if self.count_option1 == 'step':
+            step1 = ratio_sweep1 
             ratio_sweep1 = ratio_sweep1 / delay_factor1
+            if globals()['sweeper_write'].sweepable1 != True:
+                globals()['sweeper_write'].step1 = step1
         
         if self.count_option2 == 'step':
+            step2 = ratio_sweep2 
             ratio_sweep2 = ratio_sweep2 / delay_factor2
+            if globals()['sweeper_write'].sweepable2 != True:
+                globals()['sweeper_write'].step2 = step2
             
         if self.count_option3 == 'step':
+            step3 = ratio_sweep3 
             ratio_sweep3 = ratio_sweep3 / delay_factor3
+            if globals()['sweeper_write'].sweepable3 != True:
+                globals()['sweeper_write'].step3 = step3
         
         if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
             ratio_sweep1 = -ratio_sweep1
@@ -4051,13 +4069,15 @@ class Sweeper_write(threading.Thread):
         self.value1 = float(from_sweep1)
         if parameter_to_sweep1 in device_to_sweep1.get_options:
             self.value1 = float(getattr(device_to_sweep1, parameter_to_sweep1)())
+            
+        globals()['value1'] = self.value1
         self.condition = condition
         self.time1 = (float(from_sweep1) - float(to_sweep1)) / float(ratio_sweep1)
         self.filename_sweep = filename_sweep
         self.columns = columns
         self.sweepable1 = False
         
-        if hasattr(device_to_sweep1, 'sweepable'):
+        if hasattr(device_to_sweep1, 'sweepable') and len(manual_sweep_flags) == 1:
             if device_to_sweep1.sweepable[device_to_sweep1.set_options.index(parameter_to_sweep1)]:
                         self.sweepable1 = True
                         globals()['upcoming_value1'] = self.value1
@@ -4093,6 +4113,7 @@ class Sweeper_write(threading.Thread):
             self.value2 = float(from_sweep2)
             if parameter_to_sweep2 in device_to_sweep2.get_options:
                 self.value2 = float(getattr(device_to_sweep2, parameter_to_sweep2)())
+            globals()['value2'] = self.value2
             self.columns = columns
             self.time2 = (float(from_sweep2) - float(to_sweep2)) / float(ratio_sweep2)
             
@@ -4104,7 +4125,7 @@ class Sweeper_write(threading.Thread):
                 
             self.sweepable2 = False
                 
-            if hasattr(device_to_sweep2, 'sweepable'):
+            if hasattr(device_to_sweep2, 'sweepable') and len(manual_sweep_flags) == 2:
                 if device_to_sweep2.sweepable[device_to_sweep2.set_options.index(parameter_to_sweep2)]:
                             self.sweepable2 = True
                             globals()['upcoming_value2'] = self.value2
@@ -4145,9 +4166,11 @@ class Sweeper_write(threading.Thread):
             self.value2 = float(from_sweep2)
             if parameter_to_sweep2 in device_to_sweep2.get_options:
                 self.value2 = float(getattr(device_to_sweep2, parameter_to_sweep2)())
+            globals()['value2'] = self.value2
             self.value3 = float(from_sweep3)
             if parameter_to_sweep3 in device_to_sweep3.get_options:
                 self.value3 = float(getattr(device_to_sweep3, parameter_to_sweep3)())
+            globals()['value3'] = self.value3
             self.columns = columns
             self.step2 = float(delay_factor2) * float(ratio_sweep2)
             self.step3 = float(delay_factor3) * float(ratio_sweep3)
@@ -4175,7 +4198,7 @@ class Sweeper_write(threading.Thread):
                             self.sweepable2 = True
                             globals()['upcoming_value2'] = self.value2
                             
-            if hasattr(device_to_sweep3, 'sweepable'):
+            if hasattr(device_to_sweep3, 'sweepable') and len(manual_sweep_flags) == 3:
                 if device_to_sweep3.sweepable[device_to_sweep3.set_options.index(parameter_to_sweep3)]:
                             self.sweepable3 = True
                             globals()['upcoming_value3'] = self.value3
@@ -4219,6 +4242,8 @@ class Sweeper_write(threading.Thread):
         except NameError:
             pass
 
+        globals()['sweeper_write'] = self
+
         self.grid_space = True
 
         if self.condition != '':
@@ -4235,7 +4260,6 @@ class Sweeper_write(threading.Thread):
                         
                         if not np.isnan(space[i][j][0]):
                             self.grid_space.append(space[i][j])
-                            globals()['griid'] = self.grid_space
                 
                         
             if self.sweeper_flag3 == True: 
@@ -4252,7 +4276,6 @@ class Sweeper_write(threading.Thread):
 
                             if not np.isnan(space[i][j][k][0]):
                                 self.grid_space.append(space[i][j][k])
-                                globals()['griiid'] = self.grid_space
                                 
 
     def func(self, tup, condition_str, sweep_dimension):
@@ -4471,6 +4494,7 @@ class Sweeper_write(threading.Thread):
             
             global stop_flag
             global zero_time
+            global manual_sweep_flags
             
             '''Determine if current value is in sweep borders of axis'''
             
@@ -4487,14 +4511,24 @@ class Sweeper_write(threading.Thread):
             device_to_sweep = globals()[f'device_to_sweep{axis}']
             parameter_to_sweep = globals()[f'parameter_to_sweep{axis}']
             result = True
-            
+            if getattr(self, f'sweepable{axis}') == True and manual_sweep_flags[int(axis) - 1] == 0:
+                eps = abs(from_sweep - to_sweep) * (0.001)
+            else:
+                eps = float(getattr(self, f'step{axis}')) * 0.01
+                
+            print(f'Epsilon = {eps}')
                 
             if getattr(self, f'sweepable{axis}') == True:
                 current_value = float(getattr(device_to_sweep, parameter_to_sweep)())
-                print(f'Current value is {current_value}')
                 print(f'Sweep value is {value}')
-                if (speed > 0 and current_value > value) or ((speed < 0 and current_value < value)):
-                    if  time.perf_counter() - zero_time < 1:
+                print(f'Current value is {current_value}') 
+                if not hasattr(self, 'time2'):
+                    dt = time.perf_counter() - zero_time
+                else:
+                    dt = time.perf_counter() - zero_time - self.time2
+                    
+                if (speed > 0 and current_value > value) or ((speed < 0 and current_value < value)): #if current value out of border
+                    if  dt < 1:
                         result = True
                     else:
                         result = False
@@ -4503,9 +4537,9 @@ class Sweeper_write(threading.Thread):
                     setattr(self, f'value{axis}', to_sweep - getattr(self, f'step{axis}'))
             else:
                 if speed >= 0:
-                    result = value >= from_sweep and value <= to_sweep
+                    result = (value >= from_sweep - eps and value <= to_sweep + eps)
                 else:
-                    result = value >= to_sweep and value <= from_sweep
+                    result = (value >= to_sweep - eps and value <= from_sweep + eps)
                 
             if speed > 0:
                 print('Condition checked, result is ' + str(result) + f'\nBoundaries are [{from_sweep};{to_sweep}), Value is {value}, Ratio is positive')
@@ -4646,46 +4680,33 @@ class Sweeper_write(threading.Thread):
             files = os.listdir(cur_dir)
             ind = [0]
             basic_name = filename_sweep[len(cur_dir)+ 1:-4]
-            
-            '''
-            #to check whether name has '-' and int after
-            def condition(name):
-                index = name[::-1].find('-')
-                if index != -1:
-                    index = len(name) - index - 1
-                    try:
-                        int(name[index + 1:])
-                        return True
-                    except:
-                        return False
-                else:
-                    return False
-            '''
-                    
-            
             if '-' in basic_name:
                 basic_name = basic_name[:basic_name.find('-')]
-            print(basic_name)
+            if '_' in basic_name:
+                basic_name = basic_name[:basic_name.find('_')]
+            if '_' in basic_name:
+                basic_name = basic_name[:basic_name.find('_')]
+            print(f'Basic name is {basic_name}')
             for file in files:
-                if basic_name in file and 'manual' not in file and 'setget' not in file:
+                if basic_name in file and 'manual' not in file:
                     index_start = len(file) - file[::-1].find('-') - 1
                     index_stop = file.find('.csv')
                     ind.append(int(file[index_start + 1 : index_stop]))
             previous_ind = np.max(ind)
-            print(previous_ind)
+            print(f'Previous ndex is {previous_ind}')
             if sweeper_flag1 == True:
                 filename_sweep = f'{cur_dir}\{basic_name}-{previous_ind + 1}.csv'
             elif sweeper_flag2 == True:
                 value1 = self.value1
-                integer1 = int(value1)
+                integer1 = int(round(float(value1), 2))
                 fractional1 = int(10 * (value1 % 1))
                 filename_sweep = f'{cur_dir}\{basic_name}_{integer1}.{fractional1}-{previous_ind + 1}.csv'
             elif sweeper_flag3 == True:
                 value1 = self.value1
-                value2 = self.value2
-                integer1 = int(value1)
+                value2 = self.value1
+                integer1 = int(round(float(value1), 2))
                 fractional1 = int(10 * (value1 % 1))
-                integer2 = int(value2)
+                integer2 = int(round(float(value2), 2))
                 fractional2 = int(10 * (value2 % 1))
                 filename_sweep = f'{cur_dir}\{basic_name}_{integer1}.{fractional1}_{integer2}.{fractional2}-{previous_ind + 1}.csv'
                 
@@ -4847,6 +4868,9 @@ class Sweeper_write(threading.Thread):
                     
             else:
                 raise Exception('back_and_forth_slave is not correct, needs >= 1, but got ', back_and_forth_slave)
+               
+            if not hasattr(self, 'time2'):
+                self.time2 = time.perf_counter()
                
             print('Inner loop was made back and forth') 
                
@@ -5516,13 +5540,6 @@ class Graph():
         globals()[f'self.toolbar{self.order}'].update()
         globals()[f'self.toolbar{self.order}'].place(relx=0, rely=0)
         globals()[f'self.plot{self.order}']._tkcanvas.place(relx=0, rely=0)
-        #globals()[f'self.toolbar{self.order}'].children['!button4'].bind('<Button-1>', self.disable_autoscale)
-        #globals()[f'self.toolbar{self.order}'].children['!button5'].bind('<Button-1>', self.disable_autoscale)
-        #print(globals()[f'self.toolbar{self.order}'].children)
-        #print(globals()[f'self.toolbar{self.order}'].children['!frame2'].__dict__)
-        from matplotlib import backend_bases
-        print(backend_bases.NavigationToolbar2.toolitems)
-        globals()[f'self.toolbar{self.order}'].children['!button'].bind('<Button-1>', self.enable_autoscale)
 
         globals()[f'self.plot{self.order + 1}'] = FigureCanvasTkAgg(globals()[f'fig{self.order + 1}'], self.tw)
         globals()[f'self.plot{self.order + 1}'].draw()
