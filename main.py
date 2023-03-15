@@ -415,9 +415,10 @@ def my_animate(i, n, filename):
     
     ax = globals()[f'ax{n}']
     
-    
     xscale_status = ax.get_xscale()
     yscale_status = ax.get_yscale()
+    autoscale_x = ax.__dict__['_autoscaleXon']
+    autoscale_y = ax.__dict__['_autoscaleYon']
     title = ax.get_title()
     xlabel = ax.get_xlabel()
     ylabel = ax.get_ylabel()
@@ -433,8 +434,8 @@ def my_animate(i, n, filename):
     ax.set_xlabel(xlabel, fontsize = 8)
     ax.set_ylabel(ylabel, fontsize = 8)
     
-    ax.autoscale(enable = globals()[f'x{n}_autoscale'], axis = 'x')
-    ax.autoscale(enable = globals()[f'y{n}_autoscale'], axis = 'y')
+    ax.autoscale(enable = autoscale_x, axis = 'x')
+    ax.autoscale(enable = autoscale_y, axis = 'y')
     
     ax.plot(x, y, '-', lw=1, color=color)
     
@@ -4080,7 +4081,7 @@ class Sweeper_write(threading.Thread):
         if hasattr(device_to_sweep1, 'sweepable') and len(manual_sweep_flags) == 1:
             if device_to_sweep1.sweepable[device_to_sweep1.set_options.index(parameter_to_sweep1)]:
                         self.sweepable1 = True
-                        globals()['upcoming_value1'] = self.value1
+                        self.upcoming_value1 = self.value1
         
         globals()['dataframe'] = []
         
@@ -4128,7 +4129,7 @@ class Sweeper_write(threading.Thread):
             if hasattr(device_to_sweep2, 'sweepable') and len(manual_sweep_flags) == 2:
                 if device_to_sweep2.sweepable[device_to_sweep2.set_options.index(parameter_to_sweep2)]:
                             self.sweepable2 = True
-                            globals()['upcoming_value2'] = self.value2
+                            self.upcoming_value2 = self.value2
                             
             if self.sweepable2 == False:
                 self.step2 = float(delay_factor2) * float(ratio_sweep2)
@@ -4196,12 +4197,12 @@ class Sweeper_write(threading.Thread):
             if hasattr(device_to_sweep2, 'sweepable'):
                 if device_to_sweep2.sweepable[device_to_sweep2.set_options.index(parameter_to_sweep2)]:
                             self.sweepable2 = True
-                            globals()['upcoming_value2'] = self.value2
+                            self.upcoming_value2 = self.value2
                             
             if hasattr(device_to_sweep3, 'sweepable') and len(manual_sweep_flags) == 3:
                 if device_to_sweep3.sweepable[device_to_sweep3.set_options.index(parameter_to_sweep3)]:
                             self.sweepable3 = True
-                            globals()['upcoming_value3'] = self.value3
+                            self.upcoming_value3 = self.value3
                             
             if self.sweepable3 == False:
                 self.step3 = float(delay_factor3) * float(ratio_sweep3)
@@ -4524,7 +4525,7 @@ class Sweeper_write(threading.Thread):
                 print(f'Current value is {current_value}') 
                 if not hasattr(self, 'time2'):
                     dt = time.perf_counter() - zero_time
-                else:
+                else: #if it the first internal loop so the direction wasn't stabilised
                     dt = time.perf_counter() - zero_time - self.time2
                     
                 if (speed > 0 and current_value > value) or ((speed < 0 and current_value < value)): #if current value out of border
@@ -4592,17 +4593,17 @@ class Sweeper_write(threading.Thread):
                     # set 'parameter_to_sweep' to 'value'
                     if getattr(self, f'sweepable{str(axis)}') == False:
                         if manual_sweep_flags[axis - 1] == 0:
-                            value = getattr(self, 'value' + str(axis))
+                            value = getattr(self, f'value{str(axis)}')
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
                             delay_factor = globals()['delay_factor' + str(axis)]
                             time.sleep(delay_factor)
                             dataframe.append("{:.3e}".format(getattr(self, 'value' + str(axis))))
                             if back == False:
-                                setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) + getattr(self, 'step' + str(axis)))
+                                setattr(self, f'value{str(axis)}', getattr(self, f'value{str(axis)}') + getattr(self, f'step{str(axis)}'))
                             else:
-                                setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) - getattr(self, 'step' + str(axis)))
+                                setattr(self, f'value{str(axis)}', getattr(self, f'value{str(axis)}') - getattr(self, f'step{str(axis)}'))
                         else:
-                            value = globals()[f'value{str(axis)}']
+                            value = getattr(self, f'value{str(axis)}')
                             
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
                             delay_factor = globals()['delay_factor' + str(axis)]
@@ -4615,8 +4616,8 @@ class Sweeper_write(threading.Thread):
                         return 
                     elif getattr(self, f'sweepable{str(axis)}') == True:
                         if manual_sweep_flags[axis - 1] == 0:
-                            value = globals()['upcoming_value' + str(axis)]
-                            if value - getattr(self, 'value' + str(axis)) > getattr(self, 'step' + str(axis)):
+                            value = getattr(self, f'upcoming_value{str(axis)}')
+                            if value - getattr(self, f'value{str(axis)}') > getattr(self, f'step{str(axis)}'):
                                 if hasattr(device_to_sweep, 'maxsweep'):
                                     speed = device_to_sweep.maxspeed[device_to_sweep.set_options.find(parameter_to_sweep)]
                                 else:
@@ -4628,15 +4629,15 @@ class Sweeper_write(threading.Thread):
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
                             delay_factor = globals()['delay_factor' + str(axis)]
                             time.sleep(delay_factor)
-                            dataframe.append("{:.3e}".format(getattr(self, 'value' + str(axis))))
+                            dataframe.append("{:.3e}".format(getattr(self, f'value{str(axis)}')))
                             if back == False:
-                                setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) + getattr(self, 'step' + str(axis)))
+                                setattr(self, f'value{str(axis)}', getattr(self, f'value{str(axis)}') + getattr(self, f'step{str(axis)}'))
                             else:
-                                setattr(self, 'value' + str(axis), getattr(self, 'value' + str(axis)) - getattr(self, 'step' + str(axis)))
+                                setattr(self, f'value{str(axis)}', getattr(self, f'value{str(axis)}') - getattr(self, f'step{str(axis)}'))
                             
-                            globals()['upcoming_value' + str(axis)] = getattr(self, 'value' + str(axis))
+                            setattr(self, f'upcoming_value{str(axis)}', getattr(self, f'value{str(axis)}'))
                         else:
-                            value = globals()[f'value{str(axis)}']
+                            value = getattr(self, f'value{str(axis)}')
                             speed = float(globals()['ratio_sweep' + str(axis)])
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
                             delay_factor = globals()['delay_factor' + str(axis)]
@@ -4770,10 +4771,7 @@ class Sweeper_write(threading.Thread):
             
             point = []
             for ind, flag in enumerate(manual_sweep_flags):
-                if flag == 0:
-                    point.append(getattr(self, 'value' + str(ind + 1)))
-                else:
-                    point.append(globals()['value' + str(ind + 1)])
+                point.append(getattr(self, 'value' + str(ind + 1)))
                     
             print('Current point was determined')
             return point
@@ -4781,10 +4779,6 @@ class Sweeper_write(threading.Thread):
         def inner_step(value1 = None, value2 = None, value3 = None):
             global manual_sweep_flags
             '''Performs single step in a slave-axis'''
-            
-            globals()['value1'] = value1
-            globals()['value2'] = value2
-            globals()['value3'] = value3
             
             if len(manual_sweep_flags) == 1:
                 update_dataframe()
@@ -5049,6 +5043,114 @@ class Sweeper_write(threading.Thread):
 class VerticalNavigationToolbar2Tk(NavigationToolbar2Tk):
     def __init__(self, canvas, window):
         super().__init__(canvas, window, pack_toolbar=True)
+
+    #Override pan function so it would return to original autoscale after releasing the button
+    def pan(self, *args):
+        
+        from enum import Enum
+        
+        class _Mode(str, Enum):
+            NONE = ""
+            PAN = "pan/zoom"
+            ZOOM = "zoom rect"
+            
+            def __init__(self, NONE):
+                self.N = NONE
+
+            def __str__(self):
+                return self.value
+
+            @property
+            def _navigate_mode(self):
+                return self.name if self is not self.N else None
+        
+        """
+        Toggle the pan/zoom tool.
+
+        Pan with left button, zoom with right.
+        """
+        if self.mode == _Mode.PAN:
+            self.mode = _Mode.NONE
+            self.canvas.widgetlock.release(self)
+            n = globals()['cur_animation_num'] - 3
+            autoscale_x = bool(globals()[f'x{n}_autoscale'])
+            autoscale_y = bool(globals()[f'y{n}_autoscale'])
+            ax = globals()[f'ax{n}']
+            ax.autoscale(enable = autoscale_x, axis = 'x')
+            ax.autoscale(enable = autoscale_y, axis = 'y')
+        else:
+            self.mode = _Mode.PAN
+            self.canvas.widgetlock(self)
+        for a in self.canvas.figure.get_axes():
+            a.set_navigate_mode(self.mode._navigate_mode)
+        self.set_message(self.mode)
+
+    #Override zoom function so it would return to original autoscale after releasing the button
+    def zoom(self, *args):
+        
+        from enum import Enum
+        
+        class _Mode(str, Enum):
+            NONE = ""
+            PAN = "pan/zoom"
+            ZOOM = "zoom rect"
+            
+            def __init__(self, NONE):
+                self.N = NONE
+
+            def __str__(self):
+                return self.value
+
+            @property
+            def _navigate_mode(self):
+                return self.name if self is not self.N else None
+        
+        """Toggle zoom to rect mode."""
+        if self.mode == _Mode.ZOOM:
+            self.mode = _Mode.NONE
+            self.canvas.widgetlock.release(self)
+            n = globals()['cur_animation_num'] - 3
+            autoscale_x = bool(globals()[f'x{n}_autoscale'])
+            autoscale_y = bool(globals()[f'y{n}_autoscale'])
+            ax = globals()[f'ax{n}']
+            ax.autoscale(enable = autoscale_x, axis = 'x')
+            ax.autoscale(enable = autoscale_y, axis = 'y')
+        else:
+            self.mode = _Mode.ZOOM
+            self.canvas.widgetlock(self)
+        for a in self.canvas.figure.get_axes():
+            a.set_navigate_mode(self.mode._navigate_mode)
+        self.set_message(self.mode)
+
+    def drag_pan(self, event):
+        """Callback for dragging in pan/zoom mode."""
+        for ax in self._pan_info.axes:
+            # Using the recorded button at the press is safer than the current
+            # button, as multiple buttons can get pressed during motion.
+            ax.drag_pan(self._pan_info.button, event.key, event.x, event.y)
+            ax.autoscale(enable = False, axis = 'x')
+            ax.autoscale(enable = False, axis = 'y')
+        self.canvas.draw_idle()
+        
+    def drag_zoom(self, event):
+        """Callback for dragging in zoom mode."""
+        start_xy = self._zoom_info.start_xy
+        self._zoom_info.axes[0].autoscale(enable = False, axis = 'x')
+        self._zoom_info.axes[0].autoscale(enable = False, axis = 'y')
+        (x1, y1), (x2, y2) = np.clip(
+            [start_xy, [event.x, event.y]], self._zoom_info.axes[0].bbox.min, self._zoom_info.axes[0].bbox.max)
+        key = event.key
+        # Force the key on colorbars to extend the short-axis bbox
+        if self._zoom_info.cbar == "horizontal":
+            key = "x"
+        elif self._zoom_info.cbar == "vertical":
+            key = "y"
+        if key == "x":
+            y1, y2 = self._zoom_info.axes[0].bbox.intervaly
+        elif key == "y":
+            x1, x2 = self._zoom_info.axes[0].bbox.intervalx
+
+        self.draw_rubberband(event, x1, y1, x2, y2)
 
     # override _Button() to re-pack the toolbar button in vertical direction
     def _Button(self, text, image_file, toggle, command):
