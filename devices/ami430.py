@@ -35,7 +35,7 @@ class ami430():
             speed = self.ramp_field_speed()
             self.ramp_to_field(value, speed)
         else:
-            self.ramp_to_field(value, abs(max(speed, self.maxspeed[self.set_options.index('field')])))
+            self.ramp_to_field(value, abs(min(speed, self.maxspeed[self.set_options.index('field')])))
             
     def set_to_zero(self, *args, **kwargs):
         self.to_zero()
@@ -47,7 +47,7 @@ class ami430():
             speed = self.ramp_current_speed()
             self.ramp_to_current(value, speed)
         else:
-            self.ramp_to_current(value, abs(max(speed, self.maxspeed[self.set_options.index('current')])))
+            self.ramp_to_current(value, abs(min(speed, self.maxspeed[self.set_options.index('current')])))
             
     def set_target_current(self, value = 0):
         self.device.write(f'CONF:CURR:TARG {round(float(value), 5)}')

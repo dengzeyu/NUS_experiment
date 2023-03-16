@@ -138,7 +138,7 @@ class keithley2400():
         if speed == None or speed == 'SetGet':
             speed = maxspeed
         else:
-            speed = max(speed, maxspeed)
+            speed = min(speed, maxspeed)
             
         if not hasattr(self, 'freq'):
             self.line_freq()
@@ -174,6 +174,13 @@ class keithley2400():
         """
         
         self.Curr()
+        
+        maxspeed = self.maxspeed[self.set_options.index('Curr')]
+        
+        if speed == None or speed == 'SetGet':
+            speed = maxspeed
+        else:
+            speed = min(speed, maxspeed)
         
         if not hasattr(self, 'freq'):
             self.line_freq()

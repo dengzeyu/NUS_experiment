@@ -48,7 +48,7 @@ class mercuryITC_VTI():
             self.set_T_VTI_rate(speed)
             self.device.write(f'SET:DEV:MB1.T1 :TEMP:LOOP:TSET:{round(float(value), 3)}')
         else:
-            speed = max(maxspeed, speed)
+            speed = min(maxspeed, speed)
             self.speed_VTI = speed
             self.set_T_VTI_rate(speed)
             self.device.write(f'SET:DEV:MB1.T1 :TEMP:LOOP:TSET:{round(float(value), 3)}')
@@ -66,7 +66,7 @@ class mercuryITC_VTI():
             self.set_T_sample_rate(speed)
             self.device.write(f'SET:DEV:DB8.T1 :TEMP:LOOP:TSET:{round(float(value), 3)}')
         else:
-            speed = max(speed, maxspeed)
+            speed = min(speed, maxspeed)
             self.speed_sample = speed
             self.set_T_sample_rate(speed)
             self.device.write(f'SET:DEV:DB8.T1 :TEMP:LOOP:TSET:{round(float(value), 3)}')

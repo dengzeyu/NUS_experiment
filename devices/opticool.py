@@ -144,11 +144,16 @@ class opticool():
 
         """
         
+        maxspeed = self.maxspeed[self.set_options.index('T')]
+        
         if speed == None:
-            speed = self.maxspeed[self.set_options.index('T')]
+            speed = maxspeed
                 
         elif speed == 'SetGet':
             speed = self._T_rate
+        
+        else:
+            speed = min(float(speed), maxspeed)
         
         self.set_T_rate(speed)
         
@@ -178,11 +183,16 @@ class opticool():
 
         """
         
+        maxspeed = self.maxspeed[self.set_options.index('Field')]
+        
         if speed == None:
-            speed = self.maxspeed[self.set_options.index('Field')]
-            
+            speed = maxspeed
+                
         elif speed == 'SetGet':
             speed = self._T_rate
+        
+        else:
+            speed = min(float(speed), maxspeed)
         
         self.set_Field_rate(speed)
         

@@ -49,7 +49,7 @@ class mercuryIPS():
             self.set_field_rate(speed)
             self.device.write(f'SET:DEV:GRPZ :PSU:SIG:FSET:{round(float(value), 3)}')
         else:
-            speed = max(speed, maxspeed)
+            speed = min(speed, maxspeed)
             self.set_field_rate(speed)
             self.device.write(f'SET:DEV:GRPZ :PSU:SIG:FSET:{round(float(value), 3)}')
             
@@ -63,7 +63,7 @@ class mercuryIPS():
             self.set_current_rate(speed)
             self.device.write(f'SET:DEV:GRPZ :PSU:SIG:CSET:{round(float(value), 3)}')
         else:
-            speed = max(speed, maxspeed)
+            speed = min(speed, maxspeed)
             self.set_current_rate(speed)
             self.device.write(f'SET:DEV:GRPZ :PSU:SIG:CSET:{round(float(value), 3)}')
             
