@@ -21,6 +21,36 @@ from datetime import datetime
 import pandas as pd
 import matplotlib
 import numpy as np
+import glob
+import serial
+
+def serial_ports():
+    """ Lists serial port names
+
+        :raises EnvironmentError:
+            On unsupported or unknown platforms
+        :returns:
+            A list of the serial ports available on the system
+    """
+    if sys.platform.startswith('win'):
+        ports = ['COM%s' % (i + 1) for i in range(256)]
+    elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+        # this excludes your current terminal "/dev/tty"
+        ports = glob.glob('/dev/tty[A-Za-z]*')
+    elif sys.platform.startswith('darwin'):
+        ports = glob.glob('/dev/tty.*')
+    else:
+        raise EnvironmentError('Unsupported platform')
+
+    result = []
+    for port in ports:
+        try:
+            s = serial.Serial(port)
+            s.close()
+            result.append(port)
+        except (OSError, serial.SerialException):
+            pass
+    return result
 
 if not exists(os.path.join(core_dir, 'devices')):
     os.mkdir(os.path.join(core_dir, 'devices'))
@@ -43,8 +73,6 @@ for ind, device in enumerate(device_classes):
 
 print('Devices import succes')
 
-#import random
-
 matplotlib.use("TkAgg")
 plt.rcParams['animation.html'] = 'jshtml'
 LARGE_FONT = ('Verdana', 12)
@@ -55,15 +83,15 @@ style.use('seaborn-whitegrid')
 rm = visa.ResourceManager()
 list_of_devices = list(rm.list_resources())
 
+for i in serial_ports():
+    list_of_devices.append(i)
+
 # Write command to a device and get it's output
 def get(device, command):
     # return np.round(np.random.random(1), 1)
     return device.query(command)
 
-
-#print(get(temp, 'IDN?'))
-
-print(f'Instruments: {rm.list_resources()} \n')
+print(f'Instruments: {list_of_devices} \n')
 
 def var2str(var, vars_data=locals()):
     return [var_name for var_name in vars_data if id(var) == id(vars_data[var_name])][0]
@@ -255,47 +283,6 @@ if not exists(graph_preset_path):
     dataframe = pd.DataFrame(dic)
     dataframe.to_csv(graph_preset_path, index = False)
 
-'''
-def devices_list():
-    # queries each device IDN?
-    list_of_devices = []
-    types_of_devices = []
-    for adress in rm.list_resources():
-        try:
-            try:
-                name = get(rm.open_resource(
-                    adress, read_termination='\r'), 'IDN?')
-                if name.startswith('\n'):
-                    name = name[2:]
-                if name == '':
-                    raise UserWarning
-            except UserWarning:
-                name = get(rm.open_resource(
-                    adress, read_termination='\n'), 'IDN?')
-                if name.startswith('\n'):
-                    name = name[2:]
-        except visa.errors.VisaIOError:
-            try:
-                name = get(rm.open_resource(
-                    adress, read_termination='\n'), '*IDN?')
-                if name.startswith('\n'):
-                    name = name[2:]
-                if name == '':
-                    raise UserWarning
-            except UserWarning:
-                name = get(rm.open_resource(
-                    adress, read_termination='\r'), '*IDN?')
-                if name.startswith('\n'):
-                    name = name[2:]
-        list_of_devices.append(name)
-        for class_of_device in device_classes:
-            if globals()[var2str(class_of_device)]().IDN() == name:
-                types_of_devices.append(var2str(class_of_device))
-        if len(types_of_devices) != len(list_of_devices):
-            types_of_devices.append('Not a class')
-    return list_of_devices, types_of_devices
-'''
-
 if len(list_of_devices) == 0:
     list_of_devices = ['']
     
@@ -325,32 +312,6 @@ for ind_, type_ in enumerate(types_of_devices):
     if type_ == 'Not a class':
         if list_of_devices[ind_] in list(adress_dict.keys()):
             types_of_devices[ind_] = adress_dict[list_of_devices[ind_]]
-        
-
-def new_parameters_to_read():
-    global types_of_devices
-    global list_of_devices
-    global list_of_devices_addresses
-    
-    if 'list_of_devices_addresses' in list(globals().keys()):
-        new_list_for_parameters = list_of_devices_addresses.copy()
-    else:
-        new_list_for_parameters = list_of_devices.copy()
-    
-    parameters_to_read = []
-    for ind, device_type in enumerate(types_of_devices):
-        if device_type == 'Not a class':
-            pass
-        else:
-            adress = new_list_for_parameters[ind]
-            get_options = getattr(globals()[device_type](
-                adress=adress), 'get_options')
-            for option in get_options:
-                parameters_to_read.append(adress + '.' + option)
-    return parameters_to_read
-
-parameters_to_read = new_parameters_to_read()
-parameters_to_read_copy = parameters_to_read.copy()
 
 list_of_devices_addresses = list_of_devices.copy()
 for ind, device in enumerate(list_of_devices_addresses):
@@ -360,6 +321,23 @@ for ind, device in enumerate(list_of_devices_addresses):
 device_to_sweep1 = list_of_devices[0]
 device_to_sweep2 = list_of_devices[0]
 device_to_sweep3 = list_of_devices[0]
+
+def new_parameters_to_read():
+    global list_of_devices
+    global list_of_devices_addresses
+    
+    parameters_to_read = []
+    for ind, device in enumerate(list_of_devices):
+        if not isinstance(device, str): #if device is object of a class but not a string object
+            get_options = getattr(device, 'get_options')
+            adress = list_of_devices_addresses[ind]
+            for option in get_options:
+                parameters_to_read.append(adress + '.' + option)
+    return parameters_to_read
+
+parameters_to_read = new_parameters_to_read()
+
+parameters_to_read_copy = parameters_to_read.copy()
 
 zero_time = time.perf_counter()
 
@@ -608,51 +586,51 @@ class SetGet(tk.Frame):
         
         for i in range (1, self.num_widgets + 1):
         
-            globals()[f'label_devices{i}'] = tk.Label(self, text = 'Devices:', font=LARGE_FONT)
-            globals()[f'label_devices{i}'].place(relx = 0.05 + (i - int(i / 5) * 4 - 1) * 7/30, rely = 0.21 + int(i / 5) * 0.35)
+            self.__dict__[f'label_devices{i}'] = tk.Label(self, text = 'Devices:', font=LARGE_FONT)
+            self.__dict__[f'label_devices{i}'].place(relx = 0.05 + (i - int(i / 5) * 4 - 1) * 7/30, rely = 0.21 + int(i / 5) * 0.35)
     
-            globals()[f'self.combo_to_sweep{i}'] = ttk.Combobox(self, value=list_of_devices_addresses)
-            globals()[f'self.combo_to_sweep{i}'].bind(
+            self.__dict__[f'combo_to_sweep{i}'] = ttk.Combobox(self, value=list_of_devices_addresses)
+            self.__dict__[f'combo_to_sweep{i}'].bind(
                 "<<ComboboxSelected>>", getattr(self, f'update_sweep_parameters{i}'))
-            globals()[f'self.combo_to_sweep{i}'].place(relx=0.15 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.21 + int(i / 5) * 0.35)
+            self.__dict__[f'combo_to_sweep{i}'].place(relx=0.15 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.21 + int(i / 5) * 0.35)
             
-            globals()[f'label_options{i}'] = tk.Label(self, text = 'Options:', font = LARGE_FONT)
-            globals()[f'label_options{i}'].place(relx = 0.05 + (i - int(i / 5) * 4 - 1) * 7/30, rely = 0.25 + int(i / 5) * 0.35)
+            self.__dict__[f'label_options{i}'] = tk.Label(self, text = 'Options:', font = LARGE_FONT)
+            self.__dict__[f'label_options{i}'].place(relx = 0.05 + (i - int(i / 5) * 4 - 1) * 7/30, rely = 0.25 + int(i / 5) * 0.35)
             
-            globals()[f'self.sweep_options{i}'] = ttk.Combobox(self)
-            globals()[f'self.sweep_options{i}'].bind(
+            self.__dict__[f'sweep_options{i}'] = ttk.Combobox(self)
+            self.__dict__[f'sweep_options{i}'].bind(
                 "<<ComboboxSelected>>", getattr(self, f'update_sweep_options{i}'))
-            globals()[f'self.sweep_options{i}'].place(relx=0.15 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.25 + int(i / 5) * 0.35)
+            self.__dict__[f'sweep_options{i}'].place(relx=0.15 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.25 + int(i / 5) * 0.35)
             
             try:
-                globals()[f'self.combo_to_sweep{i}'].current(getattr(self, f'combo_to_sweep{i}_current'))
+                self.__dict__[f'combo_to_sweep{i}'].current(getattr(self, f'combo_to_sweep{i}_current'))
                 getattr(self, f'update_sweep_parameters{i}')(event = None)
             except:
-                globals()[f'self.combo_to_sweep{i}'].current(0)
+                self.__dict__[f'combo_to_sweep{i}'].current(0)
                 
-                if globals()[f'self.combo_to_sweep{i}']['values'][0] != '':
+                if self.__dict__[f'combo_to_sweep{i}']['values'][0] != '':
                     getattr(self, f'update_sweep_parameters{i}')(event = None)
                 
             
-            globals()[f'label_set{i}'] = tk.Label(self, text = 'Set', font = LARGE_FONT)
-            globals()[f'label_set{i}'].place(relx=0.05 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.29 + int(i / 5) * 0.35)
+            self.__dict__[f'label_set{i}'] = tk.Label(self, text = 'Set', font = LARGE_FONT)
+            self.__dict__[f'label_set{i}'].place(relx=0.05 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.29 + int(i / 5) * 0.35)
             
-            globals()[f'self.entry_set{i}'] = tk.Entry(self, width = 16)
-            globals()[f'self.entry_set{i}'].insert(0, getattr(self, f'set{i}_current'))
-            globals()[f'self.entry_set{i}'].place(relx=0.15 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.29 + int(i / 5) * 0.35)
+            self.__dict__[f'entry_set{i}'] = tk.Entry(self, width = 16)
+            self.__dict__[f'entry_set{i}'].insert(0, getattr(self, f'set{i}_current'))
+            self.__dict__[f'entry_set{i}'].place(relx=0.15 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.29 + int(i / 5) * 0.35)
             
-            globals()[f'button_set{i}'] = tk.Button(self, text = 'Set', command = getattr(self, f'set_device{i}'))
-            globals()[f'button_set{i}'].place(relx=0.235 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.285 + int(i / 5) * 0.35)
+            self.__dict__[f'button_set{i}'] = tk.Button(self, text = 'Set', command = getattr(self, f'set_device{i}'))
+            self.__dict__[f'button_set{i}'].place(relx=0.235 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.285 + int(i / 5) * 0.35)
             
         i = self.num_widgets
         
         if i >= 2:
-            globals()[f'button_destroy{i}'] = tk.Button(self, text = r'🗙', command = lambda: self.destroy_block(i))
-            globals()[f'button_destroy{i}'].place(relx = 0.28 + (i - int(i / 5) * 4 - 1) * 7/30, rely = 0.17 + int(i / 5) * 0.35)
+            self.__dict__[f'button_destroy{i}'] = tk.Button(self, text = r'🗙', command = lambda: self.destroy_block(i))
+            self.__dict__[f'button_destroy{i}'].place(relx = 0.28 + (i - int(i / 5) * 4 - 1) * 7/30, rely = 0.17 + int(i / 5) * 0.35)
         
         if i >= 1 and i <= 5:
-            globals()[f'button_add{i}'] = tk.Button(self, text = 'Add', font = LARGE_FONT, command = lambda: self.add_block(i + 1))
-            globals()[f'button_add{i}'].place(relx=0.15 + (i - int((i + 1) / 5) * 4) * 7/30, rely=0.25 + int((i+1) / 5) * 0.35)
+            self.__dict__[f'button_add{i}'] = tk.Button(self, text = 'Add', font = LARGE_FONT, command = lambda: self.add_block(i + 1))
+            self.__dict__[f'button_add{i}'].place(relx=0.15 + (i - int((i + 1) / 5) * 4) * 7/30, rely=0.25 + int((i+1) / 5) * 0.35)
             
         label_get = tk.Label(self, text = 'Get', font = LARGE_FONT)
         label_get.place(relx = 0.7, rely = 0.4)
@@ -695,31 +673,35 @@ class SetGet(tk.Frame):
             
     def update_sweep_parameters1(self, event, interval=100):
         global types_of_devices
+        global list_of_devices
         i = 1
-        class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
+        #which type of device did I chose
+        ind = self.__dict__[f'combo_to_sweep{i}'].current()
+        class_of_sweeper_device = types_of_devices[ind]
+        device_to_sweep = list_of_devices[ind]
         if class_of_sweeper_device != 'Not a class':
             try:
-                globals()[f'self.sweep_options{i}']['value'] = getattr(
-                    globals()[class_of_sweeper_device](), 'set_options')
-                globals()[f'self.sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
-                globals()[f'self.sweep_options{i}'].after(interval)
+                self.__dict__[f'sweep_options{i}']['value'] = getattr(
+                    device_to_sweep, 'set_options')
+                self.__dict__[f'sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
+                self.__dict__[f'sweep_options{i}'].after(interval)
             except:
-                globals()[f'self.sweep_options{i}'].current(0)
-                globals()[f'self.sweep_options{i}'].after(interval)
+                self.__dict__[f'sweep_options{i}'].current(0)
+                self.__dict__[f'sweep_options{i}'].after(interval)
                 
         else:
-            globals()[f'self.sweep_options{i}']['value'] = ['']
-            globals()[f'self.sweep_options{i}'].current(0)
-            globals()[f'self.sweep_options{i}'].after(interval)
+            self.__dict__[f'sweep_options{i}']['value'] = ['']
+            self.__dict__[f'sweep_options{i}'].current(0)
+            self.__dict__[f'sweep_options{i}'].after(interval)
             
-        if globals()[f'self.combo_to_sweep{i}'].current() != getattr(self, f'combo_to_sweep{i}_current'):
-            self.preset.loc[0, f'combo_to_sweep{i}'] = globals()[f'self.combo_to_sweep{i}'].current()
+        if self.__dict__[f'combo_to_sweep{i}'].current() != getattr(self, f'combo_to_sweep{i}_current'):
+            self.preset.loc[0, f'combo_to_sweep{i}'] = self.__dict__[f'combo_to_sweep{i}'].current()
             self.preset.to_csv(globals()['setget_path'], index = False)
             
     def update_sweep_options1(self, event):
         i = 1
-        if globals()[f'self.sweep_options{i}'].current() != getattr(self, f'sweep_options{i}_current'):
-            self.preset.loc[0, f'sweep_options{i}'] = globals()[f'self.sweep_options{i}'].current()
+        if self.__dict__[f'sweep_options{i}'].current() != getattr(self, f'sweep_options{i}_current'):
+            self.preset.loc[0, f'sweep_options{i}'] = self.__dict__[f'sweep_options{i}'].current()
             self.preset.to_csv(globals()['setget_path'], index = False)
             
     def set_device1(self):
@@ -727,11 +709,13 @@ class SetGet(tk.Frame):
         global list_of_devices
         
         i = 1
-        class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
-        device_to_sweep = list_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
+        #which type of device did I chose
+        ind = self.__dict__[f'combo_to_sweep{i}'].current()
+        class_of_sweeper_device = types_of_devices[ind]
+        device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
-        parameter_to_sweep = parameters[globals()[f'self.sweep_options{i}'].current()]
-        value = float(globals()[f'self.entry_set{i}'].get())
+        parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
+        value = float(self.__dict__[f'entry_set{i}'].get())
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -744,30 +728,35 @@ class SetGet(tk.Frame):
             
     def update_sweep_parameters2(self, event, interval=100):
         global types_of_devices
+        global list_of_devices
         i = 2
-        class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
+        #which type of device did I chose
+        ind = self.__dict__[f'combo_to_sweep{i}'].current()
+        class_of_sweeper_device = types_of_devices[ind]
+        device_to_sweep = list_of_devices[ind]
         if class_of_sweeper_device != 'Not a class':
             try:
-                globals()[f'self.sweep_options{i}']['value'] = getattr(
-                    globals()[class_of_sweeper_device](), 'set_options')
-                globals()[f'self.sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
-                globals()[f'self.sweep_options{i}'].after(interval)
+                self.__dict__[f'sweep_options{i}']['value'] = getattr(
+                    device_to_sweep, 'set_options')
+                self.__dict__[f'sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
+                self.__dict__[f'sweep_options{i}'].after(interval)
             except:
-                globals()[f'self.sweep_options{i}'].current(0)
-                globals()[f'self.sweep_options{i}'].after(interval)
+                self.__dict__[f'sweep_options{i}'].current(0)
+                self.__dict__[f'sweep_options{i}'].after(interval)
+                
         else:
-            globals()[f'self.sweep_options{i}']['value'] = ['']
-            globals()[f'self.sweep_options{i}'].current(0)
-            globals()[f'self.sweep_options{i}'].after(interval)
+            self.__dict__[f'sweep_options{i}']['value'] = ['']
+            self.__dict__[f'sweep_options{i}'].current(0)
+            self.__dict__[f'sweep_options{i}'].after(interval)
             
-        if globals()[f'self.combo_to_sweep{i}'].current() != getattr(self, f'combo_to_sweep{i}_current'):
-            self.preset.loc[0, f'combo_to_sweep{i}'] = globals()[f'self.combo_to_sweep{i}'].current()
+        if self.__dict__[f'combo_to_sweep{i}'].current() != getattr(self, f'combo_to_sweep{i}_current'):
+            self.preset.loc[0, f'combo_to_sweep{i}'] = self.__dict__[f'combo_to_sweep{i}'].current()
             self.preset.to_csv(globals()['setget_path'], index = False)
             
     def update_sweep_options2(self, event):
         i = 2
-        if globals()[f'self.sweep_options{i}'].current() != getattr(self, f'sweep_options{i}_current'):
-            self.preset.loc[0, f'sweep_options{i}'] = globals()[f'self.sweep_options{i}'].current()
+        if self.__dict__[f'sweep_options{i}'].current() != getattr(self, f'sweep_options{i}_current'):
+            self.preset.loc[0, f'sweep_options{i}'] = self.__dict__[f'sweep_options{i}'].current()
             self.preset.to_csv(globals()['setget_path'], index = False)
             
     def set_device2(self):
@@ -775,11 +764,13 @@ class SetGet(tk.Frame):
         global list_of_devices
         
         i = 2
-        class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
-        device_to_sweep = list_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
+        #which type of device did I chose
+        ind = self.__dict__[f'combo_to_sweep{i}'].current()
+        class_of_sweeper_device = types_of_devices[ind]
+        device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
-        parameter_to_sweep = parameters[globals()[f'self.sweep_options{i}'].current()]
-        value = float(globals()[f'self.entry_set{i}'].get())
+        parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
+        value = float(self.__dict__[f'entry_set{i}'].get())
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -792,30 +783,35 @@ class SetGet(tk.Frame):
             
     def update_sweep_parameters3(self, event, interval=100):
         global types_of_devices
+        global list_of_devices
         i = 3
-        class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
+        #which type of device did I chose
+        ind = self.__dict__[f'combo_to_sweep{i}'].current()
+        class_of_sweeper_device = types_of_devices[ind]
+        device_to_sweep = list_of_devices[ind]
         if class_of_sweeper_device != 'Not a class':
             try:
-                globals()[f'self.sweep_options{i}']['value'] = getattr(
-                    globals()[class_of_sweeper_device](), 'set_options')
-                globals()[f'self.sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
-                globals()[f'self.sweep_options{i}'].after(interval)
+                self.__dict__[f'sweep_options{i}']['value'] = getattr(
+                    device_to_sweep, 'set_options')
+                self.__dict__[f'sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
+                self.__dict__[f'sweep_options{i}'].after(interval)
             except:
-                globals()[f'self.sweep_options{i}'].current(0)
-                globals()[f'self.sweep_options{i}'].after(interval)
+                self.__dict__[f'sweep_options{i}'].current(0)
+                self.__dict__[f'sweep_options{i}'].after(interval)
+                
         else:
-            globals()[f'self.sweep_options{i}']['value'] = ['']
-            globals()[f'self.sweep_options{i}'].current(0)
-            globals()[f'self.sweep_options{i}'].after(interval)
+            self.__dict__[f'sweep_options{i}']['value'] = ['']
+            self.__dict__[f'sweep_options{i}'].current(0)
+            self.__dict__[f'sweep_options{i}'].after(interval)
             
-        if globals()[f'self.combo_to_sweep{i}'].current() != getattr(self, f'combo_to_sweep{i}_current'):
-            self.preset.loc[0, f'combo_to_sweep{i}'] = globals()[f'self.combo_to_sweep{i}'].current()
+        if self.__dict__[f'combo_to_sweep{i}'].current() != getattr(self, f'combo_to_sweep{i}_current'):
+            self.preset.loc[0, f'combo_to_sweep{i}'] = self.__dict__[f'combo_to_sweep{i}'].current()
             self.preset.to_csv(globals()['setget_path'], index = False)
             
     def update_sweep_options3(self, event):
         i = 3
-        if globals()[f'self.sweep_options{i}'].current() != getattr(self, f'sweep_options{i}_current'):
-            self.preset.loc[0, f'sweep_options{i}'] = globals()[f'self.sweep_options{i}'].current()
+        if self.__dict__[f'sweep_options{i}'].current() != getattr(self, f'sweep_options{i}_current'):
+            self.preset.loc[0, f'sweep_options{i}'] = self.__dict__[f'sweep_options{i}'].current()
             self.preset.to_csv(globals()['setget_path'], index = False)
             
     def set_device3(self):
@@ -823,11 +819,13 @@ class SetGet(tk.Frame):
         global list_of_devices
         
         i = 3
-        class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
-        device_to_sweep = list_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
+        #which type of device did I chose
+        ind = self.__dict__[f'combo_to_sweep{i}'].current()
+        class_of_sweeper_device = types_of_devices[ind]
+        device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
-        parameter_to_sweep = parameters[globals()[f'self.sweep_options{i}'].current()]
-        value = float(globals()[f'self.entry_set{i}'].get())
+        parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
+        value = float(self.__dict__[f'entry_set{i}'].get())
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -840,30 +838,35 @@ class SetGet(tk.Frame):
             
     def update_sweep_parameters4(self, event, interval=100):
         global types_of_devices
+        global list_of_devices
         i = 4
-        class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
+        #which type of device did I chose
+        ind = self.__dict__[f'combo_to_sweep{i}'].current()
+        class_of_sweeper_device = types_of_devices[ind]
+        device_to_sweep = list_of_devices[ind]
         if class_of_sweeper_device != 'Not a class':
             try:
-                globals()[f'self.sweep_options{i}']['value'] = getattr(
-                    globals()[class_of_sweeper_device](), 'set_options')
-                globals()[f'self.sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
-                globals()[f'self.sweep_options{i}'].after(interval)
+                self.__dict__[f'sweep_options{i}']['value'] = getattr(
+                    device_to_sweep, 'set_options')
+                self.__dict__[f'sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
+                self.__dict__[f'sweep_options{i}'].after(interval)
             except:
-                globals()[f'self.sweep_options{i}'].current(0)
-                globals()[f'self.sweep_options{i}'].after(interval)
+                self.__dict__[f'sweep_options{i}'].current(0)
+                self.__dict__[f'sweep_options{i}'].after(interval)
+                
         else:
-            globals()[f'self.sweep_options{i}']['value'] = ['']
-            globals()[f'self.sweep_options{i}'].current(0)
-            globals()[f'self.sweep_options{i}'].after(interval)
+            self.__dict__[f'sweep_options{i}']['value'] = ['']
+            self.__dict__[f'sweep_options{i}'].current(0)
+            self.__dict__[f'sweep_options{i}'].after(interval)
             
-        if globals()[f'self.combo_to_sweep{i}'].current() != getattr(self, f'combo_to_sweep{i}_current'):
-            self.preset.loc[0, f'combo_to_sweep{i}'] = globals()[f'self.combo_to_sweep{i}'].current()
+        if self.__dict__[f'combo_to_sweep{i}'].current() != getattr(self, f'combo_to_sweep{i}_current'):
+            self.preset.loc[0, f'combo_to_sweep{i}'] = self.__dict__[f'combo_to_sweep{i}'].current()
             self.preset.to_csv(globals()['setget_path'], index = False)
             
     def update_sweep_options4(self, event):
         i = 4
-        if globals()[f'self.sweep_options{i}'].current() != getattr(self, f'sweep_options{i}_current'):
-            self.preset.loc[0, f'sweep_options{i}'] = globals()[f'self.sweep_options{i}'].current()
+        if self.__dict__[f'sweep_options{i}'].current() != getattr(self, f'sweep_options{i}_current'):
+            self.preset.loc[0, f'sweep_options{i}'] = self.__dict__[f'sweep_options{i}'].current()
             self.preset.to_csv(globals()['setget_path'], index = False)
             
     def set_device4(self):
@@ -871,11 +874,13 @@ class SetGet(tk.Frame):
         global list_of_devices
         
         i = 4
-        class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
-        device_to_sweep = list_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
+        #which type of device did I chose
+        ind = self.__dict__[f'combo_to_sweep{i}'].current()
+        class_of_sweeper_device = types_of_devices[ind]
+        device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
-        parameter_to_sweep = parameters[globals()[f'self.sweep_options{i}'].current()]
-        value = float(globals()[f'self.entry_set{i}'].get())
+        parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
+        value = float(self.__dict__[f'entry_set{i}'].get())
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -888,30 +893,35 @@ class SetGet(tk.Frame):
             
     def update_sweep_parameters5(self, event, interval=100):
         global types_of_devices
+        global list_of_devices
         i = 5
-        class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
+        #which type of device did I chose
+        ind = self.__dict__[f'combo_to_sweep{i}'].current()
+        class_of_sweeper_device = types_of_devices[ind]
+        device_to_sweep = list_of_devices[ind]
         if class_of_sweeper_device != 'Not a class':
             try:
-                globals()[f'self.sweep_options{i}']['value'] = getattr(
-                    globals()[class_of_sweeper_device](), 'set_options')
-                globals()[f'self.sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
-                globals()[f'self.sweep_options{i}'].after(interval)
+                self.__dict__[f'sweep_options{i}']['value'] = getattr(
+                    device_to_sweep, 'set_options')
+                self.__dict__[f'sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
+                self.__dict__[f'sweep_options{i}'].after(interval)
             except:
-                globals()[f'self.sweep_options{i}'].current(0)
-                globals()[f'self.sweep_options{i}'].after(interval)
+                self.__dict__[f'sweep_options{i}'].current(0)
+                self.__dict__[f'sweep_options{i}'].after(interval)
+                
         else:
-            globals()[f'self.sweep_options{i}']['value'] = ['']
-            globals()[f'self.sweep_options{i}'].current(0)
-            globals()[f'self.sweep_options{i}'].after(interval)
+            self.__dict__[f'sweep_options{i}']['value'] = ['']
+            self.__dict__[f'sweep_options{i}'].current(0)
+            self.__dict__[f'sweep_options{i}'].after(interval)
             
-        if globals()[f'self.combo_to_sweep{i}'].current() != getattr(self, f'combo_to_sweep{i}_current'):
-            self.preset.loc[0, f'combo_to_sweep{i}'] = globals()[f'self.combo_to_sweep{i}'].current()
+        if self.__dict__[f'combo_to_sweep{i}'].current() != getattr(self, f'combo_to_sweep{i}_current'):
+            self.preset.loc[0, f'combo_to_sweep{i}'] = self.__dict__[f'combo_to_sweep{i}'].current()
             self.preset.to_csv(globals()['setget_path'], index = False)
             
     def update_sweep_options5(self, event):
         i = 5
-        if globals()[f'self.sweep_options{i}'].current() != getattr(self, f'sweep_options{i}_current'):
-            self.preset.loc[0, f'sweep_options{i}'] = globals()[f'self.sweep_options{i}'].current()
+        if self.__dict__[f'sweep_options{i}'].current() != getattr(self, f'sweep_options{i}_current'):
+            self.preset.loc[0, f'sweep_options{i}'] = self.__dict__[f'sweep_options{i}'].current()
             self.preset.to_csv(globals()['setget_path'], index = False)
             
     def set_device5(self):
@@ -919,11 +929,13 @@ class SetGet(tk.Frame):
         global list_of_devices
         
         i = 5
-        class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
-        device_to_sweep = list_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
+        #which type of device did I chose
+        ind = self.__dict__[f'combo_to_sweep{i}'].current()
+        class_of_sweeper_device = types_of_devices[ind]
+        device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
-        parameter_to_sweep = parameters[globals()[f'self.sweep_options{i}'].current()]
-        value = float(globals()[f'self.entry_set{i}'].get())
+        parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
+        value = float(self.__dict__[f'entry_set{i}'].get())
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -936,30 +948,35 @@ class SetGet(tk.Frame):
             
     def update_sweep_parameters6(self, event, interval=100):
         global types_of_devices
+        global list_of_devices
         i = 6
-        class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
+        #which type of device did I chose
+        ind = self.__dict__[f'combo_to_sweep{i}'].current()
+        class_of_sweeper_device = types_of_devices[ind]
+        device_to_sweep = list_of_devices[ind]
         if class_of_sweeper_device != 'Not a class':
             try:
-                globals()[f'self.sweep_options{i}']['value'] = getattr(
-                    globals()[class_of_sweeper_device](), 'set_options')
-                globals()[f'self.sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
-                globals()[f'self.sweep_options{i}'].after(interval)
+                self.__dict__[f'sweep_options{i}']['value'] = getattr(
+                    device_to_sweep, 'set_options')
+                self.__dict__[f'sweep_options{i}'].current(getattr(self, f'sweep_options{i}_current'))
+                self.__dict__[f'sweep_options{i}'].after(interval)
             except:
-                globals()[f'self.sweep_options{i}'].current(0)
-                globals()[f'self.sweep_options{i}'].after(interval)
+                self.__dict__[f'sweep_options{i}'].current(0)
+                self.__dict__[f'sweep_options{i}'].after(interval)
+                
         else:
-            globals()[f'self.sweep_options{i}']['value'] = ['']
-            globals()[f'self.sweep_options{i}'].current(0)
-            globals()[f'self.sweep_options{i}'].after(interval)
+            self.__dict__[f'sweep_options{i}']['value'] = ['']
+            self.__dict__[f'sweep_options{i}'].current(0)
+            self.__dict__[f'sweep_options{i}'].after(interval)
             
-        if globals()[f'self.combo_to_sweep{i}'].current() != getattr(self, f'combo_to_sweep{i}_current'):
-            self.preset.loc[0, f'combo_to_sweep{i}'] = globals()[f'self.combo_to_sweep{i}'].current()
+        if self.__dict__[f'combo_to_sweep{i}'].current() != getattr(self, f'combo_to_sweep{i}_current'):
+            self.preset.loc[0, f'combo_to_sweep{i}'] = self.__dict__[f'combo_to_sweep{i}'].current()
             self.preset.to_csv(globals()['setget_path'], index = False)
             
     def update_sweep_options6(self, event):
         i = 6
-        if globals()[f'self.sweep_options{i}'].current() != getattr(self, f'sweep_options{i}_current'):
-            self.preset.loc[0, f'sweep_options{i}'] = globals()[f'self.sweep_options{i}'].current()
+        if self.__dict__[f'sweep_options{i}'].current() != getattr(self, f'sweep_options{i}_current'):
+            self.preset.loc[0, f'sweep_options{i}'] = self.__dict__[f'sweep_options{i}'].current()
             self.preset.to_csv(globals()['setget_path'], index = False)
             
     def set_device6(self):
@@ -967,11 +984,13 @@ class SetGet(tk.Frame):
         global list_of_devices
         
         i = 6
-        class_of_sweeper_device = types_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
-        device_to_sweep = list_of_devices[globals()[f'self.combo_to_sweep{i}'].current()]
+        #which type of device did I chose
+        ind = self.__dict__[f'combo_to_sweep{i}'].current()
+        class_of_sweeper_device = types_of_devices[ind]
+        device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
-        parameter_to_sweep = parameters[globals()[f'self.sweep_options{i}'].current()]
-        value = float(globals()[f'self.entry_set{i}'].get())
+        parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
+        value = float(self.__dict__[f'entry_set{i}'].get())
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -985,59 +1004,59 @@ class SetGet(tk.Frame):
     def set_all(self):
         for i in range(1, self.num_widgets):
             try:
-                self.set_device(i)
+                self.__dict__[f'set_device{i}']()
             except:
                 pass
             
     def add_block(self, i):
         
         try:
-            globals()[f'button_destroy{i - 1}'].destroy()
+            self.__dict__[f'button_destroy{i - 1}'].destroy()
         except KeyError:
             pass
-        globals()[f'button_add{i - 1}'].destroy()
+        self.__dict__[f'button_add{i - 1}'].destroy()
         
-        globals()[f'label_devices{i}'] = tk.Label(self, text = 'Devices:', font=LARGE_FONT)
-        globals()[f'label_devices{i}'].place(relx = 0.05 + (i - int(i / 5) * 4 - 1) * 7/30, rely = 0.21 + int(i / 5) * 0.35)
+        self.__dict__[f'label_devices{i}'] = tk.Label(self, text = 'Devices:', font=LARGE_FONT)
+        self.__dict__[f'label_devices{i}'].place(relx = 0.05 + (i - int(i / 5) * 4 - 1) * 7/30, rely = 0.21 + int(i / 5) * 0.35)
 
-        globals()[f'self.combo_to_sweep{i}'] = ttk.Combobox(self, value=list_of_devices_addresses)
-        globals()[f'self.combo_to_sweep{i}'].bind(
+        self.__dict__[f'combo_to_sweep{i}'] = ttk.Combobox(self, value=list_of_devices_addresses)
+        self.__dict__[f'combo_to_sweep{i}'].bind(
             "<<ComboboxSelected>>", getattr(self, f'update_sweep_parameters{i}'))
-        globals()[f'self.combo_to_sweep{i}'].place(relx=0.15 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.21 + int(i / 5) * 0.35)
+        self.__dict__[f'combo_to_sweep{i}'].place(relx=0.15 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.21 + int(i / 5) * 0.35)
         
-        globals()[f'label_options{i}'] = tk.Label(self, text = 'Options:', font = LARGE_FONT)
-        globals()[f'label_options{i}'].place(relx = 0.05 + (i - int(i / 5) * 4 - 1) * 7/30, rely = 0.25 + int(i / 5) * 0.35)
+        self.__dict__[f'label_options{i}'] = tk.Label(self, text = 'Options:', font = LARGE_FONT)
+        self.__dict__[f'label_options{i}'].place(relx = 0.05 + (i - int(i / 5) * 4 - 1) * 7/30, rely = 0.25 + int(i / 5) * 0.35)
         
-        globals()[f'self.sweep_options{i}'] = ttk.Combobox(self)
-        globals()[f'self.sweep_options{i}'].bind(
+        self.__dict__[f'sweep_options{i}'] = ttk.Combobox(self)
+        self.__dict__[f'sweep_options{i}'].bind(
             "<<ComboboxSelected>>", getattr(self, f'update_sweep_options{i}'))
-        globals()[f'self.sweep_options{i}'].place(relx=0.15 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.25 + int(i / 5) * 0.35)
+        self.__dict__[f'sweep_options{i}'].place(relx=0.15 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.25 + int(i / 5) * 0.35)
         
         try:
-            globals()[f'self.combo_to_sweep{i}'].current(getattr(self, f'combo_to_sweep{i}_current'))
+            self.__dict__[f'combo_to_sweep{i}'].current(getattr(self, f'combo_to_sweep{i}_current'))
             getattr(self, f'update_sweep_parameters{i}')(event = None)
         except:
-            globals()[f'self.combo_to_sweep{i}'].current(0)
-            if globals()[f'self.combo_to_sweep{i}']['values'][0] != '':
+            self.__dict__[f'combo_to_sweep{i}'].current(0)
+            if self.__dict__[f'combo_to_sweep{i}']['values'][0] != '':
                 getattr(self, f'update_sweep_parameters{i}')(event = None)
         
-        globals()[f'label_set{i}'] = tk.Label(self, text = 'Set', font = LARGE_FONT)
-        globals()[f'label_set{i}'].place(relx=0.05 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.29 + int(i / 5) * 0.35)
+        self.__dict__[f'label_set{i}'] = tk.Label(self, text = 'Set', font = LARGE_FONT)
+        self.__dict__[f'label_set{i}'].place(relx=0.05 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.29 + int(i / 5) * 0.35)
         
-        globals()[f'self.entry_set{i}'] = tk.Entry(self, width = 16)
-        globals()[f'self.entry_set{i}'].insert(0, getattr(self, f'set{i}_current'))
-        globals()[f'self.entry_set{i}'].place(relx=0.15 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.29 + int(i / 5) * 0.35)
+        self.__dict__[f'entry_set{i}'] = tk.Entry(self, width = 16)
+        self.__dict__[f'entry_set{i}'].insert(0, getattr(self, f'set{i}_current'))
+        self.__dict__[f'entry_set{i}'].place(relx=0.15 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.29 + int(i / 5) * 0.35)
         
-        globals()[f'button_set{i}'] = tk.Button(self, text = 'Set', command = getattr(self, f'set_device{i}'))
-        globals()[f'button_set{i}'].place(relx=0.235 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.285 + int(i / 5) * 0.35)
+        self.__dict__[f'button_set{i}'] = tk.Button(self, text = 'Set', command = getattr(self, f'set_device{i}'))
+        self.__dict__[f'button_set{i}'].place(relx=0.235 + (i - int(i / 5) * 4 - 1) * 7/30, rely=0.285 + int(i / 5) * 0.35)
 
         if i >= 2:
-            globals()[f'button_destroy{i}'] = tk.Button(self, text = r'🗙', command = lambda: self.destroy_block(i))
-            globals()[f'button_destroy{i}'].place(relx = 0.28 + (i - int(i / 5) * 4 - 1) * 7/30, rely = 0.17 + int(i / 5) * 0.35)
+            self.__dict__[f'button_destroy{i}'] = tk.Button(self, text = r'🗙', command = lambda: self.destroy_block(i))
+            self.__dict__[f'button_destroy{i}'].place(relx = 0.28 + (i - int(i / 5) * 4 - 1) * 7/30, rely = 0.17 + int(i / 5) * 0.35)
         
         if i <= 5:
-            globals()[f'button_add{i}'] = tk.Button(self, text = 'Add', font = LARGE_FONT, command = lambda: self.add_block(i + 1))
-            globals()[f'button_add{i}'].place(relx=0.15 + (i - int((i + 1) / 5) * 4) * 7/30, rely=0.25 + int((i+1) / 5) * 0.35)
+            self.__dict__[f'button_add{i}'] = tk.Button(self, text = 'Add', font = LARGE_FONT, command = lambda: self.add_block(i + 1))
+            self.__dict__[f'button_add{i}'].place(relx=0.15 + (i - int((i + 1) / 5) * 4) * 7/30, rely=0.25 + int((i+1) / 5) * 0.35)
             
         self.num_widgets += 1
         
@@ -1048,28 +1067,28 @@ class SetGet(tk.Frame):
         
         if i != 1:
         
-            globals()[f'button_destroy{i}'].destroy()
+            self.__dict__[f'button_destroy{i}'].destroy()
             try:
-                globals()[f'button_add{i}'].destroy()
+                self.__dict__[f'button_add{i}'].destroy()
             except KeyError:
                 pass
-            globals()[f'label_devices{i}'].destroy()
-            globals()[f'self.combo_to_sweep{i}'].destroy()
-            globals()[f'label_options{i}'].destroy()
-            globals()[f'self.sweep_options{i}'].destroy()
-            globals()[f'label_set{i}'].destroy()
-            globals()[f'self.entry_set{i}'].destroy()
-            globals()[f'button_set{i}'].destroy()
+            self.__dict__[f'label_devices{i}'].destroy()
+            self.__dict__[f'combo_to_sweep{i}'].destroy()
+            self.__dict__[f'label_options{i}'].destroy()
+            self.__dict__[f'sweep_options{i}'].destroy()
+            self.__dict__[f'label_set{i}'].destroy()
+            self.__dict__[f'entry_set{i}'].destroy()
+            self.__dict__[f'button_set{i}'].destroy()
             
             i -= 1
             
             if i > 1:
-                globals()[f'button_destroy{i}'] = tk.Button(self, text = r'🗙', command = lambda: self.destroy_block(i))
-                globals()[f'button_destroy{i}'].place(relx = 0.28 + (i - int(i / 5) * 4 - 1) * 7/30, rely = 0.17 + int(i / 5) * 0.35)
+                self.__dict__[f'button_destroy{i}'] = tk.Button(self, text = r'🗙', command = lambda: self.destroy_block(i))
+                self.__dict__[f'button_destroy{i}'].place(relx = 0.28 + (i - int(i / 5) * 4 - 1) * 7/30, rely = 0.17 + int(i / 5) * 0.35)
             
             if i <= 6:
-                globals()[f'button_add{i}'] = tk.Button(self, text = 'Add', font = LARGE_FONT, command = lambda: self.add_block(i + 1))
-                globals()[f'button_add{i}'].place(relx=0.15 + (i - int((i + 1) / 5) * 4) * 7/30, rely=0.25 + int((i+1) / 5) * 0.35)
+                self.__dict__[f'button_add{i}'] = tk.Button(self, text = 'Add', font = LARGE_FONT, command = lambda: self.add_block(i + 1))
+                self.__dict__[f'button_add{i}'].place(relx=0.15 + (i - int((i + 1) / 5) * 4) * 7/30, rely=0.25 + int((i+1) / 5) * 0.35)
                 
             self.num_widgets -= 1
             
@@ -1112,18 +1131,18 @@ class SetGet(tk.Frame):
         tw.geometry("800x400")
         tw.title("Graph")
         
-        globals()[f'fig_setget{self.num_tw}'] = Figure((2.4, 1.4), dpi=300)
-        globals()[f'ax_setget{self.num_tw}'] = globals()[f'fig_setget{self.num_tw}'].add_subplot(111)
-        globals()[f'fig_setget{self.num_tw}'].subplots_adjust(left = 0.25, bottom = 0.3)
-        globals()[f'ax_setget{self.num_tw}'].set_xlabel('t, s')
-        globals()[f'ax_setget{self.num_tw}'].set_title(self.current_heading)
+        self.__dict__[f'fig_setget{self.num_tw}'] = Figure((2.4, 1.4), dpi=300)
+        self.__dict__[f'ax_setget{self.num_tw}'] = globals()[f'fig_setget{self.num_tw}'].add_subplot(111)
+        self.__dict__[f'fig_setget{self.num_tw}'].subplots_adjust(left = 0.25, bottom = 0.3)
+        self.__dict__[f'ax_setget{self.num_tw}'].set_xlabel('t, s')
+        self.__dict__[f'ax_setget{self.num_tw}'].set_title(self.current_heading)
         
-        globals()[f'self.plot_setget{self.num_tw}'] = FigureCanvasTkAgg(globals()[f'fig_setget{self.num_tw}'], tw)
-        globals()[f'self.plot_setget{self.num_tw}'].draw()
-        globals()[f'self.plot_setget{self.num_tw}'].get_tk_widget().place(relx=0, rely=0)
+        self.__dict__[f'plot_setget{self.num_tw}'] = FigureCanvasTkAgg(globals()[f'fig_setget{self.num_tw}'], tw)
+        self.__dict__[f'plot_setget{self.num_tw}'].draw()
+        self.__dict__[f'plot_setget{self.num_tw}'].get_tk_widget().place(relx=0, rely=0)
         
-        globals()[f'ani_setget{self.num_tw}'] = animation.FuncAnimation(
-            fig = globals()[f'fig_setget{self.num_tw}'], func = lambda x: self.animate(x, self.current_heading), 
+        self.__dict__[f'ani_setget{self.num_tw}'] = animation.FuncAnimation(
+            fig = self.__dict__[f'fig_setget{self.num_tw}'], func = lambda x: self.animate(x, self.current_heading), 
             interval=100, blit = False)
         
         self.dict_num_heading[self.current_heading] = self.num_tw
@@ -1425,10 +1444,14 @@ class Sweeper1d(tk.Frame):
 
     def update_sweep_parameters(self, event, interval=100):
         global types_of_devices
-        class_of_sweeper_device1 = types_of_devices[self.combo_to_sweep1.current()]
+        global list_of_devices
+        
+        ind = self.combo_to_sweep1.current()
+        class_of_sweeper_device1 = types_of_devices[ind]
+        device1 = list_of_devices[ind]
         if class_of_sweeper_device1 != 'Not a class':
             self.sweep_options1['value'] = getattr(
-                globals()[class_of_sweeper_device1](), 'set_options')
+                device1, 'set_options')
             try:
                 self.sweep_options1.current(self.sweep_options1_current)
             except tk.TclError:
@@ -2113,10 +2136,13 @@ class Sweeper2d(tk.Frame):
 
     def update_sweep_parameters1(self, event, interval=100):
         global types_of_devices
-        class_of_sweeper_device1 = types_of_devices[self.combo_to_sweep1.current()]
+        global list_of_devices
+        ind = self.combo_to_sweep1.current()
+        class_of_sweeper_device1 = types_of_devices[ind]
+        device1 = list_of_devices[ind]
         if class_of_sweeper_device1 != 'Not a class':
             self.sweep_options1['value'] = getattr(
-                globals()[class_of_sweeper_device1](), 'set_options')
+                device1, 'set_options')
             try:
                 self.sweep_options1.current(self.sweep_options1_current)
             except tk.TclError:
@@ -2138,10 +2164,13 @@ class Sweeper2d(tk.Frame):
 
     def update_sweep_parameters2(self, event, interval=100):
         global types_of_devices
-        class_of_sweeper_device2 = types_of_devices[self.combo_to_sweep2.current()]
+        global list_of_devices
+        ind = self.combo_to_sweep2.current()
+        class_of_sweeper_device2 = types_of_devices[ind]
+        device2 = list_of_devices[ind]
         if class_of_sweeper_device2 != 'Not a class':
             self.sweep_options2['value'] = getattr(
-                globals()[class_of_sweeper_device2](), 'set_options')
+                device2, 'set_options')
             try:
                 self.sweep_options2.current(self.sweep_options2_current)
             except tk.TclError:
@@ -3087,11 +3116,14 @@ class Sweeper3d(tk.Frame):
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
 
     def update_sweep_parameters1(self, event, interval=100):
-        class_of_sweeper_device1 = types_of_devices[self.combo_to_sweep1.current(
-        )]
+        global types_of_devices
+        global list_of_devices
+        ind = self.combo_to_sweep1.current()
+        class_of_sweeper_device1 = types_of_devices[ind]
+        device1 = list_of_devices[ind]
         if class_of_sweeper_device1 != 'Not a class':
             self.sweep_options1['value'] = getattr(
-                globals()[class_of_sweeper_device1](), 'set_options')
+                device1, 'set_options')
             try:
                 self.sweep_options1.current(self.sweep_options1_current)
             except tk.TclError:
@@ -3103,11 +3135,15 @@ class Sweeper3d(tk.Frame):
             self.sweep_options1.after(interval)
 
     def update_sweep_parameters2(self, event, interval=100):
-        class_of_sweeper_device2 = types_of_devices[self.combo_to_sweep2.current(
-        )]
+        global types_of_devices
+        global list_of_devices
+        
+        ind = self.combo_to_sweep2.current()
+        class_of_sweeper_device2 = types_of_devices[ind]
+        device2 = list_of_devices[ind]
         if class_of_sweeper_device2 != 'Not a class':
             self.sweep_options2['value'] = getattr(
-                globals()[class_of_sweeper_device2](), 'set_options')
+                device2, 'set_options')
             try:
                 self.sweep_options2.current(self.sweep_options2_current)
             except tk.TclError:
@@ -3119,11 +3155,14 @@ class Sweeper3d(tk.Frame):
             self.sweep_options2.after(interval)
 
     def update_sweep_parameters3(self, event, interval=100):
-        class_of_sweeper_device3 = types_of_devices[self.combo_to_sweep3.current(
-        )]
+        global types_of_devices
+        global list_of_devices
+        ind = self.combo_to_sweep3.current()
+        class_of_sweeper_device3 = types_of_devices[ind]
+        device3 = list_of_devices[ind]
         if class_of_sweeper_device3 != 'Not a class':
             self.sweep_options3['value'] = getattr(
-                globals()[class_of_sweeper_device3](), 'set_options')
+                device3, 'set_options')
             try:
                 self.sweep_options3.current(self.sweep_options3_current)
             except tk.TclError:
@@ -3744,7 +3783,7 @@ class Settings(tk.Frame):
             try:
                 self.combo_set_parameters['values'] = parent.sweep_options1['values']
             except: 
-                self.combo_set_parameters['values'] = getattr(globals()[device_class](), 'set_options')
+                self.combo_set_parameters['values'] = getattr(list_of_devices[0], 'set_options')
             self.combo_set_parameters.current(0)
             self.combo_set_parameters.bind(
                 "<<ComboboxSelected>>", self.select_set_option)
@@ -3906,11 +3945,16 @@ class Settings(tk.Frame):
         
     
     def update_combo_set_parameters(self, event, interval = 100):
+        global types_of_devices
+        global list_of_devices
+        ind = self.combo_devices.current()
+        class_of_sweeper_device = types_of_devices[ind]
+        device = list_of_devices[ind]
+        
         if self.combo_devices.current() != -1:
-            self.selected_device = self.combo_devices.current()
-        device_class = types_of_devices[self.combo_devices.current()]
-        if device_class != 'Not a class':
-            self.combo_set_parameters['values'] = getattr(globals()[device_class](), 'set_options')
+            self.selected_device = ind
+        if class_of_sweeper_device != 'Not a class':
+            self.combo_set_parameters['values'] = getattr(device, 'set_options')
             self.combo_set_parameters.after(interval)
         else:
             self.combo_set_parameters['values'] = ['']
@@ -4528,7 +4572,7 @@ class Sweeper_write(threading.Thread):
                 else: #if it the first internal loop so the direction wasn't stabilised
                     dt = time.perf_counter() - zero_time - self.time2
                     
-                if (speed > 0 and current_value > value) or ((speed < 0 and current_value < value)): #if current value out of border
+                if (speed > 0 and current_value >= value) or ((speed < 0 and current_value <= value)): #if current value out of border
                     if  dt < 1:
                         result = True
                     else:
