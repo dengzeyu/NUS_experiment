@@ -359,6 +359,8 @@ def my_animate(i, n, filename):
     def axes_settings(i, pad = 0, tick_size = 4, label_size = 6, x_pad =0, y_pad = 1, title_size = 8, title_pad = -5):
         globals()[f'ax{i}'].tick_params(axis='y', which='both', length = 0, pad=pad, labelsize=tick_size)
         globals()[f'ax{i}'].tick_params(axis='x', which='both', length = 0, pad=pad + 1, labelsize=tick_size)
+        globals()[f'ax{i}'].yaxis.offsetText.set_fontsize(tick_size)
+        globals()[f'ax{i}'].xaxis.offsetText.set_fontsize(tick_size)
         globals()[f'ax{i}'].set_xlabel('x', fontsize = label_size, labelpad = x_pad)
         globals()[f'ax{i}'].set_ylabel('y', fontsize = label_size, labelpad = y_pad)
         globals()[f'ax{i}'].set_title(f'Plot {i}', fontsize = title_size, pad = title_pad)
@@ -1776,8 +1778,8 @@ class Sweeper1d(tk.Frame):
         sweeper_flag1 = True
         sweeper_flag2 = False
         sweeper_flag3 = False
-        self.save_manual_status()
-        self.save_back_and_forth_master_status()
+        #self.save_manual_status()
+        #self.save_back_and_forth_master_status()
         manual_filenames = self.manual_filenames
         manual_sweep_flags = self.manual_sweep_flags
         script = self.script
@@ -2612,8 +2614,8 @@ class Sweeper2d(tk.Frame):
         sweeper_flag2 = True
         sweeper_flag3 = False
         #self.save_manual_status()
-        self.save_back_and_forth_master_status()
-        self.save_back_and_forth_slave_status()
+        #self.save_back_and_forth_master_status()
+        #self.save_back_and_forth_slave_status()
         condition = self.text_condition.get(1.0, tk.END)[:-1]
         script = self.script
         manual_sweep_flags = self.manual_sweep_flags
@@ -3741,10 +3743,10 @@ class Sweeper3d(tk.Frame):
         sweeper_flag1 = False
         sweeper_flag2 = False
         sweeper_flag3 = True
-        self.save_manual_status()
-        self.save_back_and_forth_master_status()
-        self.save_back_and_forth_slave_status()
-        self.save_back_and_forth_slave_slave_status()
+        #self.save_manual_status()
+        #self.save_back_and_forth_master_status()
+        #self.save_back_and_forth_slave_status()
+        #self.save_back_and_forth_slave_slave_status()
         condition = self.text_condition.get(1.0, tk.END)[:-1]
         script = self.script
         manual_sweep_flags = self.manual_sweep_flags
@@ -4106,7 +4108,7 @@ class Settings(tk.Frame):
     def set_script(self, parent):
         parent.script = self.text_script.get(1.0, tk.END)[:-1]
 
-class Sweeper_write(threading.Thread, mapper):
+class Sweeper_write(threading.Thread):
 
     def __init__(self):
 
@@ -4134,6 +4136,7 @@ class Sweeper_write(threading.Thread, mapper):
         self.filename_sweep = filename_sweep
         self.columns = columns
         self.sweepable1 = False
+        self.started = False
         
         if hasattr(device_to_sweep1, 'sweepable') and len(manual_sweep_flags) == 1:
             if device_to_sweep1.sweepable[device_to_sweep1.set_options.index(parameter_to_sweep1)]:
@@ -4174,15 +4177,13 @@ class Sweeper_write(threading.Thread, mapper):
             globals()['value2'] = self.value2
             self.columns = columns
             self.time2 = (float(from_sweep2) - float(to_sweep2)) / float(ratio_sweep2)
+            self.mapper = mapper(self.parameters_to_read, float(from_sweep2), float(to_sweep2), 100)
             
             try:
                 self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
                 self.nstep2 = int(abs(self.nstep2))
             except ValueError:
                 self.nstep2 = 1
-                
-            self.x = self.value1
-            self.y = self.value2
                 
             self.sweepable2 = False
                 
@@ -4250,10 +4251,6 @@ class Sweeper_write(threading.Thread, mapper):
             except ValueError:
                 self.nstep3 = 1
                 
-            self.x = self.value1
-            self.y = self.value2
-            self.z = self.value3
-                
             self.sweepable2 = False
             
             self.sweepable3 = False
@@ -4299,6 +4296,17 @@ class Sweeper_write(threading.Thread, mapper):
         except:
             pass
 
+        print(f'Sweepable1 = {self.sweepable1}')
+        
+        try:
+            print(f'Sweepable2 = {self.sweepable2}')
+        except:
+            pass
+        
+        try:
+            print(f'Sweepable3 = {self.sweepable3}')
+        except:
+            pass
 
         try:
             threading.Thread.__init__(self)
@@ -4530,6 +4538,7 @@ class Sweeper_write(threading.Thread, mapper):
                 try:
                     parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
                                               option)()
+                    self.mapper.append_parameter(str(parameter).replace('.', '_'), parameter_value)
                     dataframe.append("{:.3e}".format(parameter_value))
                 except:
                     dataframe.append(None)
@@ -4584,16 +4593,12 @@ class Sweeper_write(threading.Thread, mapper):
             print(f'Epsilon = {eps}')
                 
             if getattr(self, f'sweepable{axis}') == True:
-                current_value = float(getattr(device_to_sweep, parameter_to_sweep)())
+                self.current_value = float(getattr(device_to_sweep, parameter_to_sweep)())
                 print(f'Sweep value is {value}')
-                print(f'Current value is {current_value}') 
-                if not hasattr(self, 'time2'):
-                    dt = time.perf_counter() - zero_time
-                else: #if it the first internal loop so the direction wasn't stabilised
-                    dt = time.perf_counter() - zero_time - self.time2
+                print(f'Current value is {self.current_value}') 
                     
-                if (speed > 0 and current_value >= value) or ((speed < 0 and current_value <= value)): #if current value out of border
-                    if  dt < 1:
+                if (speed > 0 and self.current_value >= value) or ((speed < 0 and self.current_value <= value)): #if current value out of border
+                    if not self.started:
                         result = True
                     else:
                         result = False
@@ -4849,29 +4854,33 @@ class Sweeper_write(threading.Thread, mapper):
                 step(1, value1)
                 append_read_parameters()
                 tofile() 
-            else:
+            elif len(manual_sweep_flags) == 2:
                 point = current_point()
                 if self.isinarea(point = point, grid_area = self.grid_space, sweep_dimension = len(manual_sweep_flags)):
-                    if len(manual_sweep_flags) == 2:
-                        update_dataframe()
-                        step(2, value2)
+                    update_dataframe()
+                    if self.sweepable2 == True:
+                        self.mapper.append_slave(value = self.current_value)
                     else:
-                        update_dataframe()
-                        step(3, value3)
+                        self.mapper.append_slave(value = self.value2)
+                    step(2, value2)
                     append_read_parameters()
                     tofile() 
                 else:
                     if manual_sweep_flags[1] == 0:
                         self.value2 += self.step2
-                    else:
-                        pass
-                    try:
-                        if manual_sweep_flags[2] == 0:
-                            self.value3 += self.step3
-                        else:
-                            pass
-                    except IndexError:
-                        pass
+                    self.mapper.append_slave(value = np.nan)
+            elif len(manual_sweep_flags) == 3:
+                point = current_point()
+                if self.isinarea(point = point, grid_area = self.grid_space, sweep_dimension = len(manual_sweep_flags)):
+                    update_dataframe()
+                    step(3, value3)
+                    append_read_parameters()
+                    tofile() 
+                else:
+                    if manual_sweep_flags[2] == 0:
+                        self.value3 += self.step3
+            else:
+                raise Exception('manual_sweep_flag length is not correct, needs 1, 2 or 3, but got ', len(manual_sweep_flags))
                 
             print('Inner step was made')
                 
@@ -4881,6 +4890,8 @@ class Sweeper_write(threading.Thread, mapper):
             if manual_sweep_flags[len(manual_sweep_flags) - 1] == 0:
                 while condition(len(manual_sweep_flags)) and manual_sweep_flags[len(manual_sweep_flags) - 1] == 0:
                     inner_step()
+                    if not self.started:
+                        self.started = True
             elif manual_sweep_flags[len(manual_sweep_flags) - 1] == 1:
                 data_inner = pd.read_csv(manual_filenames[len(manual_filenames) - 1]).values.reshape(-1)
                 for i, value in enumerate(data_inner[::direction]):
@@ -4895,8 +4906,13 @@ class Sweeper_write(threading.Thread, mapper):
                             inner_step(value3 = value)
                         else:
                             raise Exception('manual_sweep_flag length is not correct, needs 1, 2 or 3, but got ', len(manual_sweep_flags))
+                    
+                        if not self.started:
+                            self.started = True
+                    
                     else:
                         break
+                
             else:
                 raise Exception('manual_sweep_flag is not correct, needs 0 or 1, but got ', manual_sweep_flags[len(manual_sweep_flags) - 1])
             
@@ -4926,6 +4942,11 @@ class Sweeper_write(threading.Thread, mapper):
                     
             else:
                 raise Exception('back_and_forth_slave is not correct, needs >= 1, but got ', back_and_forth_slave)
+           
+            if len(manual_sweep_flags) == 2:
+                self.mapper.concatenate_all()
+                self.mapper.clear_slave()
+                self.mapper.clear_parameters()
                
             if not hasattr(self, 'time2'):
                 self.time2 = time.perf_counter()
@@ -4941,6 +4962,8 @@ class Sweeper_write(threading.Thread, mapper):
                 while condition(cur_axis) and manual_sweep_flags[-2] == 0:
                     if len(manual_sweep_flags) == 3:
                         update_dataframe(True)
+                    if len(manual_sweep_flags) == 2:
+                        self.mapper.append_master(value = self.value1)
                     step(cur_axis)
                     if len(manual_sweep_flags) == 2:
                         globals()['dataframe_after'] = [*globals()['dataframe']]
@@ -5072,6 +5095,10 @@ class Sweeper_write(threading.Thread, mapper):
             if len(manual_sweep_flags) == 2:        
                 external_loop_back_and_forth()
                 self.sweeper_flag2 == False
+    
+            print(self.mapper.map_master)
+            print(self.mapper.map_slave)
+            print(self.mapper.map_Time_Random)
     
             self.sweeper_flag2 == False
     
@@ -5499,12 +5526,12 @@ class FigureSettings(object):
         global y_transformation
         
         tw = self.settings_window
-        if self.status_xlim.get() == 1:
+        if self.status_xlim.get() == 0:
             try:
                 ax.set_xlim((float(self.entry_x_from.get()), float(self.entry_x_to.get())))
             except:
                 pass
-        if self.status_ylim.get() == 1:
+        if self.status_ylim.get() == 0:
             try:
                 ax.set_ylim((float(self.entry_y_from.get()), float(self.entry_y_to.get())))
             except:
@@ -5825,8 +5852,10 @@ class Graph():
     def axes_settings(self, i, pad = 0, tick_size = 4, label_size = 6, x_pad =0, y_pad = 1, title_size = 8, title_pad = -5):
         ax = globals()[f'ax{i}']
         dic = {1: 1, 2: 2, 0: 3}
-        ax.tick_params(axis='y', which='major', length = 0, pad=pad, labelsize=tick_size)
-        ax.tick_params(axis='x', which='major', length = 0, pad=pad + 1, labelsize=tick_size)
+        ax.tick_params(axis='y', which='both', length = 0, pad=pad, labelsize=tick_size)
+        ax.tick_params(axis='x', which='both', length = 0, pad=pad + 1, labelsize=tick_size)
+        ax.yaxis.offsetText.set_fontsize(tick_size)
+        ax.xaxis.offsetText.set_fontsize(tick_size)
         ax.set_xlabel(getattr(self, f'x_label{dic[i % 3]}'), fontsize = label_size, labelpad = x_pad)
         ax.set_ylabel(getattr(self, f'y_label{dic[i % 3]}'), fontsize = label_size, labelpad = y_pad)
         ax.set_title(getattr(self, f'title{dic[i % 3]}'), fontsize = title_size, pad = title_pad)
