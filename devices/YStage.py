@@ -286,6 +286,7 @@ class YStage():
             if  not self.status_running():
                 result = lib.command_move_calb(self.device_id, c_float(value), byref(self.user_unit))
         else:
+            speed = abs(speed)
             if  not self.status_running():
                 self.set_speed(speed)
                 result = lib.command_move_calb(self.device_id, c_float(value), byref(self.user_unit))
@@ -295,6 +296,7 @@ class YStage():
             if  not self.status_running():
                 result = lib.command_movr_calb(self.device_id, c_float(value), byref(self.user_unit))
         else:
+            speed = abs(speed)
             if  not self.status_running():
                 self.set_speed(speed)
                 result = lib.command_movr_calb(self.device_id, c_float(value), byref(self.user_unit))

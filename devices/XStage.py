@@ -290,6 +290,7 @@ class XStage():
             if  not self.status_running():
                 result = lib.command_move_calb(self.device_id, c_float(value), byref(self.user_unit))
         else:
+            speed = abs(speed)
             if  not self.status_running():
                 self.set_speed(speed)
                 result = lib.command_move_calb(self.device_id, c_float(value), byref(self.user_unit))
@@ -299,6 +300,7 @@ class XStage():
             if  not self.status_running():
                 result = lib.command_movr_calb(self.device_id, c_float(value), byref(self.user_unit))
         else:
+            speed = abs(speed)
             if  not self.status_running():
                 self.set_speed(speed)
                 result = lib.command_movr_calb(self.device_id, c_float(value), byref(self.user_unit))
@@ -418,9 +420,9 @@ class XStage():
         lib.close_device(byref(cast(self.device_id, POINTER(c_int))))
 
 def main():
-    adress = 'COM9'
+    adress = 'COM6'
     stage = XStage(adress)  
-    stage.set_position(-37.5, 10)
+    stage.set_position(0, 10)
 
     try:
         print(f'Current position is {stage.position()}')
