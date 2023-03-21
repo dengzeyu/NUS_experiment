@@ -5,9 +5,11 @@ import sys
 import json
 from csv import writer
 import threading
+import multiprocessing as mp
 from tkinter import ttk
 import tkinter as tk
 from ToolTip import CreateToolTip
+from mapper import mapper
 import matplotlib.animation as animation
 #import blit_animation
 from matplotlib.figure import Figure
@@ -341,9 +343,19 @@ parameters_to_read_copy = parameters_to_read.copy()
 
 zero_time = time.perf_counter()
 
+x = np.linspace(0, 10, 100)
+y = np.linspace(0, 10, 100)
+x, y = np.meshgrid(x, y)
+
+def init_f(x, y):
+    return np.sin(np.sqrt(x**3 + y**3))
+
+z = init_f(x, y)
+
+
 def my_animate(i, n, filename):
     # function to animate graph on each step
-    
+
     def axes_settings(i, pad = 0, tick_size = 4, label_size = 6, x_pad =0, y_pad = 1, title_size = 8, title_pad = -5):
         globals()[f'ax{i}'].tick_params(axis='y', which='both', length = 0, pad=pad, labelsize=tick_size)
         globals()[f'ax{i}'].tick_params(axis='x', which='both', length = 0, pad=pad + 1, labelsize=tick_size)
@@ -419,6 +431,7 @@ def my_animate(i, n, filename):
     
     #globals()[f'graph_object{globals()["cur_animation_num"] - 3}'].update()
     globals()[f'graph_object{globals()["cur_animation_num"] - 3}'].update_idletasks()
+    
     return [ax]
 
 zero_time = time.perf_counter()
@@ -4093,7 +4106,7 @@ class Settings(tk.Frame):
     def set_script(self, parent):
         parent.script = self.text_script.get(1.0, tk.END)[:-1]
 
-class Sweeper_write(threading.Thread):
+class Sweeper_write(threading.Thread, mapper):
 
     def __init__(self):
 
@@ -4168,6 +4181,9 @@ class Sweeper_write(threading.Thread):
             except ValueError:
                 self.nstep2 = 1
                 
+            self.x = self.value1
+            self.y = self.value2
+                
             self.sweepable2 = False
                 
             if hasattr(device_to_sweep2, 'sweepable') and len(manual_sweep_flags) == 2:
@@ -4233,6 +4249,10 @@ class Sweeper_write(threading.Thread):
                 self.nstep3 = int(abs(self.nstep3))
             except ValueError:
                 self.nstep3 = 1
+                
+            self.x = self.value1
+            self.y = self.value2
+            self.z = self.value3
                 
             self.sweepable2 = False
             
