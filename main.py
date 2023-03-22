@@ -23,6 +23,7 @@ from datetime import datetime
 import pandas as pd
 import matplotlib
 import numpy as np
+import numpy.ma as ma
 import glob
 import serial
 
@@ -356,6 +357,50 @@ z = init_f(x, y)
 def my_animate(i, n, filename):
     # function to animate graph on each step
 
+    global sweeper_write
+    
+    ax = globals()[f'ax{n}']
+    
+    if not hasattr(sweeper_write.mapper, 'map_slave'):
+        x = sweeper_write.mapper.slave
+        y = sweeper_write.mapper.master
+        z = sweeper_write.mapper.Time_Random
+        
+        x = np.vstack([x, x])
+        y = np.vstack([y, [i + 1 for i in y]])
+        z = np.vstack([z, np.nan * np.ones(x.shape[0])])
+        Zm = ma.masked_invalid(z)
+    
+        c = ax.pcolor(x, y, Zm, cmap = 'ocean', vmin=np.nanmin(z), vmax=np.nanmax(z), shading = 'nearest')
+        ax.axis([np.nanmin(x), np.nanmax(x), y[0, 0], y[0, 0] + 0.5])
+        globals()[f'fig{n}'].colorbar(c, ax=ax)
+    else:
+        x = sweeper_write.mapper.map_slave
+        y = sweeper_write.mapper.map_master
+        z = sweeper_write.mapper.map_Time_Random
+        
+        
+        if x.shape[0] == 1:
+            x = np.vstack([x, x])
+            y = np.vstack([y, [i + 1 for i in y]])
+            z = np.vstack([z, np.nan * np.ones(x.shape[1])])
+            Zm = ma.masked_invalid(z)
+            c = ax.pcolor(x, y, Zm, cmap = 'ocean', vmin=np.nanmin(z), vmax=np.nanmax(z), shading = 'nearest')
+            ax.axis([np.nanmin(x), np.nanmax(x), y[0, 0], y[0, 0] + 0.5])
+            globals()[f'fig{n}'].colorbar(c, ax=ax)
+            
+        else:
+            Zm = ma.masked_invalid(z)
+            c = ax.pcolor(x, y, Zm, cmap = 'ocean', vmin=np.nanmin(z), vmax=np.nanmax(z), shading = 'nearest')
+            ax.set_title('pcolor')
+            # set the limits of the plot to the limits of the data
+            if x.shape[0] > 1:
+                ax.axis([np.nanmin(x), np.nanmax(x), np.nanmin(y), np.nanmax(y)])
+            globals()[f'fig{n}'].colorbar(c, ax=ax)
+
+
+    '''
+
     def axes_settings(i, pad = 0, tick_size = 4, label_size = 6, x_pad =0, y_pad = 1, title_size = 8, title_pad = -5):
         globals()[f'ax{i}'].tick_params(axis='y', which='both', length = 0, pad=pad, labelsize=tick_size)
         globals()[f'ax{i}'].tick_params(axis='x', which='both', length = 0, pad=pad + 1, labelsize=tick_size)
@@ -435,6 +480,7 @@ def my_animate(i, n, filename):
     globals()[f'graph_object{globals()["cur_animation_num"] - 3}'].update_idletasks()
     
     return [ax]
+    '''
 
 zero_time = time.perf_counter()
 
@@ -1731,6 +1777,7 @@ class Sweeper1d(tk.Frame):
         global manual_filenames
         global manual_sweep_flags
         global zero_time
+        global sweeper_write
 
         def get_key(val, my_dict):
             for key, value in my_dict.items():
@@ -1788,7 +1835,7 @@ class Sweeper1d(tk.Frame):
 
         zero_time = time.perf_counter()
         stop_flag = False
-        Sweeper_write()
+        sweeper_write = Sweeper_write()
         self.open_graph()
 
 
@@ -2529,6 +2576,7 @@ class Sweeper2d(tk.Frame):
         global zero_time
         global back_and_forth_master
         global back_and_forth_slave
+        global sweeper_write
 
         def get_key(val, my_dict):
             for key, value in my_dict.items():
@@ -2624,7 +2672,7 @@ class Sweeper2d(tk.Frame):
         zero_time = time.perf_counter()
         stop_flag = False
         self.rewrite_preset()
-        Sweeper_write()
+        sweeper_write = Sweeper_write()
         self.open_graph()
 
 
@@ -3605,6 +3653,7 @@ class Sweeper3d(tk.Frame):
         global back_and_forth_master
         global back_and_forth_slave
         global back_and_forth_slave_slave
+        global sweeper_write
         
         def get_key(val, my_dict):
             for key, value in my_dict.items():
@@ -3757,7 +3806,7 @@ class Sweeper3d(tk.Frame):
         zero_time = time.perf_counter()
         
         stop_flag = False
-        Sweeper_write()
+        sweeper_write = Sweeper_write()
         self.open_graph()
 
 class Settings(tk.Frame):
@@ -4314,8 +4363,6 @@ class Sweeper_write(threading.Thread):
             self.start()
         except NameError:
             pass
-
-        globals()['sweeper_write'] = self
 
         self.grid_space = True
 
