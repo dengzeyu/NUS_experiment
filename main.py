@@ -118,6 +118,7 @@ ratio_sweep3 = float
 delay_factor3 = float
 stepper_flag = False
 
+plot_flag = 'Plot'
 
 month_dictionary = {'01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr', '05': 'May', '06': 'Jun', 
                     '07': 'Jul', '08': 'Aug', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'}
@@ -458,8 +459,17 @@ def map_animation(i, n, filename):
             
         Zm = ma.masked_invalid(z)
         
-        ax.pcolor(Zm, cmap = 'ocean', vmin=np.nanmin(z), vmax=np.nanmax(z), shading = 'flat')
+        try:
+            globals()[f'colorbar{n}'].remove()
+        except:
+            pass
             
+        ax.clear()
+        
+        colormap = ax.pcolor(Zm, cmap = 'ocean', vmin=np.nanmin(z), vmax=np.nanmax(z), shading = 'flat')
+        globals()[f'colorbar{n}'] = ax.get_figure().colorbar(colormap, ax = ax)
+        globals()[f'colorbar{n}'].ax.tick_params(labelsize=5)
+        
         y_tick_labels = [round(i, 2) for i in y[:, 0]]
 
         x_tick_labels = [round(i, 2) for i in x[0, :]]
@@ -1387,6 +1397,8 @@ class Sweeper1d(tk.Frame):
         back_and_forth_master = 1
         
         self.back_and_forth_master_count = 2
+        
+        self.save_back_and_forth_master_status()
     
         self.checkbox_back_and_forth_master = ttk.Checkbutton(self,
                                            variable=self.status_back_and_forth_master, onvalue=1,
@@ -1400,7 +1412,7 @@ class Sweeper1d(tk.Frame):
         self.devices = tk.StringVar()
         self.devices.set(value=parameters_to_read)
         self.lstbox_to_read = tk.Listbox(self, listvariable = self.devices,
-                                         selectmode='multiple', width=20,
+                                         selectmode='multiple', width=40,
                                          height=len(parameters_to_read) * 1)
         
         self.dict_lstbox = {}
@@ -1682,11 +1694,9 @@ class Sweeper1d(tk.Frame):
         global back_and_forth_master
         
         if self.status_back_and_forth_master.get() == 0:
-            print(f'huh is {back_and_forth_master}')
             back_and_forth_master = 1
         else:
             back_and_forth_master = self.back_and_forth_master_count
-            print(f'back_and_forth_master is {back_and_forth_master}')
             
         self.preset.loc[0, 'status_back_and_forth1'] = self.status_back_and_forth_master.get()
         self.preset.to_csv(globals()['sweeper1d_path'], index = False)
@@ -1859,7 +1869,7 @@ class Sweeper1d(tk.Frame):
         sweeper_flag2 = False
         sweeper_flag3 = False
         #self.save_manual_status()
-        #self.save_back_and_forth_master_status()
+        self.save_back_and_forth_master_status()
         manual_filenames = self.manual_filenames
         manual_sweep_flags = self.manual_sweep_flags
         script = self.script
@@ -1991,6 +2001,9 @@ class Sweeper2d(tk.Frame):
         
         self.back_and_forth_master_count = 2
         self.back_and_forth_slave_count = 2
+        
+        self.save_back_and_forth_master_status()
+        self.save_back_and_forth_slave_status()
     
         self.checkbox_back_and_forth_master = ttk.Checkbutton(self,
                                            variable=self.status_back_and_forth_master, onvalue=1,
@@ -2013,7 +2026,7 @@ class Sweeper2d(tk.Frame):
         devices = tk.StringVar()
         devices.set(value=parameters_to_read)
         self.lstbox_to_read = tk.Listbox(self, listvariable=devices,
-                                         selectmode='multiple', width=20,
+                                         selectmode='multiple', width=40,
                                          height=len(parameters_to_read) * 1)
         self.lstbox_to_read.place(relx=0.45, rely=0.17)
         
@@ -2466,7 +2479,7 @@ class Sweeper2d(tk.Frame):
     def save_back_and_forth_master_status(self):
         global back_and_forth_master
         
-        if self.status_back_and_forth_master == 0:
+        if self.status_back_and_forth_master.get() == 0:
             back_and_forth_master = 1
         else:
             back_and_forth_master = self.back_and_forth_master_count
@@ -2477,7 +2490,7 @@ class Sweeper2d(tk.Frame):
     def save_back_and_forth_slave_status(self):
         global back_and_forth_slave
         
-        if self.status_back_and_forth_slave == 0:
+        if self.status_back_and_forth_slave.get() == 0:
             back_and_forth_slave = 1
         else:
             back_and_forth_slave = self.back_and_forth_slave_count
@@ -2695,8 +2708,8 @@ class Sweeper2d(tk.Frame):
         sweeper_flag2 = True
         sweeper_flag3 = False
         #self.save_manual_status()
-        #self.save_back_and_forth_master_status()
-        #self.save_back_and_forth_slave_status()
+        self.save_back_and_forth_master_status()
+        self.save_back_and_forth_slave_status()
         condition = self.text_condition.get(1.0, tk.END)[:-1]
         script = self.script
         manual_sweep_flags = self.manual_sweep_flags
@@ -2853,6 +2866,14 @@ class Sweeper3d(tk.Frame):
         global back_and_forth_master
         global back_and_forth_slave
         global back_and_forth_slave_slave
+        
+        back_and_forth_master = 1
+        back_and_forth_slave = 1
+        back_and_forth_slave_slave = 1
+        
+        self.save_back_and_forth_master_status()
+        self.save_back_and_forth_slave_status()
+        self.save_back_and_forth_slave_slave_status()
     
         self.back_and_forth_master_count = 2
     
@@ -2905,8 +2926,6 @@ class Sweeper3d(tk.Frame):
         
         self.back_and_forth_slave_slave_count = 2
     
-        back_and_forth_slave_slave = 1
-    
         self.checkbox_back_and_forth_slave_slave = ttk.Checkbutton(self,
                                            variable=self.status_back_and_forth_slave_slave, onvalue=1,
                                            offvalue=0, command=lambda: self.save_back_and_forth_slave_slave_status())
@@ -2919,7 +2938,7 @@ class Sweeper3d(tk.Frame):
         self.devices = tk.StringVar()
         self.devices.set(value=parameters_to_read)
         self.lstbox_to_read = tk.Listbox(self, listvariable=self.devices,
-                                         selectmode='multiple', width=20,
+                                         selectmode='multiple', width=40,
                                          height=len(parameters_to_read) * 1)
         self.lstbox_to_read.place(relx=0.6, rely=0.17)
         
@@ -3527,7 +3546,7 @@ class Sweeper3d(tk.Frame):
     def save_back_and_forth_master_status(self):
         global back_and_forth_master
         
-        if self.status_back_and_forth_master == 0:
+        if self.status_back_and_forth_master.get() == 0:
             back_and_forth_master = 1
         else:
             back_and_forth_master = self.back_and_forth_master_count
@@ -3538,7 +3557,7 @@ class Sweeper3d(tk.Frame):
     def save_back_and_forth_slave_status(self):
         global back_and_forth_slave
         
-        if self.status_back_and_forth_slave == 0:
+        if self.status_back_and_forth_slave.get() == 0:
             back_and_forth_slave = 1
         else:
             back_and_forth_slave = self.back_and_forth_slave_count
@@ -3549,7 +3568,7 @@ class Sweeper3d(tk.Frame):
     def save_back_and_forth_slave_slave_status(self):
         global back_and_forth_slave_slave
         
-        if self.status_back_and_forth_slave_slave == 0:
+        if self.status_back_and_forth_slave_slave.get() == 0:
             back_and_forth_slave_slave = 1
         else:
             back_and_forth_slave_slave = self.back_and_forth_slave_slave_count
@@ -3826,9 +3845,9 @@ class Sweeper3d(tk.Frame):
         sweeper_flag2 = False
         sweeper_flag3 = True
         #self.save_manual_status()
-        #self.save_back_and_forth_master_status()
-        #self.save_back_and_forth_slave_status()
-        #self.save_back_and_forth_slave_slave_status()
+        self.save_back_and_forth_master_status()
+        self.save_back_and_forth_slave_status()
+        self.save_back_and_forth_slave_slave_status()
         condition = self.text_condition.get(1.0, tk.END)[:-1]
         script = self.script
         manual_sweep_flags = self.manual_sweep_flags
@@ -5833,7 +5852,7 @@ class Graph():
         
         if len(manual_sweep_flags) == 2:
             self.button_map = tk.Button(self.tw, text = '🗺', font = LARGE_FONT, command = self.switch)
-            self.button_map.place(relx = 0.01, rely = 0.35)
+            self.button_map.place(relx = 0.001, rely = 0.24)
             if plot_flag == 'Map':
                 CreateToolTip(self.button_map, 'Change to plot')
             if plot_flag == 'Plot':
