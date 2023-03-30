@@ -354,53 +354,8 @@ def init_f(x, y):
 z = init_f(x, y)
 
 
-def my_animate(i, n, filename):
-    # function to animate graph on each step
-
-    global sweeper_write
+def plot_animation(i, n , filename):
     
-    ax = globals()[f'ax{n}']
-    
-    if not hasattr(sweeper_write.mapper, 'map_slave'):
-        x = sweeper_write.mapper.slave
-        y = sweeper_write.mapper.master
-        z = sweeper_write.mapper.Time_Random
-        
-        x = np.vstack([x, x])
-        y = np.vstack([y, [i + 1 for i in y]])
-        z = np.vstack([z, np.nan * np.ones(x.shape[0])])
-        Zm = ma.masked_invalid(z)
-    
-        c = ax.pcolor(x, y, Zm, cmap = 'ocean', vmin=np.nanmin(z), vmax=np.nanmax(z), shading = 'nearest')
-        ax.axis([np.nanmin(x), np.nanmax(x), y[0, 0], y[0, 0] + 0.5])
-        globals()[f'fig{n}'].colorbar(c, ax=ax)
-    else:
-        x = sweeper_write.mapper.map_slave
-        y = sweeper_write.mapper.map_master
-        z = sweeper_write.mapper.map_Time_Random
-        
-        
-        if x.shape[0] == 1:
-            x = np.vstack([x, x])
-            y = np.vstack([y, [i + 1 for i in y]])
-            z = np.vstack([z, np.nan * np.ones(x.shape[1])])
-            Zm = ma.masked_invalid(z)
-            c = ax.pcolor(x, y, Zm, cmap = 'ocean', vmin=np.nanmin(z), vmax=np.nanmax(z), shading = 'nearest')
-            ax.axis([np.nanmin(x), np.nanmax(x), y[0, 0], y[0, 0] + 0.5])
-            globals()[f'fig{n}'].colorbar(c, ax=ax)
-            
-        else:
-            Zm = ma.masked_invalid(z)
-            c = ax.pcolor(x, y, Zm, cmap = 'ocean', vmin=np.nanmin(z), vmax=np.nanmax(z), shading = 'nearest')
-            ax.set_title('pcolor')
-            # set the limits of the plot to the limits of the data
-            if x.shape[0] > 1:
-                ax.axis([np.nanmin(x), np.nanmax(x), np.nanmin(y), np.nanmax(y)])
-            globals()[f'fig{n}'].colorbar(c, ax=ax)
-
-
-    '''
-
     def axes_settings(i, pad = 0, tick_size = 4, label_size = 6, x_pad =0, y_pad = 1, title_size = 8, title_pad = -5):
         globals()[f'ax{i}'].tick_params(axis='y', which='both', length = 0, pad=pad, labelsize=tick_size)
         globals()[f'ax{i}'].tick_params(axis='x', which='both', length = 0, pad=pad + 1, labelsize=tick_size)
@@ -480,7 +435,85 @@ def my_animate(i, n, filename):
     globals()[f'graph_object{globals()["cur_animation_num"] - 3}'].update_idletasks()
     
     return [ax]
-    '''
+
+
+def map_animation(i, n, filename):
+    
+    global sweeper_write
+    global parameters_to_read
+    
+    ax = globals()[f'ax{n}']
+    
+    if hasattr(sweeper_write.mapper, 'map_slave'):
+        
+        x = sweeper_write.mapper.map_slave
+        y = sweeper_write.mapper.map_master
+        parameter = parameters_to_read[globals()[f'z{n}_status']].replace('.', '_')
+        z = getattr(sweeper_write.mapper, f'map_{parameter}')
+        
+        if x.shape[0] == 1:
+            x = np.vstack([x, x])
+            y = np.vstack([y, [i + 1 for i in y]])
+            z = np.vstack([z, np.nan * np.ones(x.shape[1])])
+            
+        Zm = ma.masked_invalid(z)
+        
+        ax.pcolor(Zm, cmap = 'ocean', vmin=np.nanmin(z), vmax=np.nanmax(z), shading = 'flat')
+            
+        y_tick_labels = [round(i, 2) for i in y[:, 0]]
+
+        x_tick_labels = [round(i, 2) for i in x[0, :]]
+
+        y_ticks = []
+
+        for ind, _ in enumerate(y_tick_labels):
+            if len(y_tick_labels) != 1 and ind != len(y_tick_labels) - 1:
+                y_ticks.append(round((abs((y_tick_labels[ind + 1] - y_tick_labels[ind])) / 2), 2))
+            elif len(y_tick_labels) == 1:
+                y_ticks.append(round((y_tick_labels[0] + 0.5), 2))
+
+        if len(y_tick_labels) != 1:
+            y_ticks.append(round((abs((y_tick_labels[-1] - y_tick_labels[-2])) / 2), 2))
+
+        x_ticks = []
+
+        for ind, _ in enumerate(x_tick_labels):
+            if len(x_tick_labels) != 1 and ind != len(x_tick_labels) - 1:
+                x_ticks.append(round((((x_tick_labels[ind + 1] - x_tick_labels[ind])) / 2), 2))
+            elif len(x_tick_labels) == 1:
+                x_ticks.append(round((x_tick_labels[0] + 0.5), 2))
+
+        if len(x_tick_labels) != 1:
+            x_ticks.append(round((abs((x_tick_labels[-1] - x_tick_labels[-2])) / 2), 2))
+        
+        if len(y_ticks) > 6:
+            ax.set_yticks((np.arange(len(y_ticks)) + np.array(y_ticks))[::len(y_ticks) // 6])
+            ax.set_yticklabels(y_tick_labels[::len(y_tick_labels) // 6])
+        else:
+            ax.set_yticks((np.arange(len(y_ticks)) + np.array(y_ticks)))
+            ax.set_yticklabels(y_tick_labels)
+            
+        if len(x_ticks) > 6:
+            ax.set_xticks((np.arange(len(x_ticks)) + np.array(x_ticks))[::len(x_ticks) // 6])
+            ax.set_xticklabels(x_tick_labels[::len(x_tick_labels) // 6])
+        else:
+            ax.set_xticks((np.arange(len(x_ticks)) + np.array(x_ticks)))
+            ax.set_xticklabels(x_tick_labels)
+
+def my_animate(i, n, filename):
+    # function to animate graph on each step
+
+    global plot_flag
+    
+    
+    
+    if plot_flag == 'Plot' or n % 3 != 1:
+        plot_animation(i, n, filename)
+    elif plot_flag == 'Map' and n % 3 == 1:
+        map_animation(i, n, filename)
+    else:
+        raise Exception(f'Plot flag can only be "plot" or "map", not {plot_flag}')
+
 
 zero_time = time.perf_counter()
 
@@ -5734,11 +5767,11 @@ class Graph():
         self.x_transform3 = str(self.preset[f'x{self.order + 2}_transform'].values[0])
         self.y_transform3 = str(self.preset[f'y{self.order + 2}_transform'].values[0])
         
-        label_x1 = tk.Label(self.tw, text='x', font=LARGE_FONT)
-        label_x1.place(relx=0.02, rely=0.76)
+        self.label_x1 = tk.Label(self.tw, text='x', font=LARGE_FONT)
+        self.label_x1.place(relx=0.02, rely=0.76)
 
-        label_y1 = tk.Label(self.tw, text='y', font=LARGE_FONT)
-        label_y1.place(relx=0.15, rely=0.76)
+        self.label_y1 = tk.Label(self.tw, text='y', font=LARGE_FONT)
+        self.label_y1.place(relx=0.15, rely=0.76)
 
         self.combo_x1 = ttk.Combobox(self.tw, values=columns)
         self.combo_x1.bind("<<ComboboxSelected>>", self.ax_update)
@@ -5797,6 +5830,14 @@ class Graph():
         
         self.button_add = tk.Button(self.tw, text = 'Add graph', font = LARGE_FONT, command = lambda: self.add_graph())
         self.button_close = tk.Button(self.tw, text = r'🗙', font = LARGE_FONT, command = lambda: self.close_graph())
+        
+        if len(manual_sweep_flags) == 2:
+            self.button_map = tk.Button(self.tw, text = '🗺', font = LARGE_FONT, command = self.switch)
+            self.button_map.place(relx = 0.01, rely = 0.35)
+            if plot_flag == 'Map':
+                CreateToolTip(self.button_map, 'Change to plot')
+            if plot_flag == 'Plot':
+                CreateToolTip(self.button_map, 'Change to map')
         
         if self.num_plots == 1:
             globals()[f'self.plot{self.order + 1}'].get_tk_widget().place_forget()
@@ -5935,6 +5976,7 @@ class Graph():
         globals()[f'y_transformation{var2str(ax)[2:]}'] = getattr(self, f'y_transform{dic[i % 3]}')
 
     def create_fig(self, i, figsize, pad = 0, tick_size = 4, label_size = 6, x_pad = 0, y_pad = 1, title_size = 8, title_pad = -5):
+        
         globals()[f'fig{i}'] = Figure(figsize, dpi=300)
         globals()[f'ax{i}'] = globals()[f'fig{i}'].add_subplot(111)
         globals()[f'fig{i}'].subplots_adjust(left = 0.25, bottom = 0.25)
@@ -5954,11 +5996,17 @@ class Graph():
 
     def ax_update(self, event):
         global columns
-        globals()[f'x{self.order}_status'] = self.combo_x1.current()
-        globals()[f'y{self.order}_status'] = self.combo_y1.current()
-        self.preset.loc[0, f'x{self.order}_current'] = self.combo_x1.current()
-        self.preset.loc[0, f'y{self.order}_current'] = self.combo_y1.current()
-        self.preset.to_csv(globals()['graph_preset_path'], index = False)
+        global plot_flag
+        if plot_flag == 'Plot':
+            globals()[f'x{self.order}_status'] = self.combo_x1.current()
+            globals()[f'y{self.order}_status'] = self.combo_y1.current()
+            self.preset.loc[0, f'x{self.order}_current'] = self.combo_x1.current()
+            self.preset.loc[0, f'y{self.order}_current'] = self.combo_y1.current()
+            self.preset.to_csv(globals()['graph_preset_path'], index = False)
+        elif plot_flag == 'Map':
+            globals()[f'z{self.order}_status'] = self.combo_x1.current()
+        else:
+            raise Exception(f'plot_flag could only obtain values "Plot" or "Map", got {plot_flag}')
         
     def disable_autoscale(self, event):
         print(f'autoscale for {self.order} axis disabled')
@@ -5967,6 +6015,31 @@ class Graph():
     def enable_autoscale(self, event):
         print(f'autoscale for {self.order} axis enabled')
         globals()[f'y{self.order}_autoscale'] = True
+        
+    def switch(self):
+        global plot_flag
+        global columns
+        
+        if plot_flag == 'Plot':
+            self.combo_y1.place_forget()
+            self.label_y1.place_forget()
+            self.label_x1.configure(text = 'z')
+            self.combo_x1.config(value = columns[3:])
+            if self.combo_x1.current() > 2:
+                globals()[f'z{self.order}_status'] = self.combo_x1.current()
+            else:
+                self.combo_x1.current(0)
+                globals()[f'z{self.order}_status'] = 0
+            globals()[f'ax{self.order}'].clear()
+            plot_flag = 'Map'
+        elif plot_flag == 'Map':
+            self.combo_y1.place(relx=0.165, rely=0.76)
+            self.combo_x1.config(value = columns)
+            self.label_y1.place(relx=0.15, rely=0.76)
+            self.label_x1.configure(text = 'x')
+            plot_flag = 'Plot'
+        else:
+            raise Exception(f'plot_flag could only obtain values "Plot" or "Map", got {plot_flag}')
         
     def update_item(self, item):
         name = self.filename
