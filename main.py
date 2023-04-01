@@ -5,7 +5,6 @@ import sys
 import json
 from csv import writer
 import threading
-import multiprocessing as mp
 from tkinter import ttk
 import tkinter as tk
 from ToolTip import CreateToolTip
@@ -273,6 +272,7 @@ if not exists(graph_preset_path):
         dic[f'x{i}_log'] = [0]
         dic[f'y{i}_current'] = [0]
         dic[f'y{i}_log'] = [0]
+        dic[f'z{i}_current'] = [0]
         dic[f'x{i}_lim_left'] = ['']
         dic[f'x{i}_lim_right'] = ['']
         dic[f'x{i}_autoscale'] = [1]
@@ -281,6 +281,8 @@ if not exists(graph_preset_path):
         dic[f'y{i}_autoscale'] = [1]
         dic[f'x{i}_label'] = ['x']
         dic[f'y{i}_label'] = ['y']
+        dic[f'z{i}_label'] = ['z']
+        dic[f'cmap{i}'] = ['viridis']
         dic[f'x{i}_transform'] = ['x']
         dic[f'y{i}_transform'] = ['y']
         
@@ -457,6 +459,16 @@ def map_animation(i, n, filename):
             y = np.vstack([y, [i + 1 for i in y]])
             z = np.vstack([z, np.nan * np.ones(x.shape[1])])
             
+        try:
+            x = eval(globals()[f'x_transformation{n}'], locals())
+        except:
+            pass
+        
+        try:
+            y = eval(globals()[f'y_transformation{n}'], locals())
+        except:
+            pass
+            
         Zm = ma.masked_invalid(z)
         
         try:
@@ -464,11 +476,21 @@ def map_animation(i, n, filename):
         except:
             pass
             
+        title = ax.get_title()
+        xlabel = ax.get_xlabel()
+        ylabel = ax.get_ylabel()
         ax.clear()
+        ax.set_title(title)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
         
-        colormap = ax.pcolor(Zm, cmap = 'ocean', vmin=np.nanmin(z), vmax=np.nanmax(z), shading = 'flat')
+        colormap = ax.pcolor(Zm, cmap = globals()[f'cmap_{n}'], vmin=np.nanmin(z), vmax=np.nanmax(z), shading = 'flat')
         globals()[f'colorbar{n}'] = ax.get_figure().colorbar(colormap, ax = ax)
         globals()[f'colorbar{n}'].ax.tick_params(labelsize=5)
+        try:
+            globals()[f'colorbar{n}'].set_label(globals()[f'colorbar{n}_label'])
+        except:
+            pass
         
         y_tick_labels = [round(i, 2) for i in y[:, 0]]
 
@@ -5381,6 +5403,7 @@ class FigureSettings(object):
         self.title = str(self.preset[f'title{self.position}'].values[0])
         self.x_current = int(self.preset[f'x{self.position}_current'].values[0])
         self.y_current = int(self.preset[f'y{self.position}_current'].values[0])
+        self.z_current = int(self.preset[f'z{self.position}_current'].values[0])
         self.x_log = int(self.preset[f'x{self.position}_log'].values[0])
         self.y_log = int(self.preset[f'y{self.position}_log'].values[0])
         self.x_lim_left = str(self.preset[f'x{self.position}_lim_left'].values[0])   
@@ -5391,144 +5414,222 @@ class FigureSettings(object):
         self.y_autoscale = str(self.preset[f'y{self.position}_autoscale'].values[0])
         self.x_label = str(self.preset[f'x{self.position}_label'].values[0])
         self.y_label = str(self.preset[f'y{self.position}_label'].values[0])
+        self.z_label = str(self.preset[f'z{self.position}_label'].values[0])
+        self.cmap = str(self.preset[f'cmap{self.position}'].values[0])
         self.x_transform = str(self.preset[f'x{self.position}_transform'].values[0])
         self.y_transform = str(self.preset[f'y{self.position}_transform'].values[0])
         
-        self.entry_title = tk.Entry(tw)
-        self.entry_title.insert(index = 0, string = self.title)
-        self.entry_title.grid(row = 0, column = 1, pady = 2)
+        if plot_flag == 'Plot':
         
-        ax.set_title(self.entry_title.get(), fontsize = 8, pad = -5)
+            self.entry_title = tk.Entry(tw)
+            self.entry_title.insert(index = 0, string = self.title)
+            self.entry_title.grid(row = 0, column = 1, pady = 2)
+            
+            ax.set_title(self.entry_title.get(), fontsize = 8, pad = -5)
+            
+            button_close = tk.Button(tw, text = 'Save', command = lambda: self.hidesettings(ax))
+            button_close.grid(row = 0, column = 5, pady = 2)
+            
+            label_xlabel = tk.Label(tw, text = 'x label = ')
+            label_xlabel.grid(row = 5, column = 0, pady = 2, sticky = tk.W)
+            
+            self.entry_xlabel = tk.Entry(tw)
+            self.entry_xlabel.insert(index = 0, string = self.x_label)
+            self.entry_xlabel.grid(row = 5, column = 1)
         
-        button_close = tk.Button(tw, text = 'Save', command = lambda: self.hidesettings(ax))
-        button_close.grid(row = 0, column = 5, pady = 2)
+            label_ylabel = tk.Label(tw, text = 'y label = ')
+            label_ylabel.grid(row = 6, column = 0, pady = 2, sticky = tk.W)
+            
+            self.entry_ylabel = tk.Entry(tw)
+            self.entry_ylabel.insert(index = 0, string = self.y_label)
+            self.entry_ylabel.grid(row = 6, column = 1, pady = 2)
+            
+            label_x_device = tk.Label(tw, text = 'x')
+            label_x_device.grid(row = 1, column = 0, pady = 2, sticky = tk.W)
+            
+            self.combo_x_device = ttk.Combobox(tw, values=globals()['columns'])
+            try:
+                self.combo_x_device.current(self.x_current)
+                self.ax_update_plot(ax = ax, event = None)
+            except:
+                pass
+            self.combo_x_device.bind("<<ComboboxSelected>>", lambda event: self.ax_update_plot(ax, event))
+            self.combo_x_device.grid(row = 1, column = 1, pady = 2)
+            
+            label_log_x = tk.Label(tw, text = 'log')
+            label_log_x.grid(row = 1, column = 3, pady = 2)
+            
+            self.status_log_x = tk.IntVar()
+            self.status_log_x.set(int(self.x_log))
+            checkbox_log_x = tk.Checkbutton(tw, 
+                                                 command= lambda: self.save_log_x_status(ax),
+                                                 variable = self.status_log_x, offvalue = 0, onvalue = 1)
+            checkbox_log_x.grid(row = 1, column = 4, pady = 2)
+            CreateToolTip(checkbox_log_x, 'Set x logscale')
+            #self.save_log_x_status(ax)
+            
+            label_y_device = tk.Label(tw, text = 'y')
+            label_y_device.grid(row = 2, column = 0, pady = 2, sticky = tk.W)
+            
+            self.combo_y_device = ttk.Combobox(tw, values=globals()['columns'])
+            try:
+                self.combo_y_device.current(self.y_current)
+                self.ax_update_plot(ax = ax, event = None)
+            except:
+                pass
+            self.combo_y_device.bind("<<ComboboxSelected>>", lambda event: self.ax_update_plot(ax, event))
+            self.combo_y_device.grid(row = 2, column = 1, pady = 2)
+            
+            label_log_y = tk.Label(tw, text = 'log')
+            label_log_y.grid(row = 2, column = 3, pady = 2)
+            
+            self.status_log_y = tk.IntVar()
+            self.status_log_y.set(int(self.y_log))
+            checkbox_log_y = tk.Checkbutton(tw, 
+                                                 command=lambda: self.save_log_y_status(ax),
+                                                 variable = self.status_log_y, offvalue = 0, onvalue = 1)
+            checkbox_log_y.grid(row = 2, column = 4, pady = 2)
+            CreateToolTip(checkbox_log_y, 'Set y logscale')
+            
+            #self.save_log_y_status(ax)
+            
+            self.status_xlim = tk.IntVar()
+            self.status_xlim.set(int(self.x_autoscale))
+            
+            label_xlim = tk.Label(tw, text = 'x lim = ')
+            label_xlim.grid(row = 3, column = 0, pady = 2, sticky = tk.W)
+            
+            self.entry_x_from = tk.Entry(tw, width = 8)
+            self.entry_x_from.insert(index = 0, string = self.x_lim_left)
+            self.entry_x_from.grid(row = 3, column = 1, pady = 2, sticky = tk.W)
+            
+            label_dash_x = tk.Label(tw, text = ' - ')
+            label_dash_x.grid(row = 3, column = 1, pady = 2)
+            
+            self.entry_x_to = tk.Entry(tw, width = 8)
+            self.entry_x_to.insert(index = 0, string = self.x_lim_right)
+            self.entry_x_to.grid(row = 3, column = 1, pady = 2, sticky = tk.E)
+            
+            checkbox_xlim = tk.Checkbutton(tw, command = lambda: self.set_xlim(ax),
+                                           variable = self.status_xlim, offvalue = 0, onvalue = 1)
+            checkbox_xlim.grid(row = 3, column = 3, pady = 2)
+            CreateToolTip(checkbox_xlim, 'Set x autoscale on')
+            
+            #self.set_xlim(ax)
+            
+            self.status_ylim = tk.IntVar()
+            self.status_ylim.set(int(self.y_autoscale))
+            
+            label_ylim = tk.Label(tw, text = 'y lim = ')
+            label_ylim.grid(row = 4, column = 0, pady = 2, sticky = tk.W)
+            
+            self.entry_y_from = tk.Entry(tw, width = 8)
+            self.entry_y_from.insert(index = 0, string = self.y_lim_left)
+            self.entry_y_from.grid(row = 4, column = 1, pady = 2, sticky = tk.W)
         
-        label_x_device = tk.Label(tw, text = 'x')
-        label_x_device.grid(row = 1, column = 0, pady = 2, sticky = tk.W)
+            label_dash_y = tk.Label(tw, text = ' - ')
+            label_dash_y.grid(row = 4, column = 1, pady = 2)
+            
+            self.entry_y_to = tk.Entry(tw, width = 8)
+            self.entry_y_to.insert(index = 0, string = self.y_lim_right)
+            self.entry_y_to.grid(row = 4, column = 1, pady = 2, sticky = tk.E)
+            
+            checkbox_ylim = tk.Checkbutton(tw, command = lambda: self.set_ylim(ax),
+                                           variable = self.status_ylim, offvalue = 0, onvalue = 1)
+            checkbox_ylim.grid(row = 4, column = 3, pady = 2)
+            CreateToolTip(checkbox_ylim, 'Set y autoscale on')
+            
+            #self.set_ylim(ax)
+            
+            label_x_transformation = tk.Label(tw, text = 'x = ')
+            label_x_transformation.grid(row = 7, column = 0, pady = 2, sticky = tk.W)
+            CreateToolTip(label_x_transformation, 'X transformation')
+            
+            self.entry_x_transformation = tk.Entry(tw)
+            self.entry_x_transformation.insert(index = 0, string = self.x_transform)
+            self.entry_x_transformation.grid(row = 7, column = 1, pady = 2)
+            
+            label_y_transformation = tk.Label(tw, text = 'y = ')
+            label_y_transformation.grid(row = 8, column = 0, pady = 2, sticky = tk.W)
+            CreateToolTip(label_y_transformation, 'Y transformation')
+            
+            self.entry_y_transformation = tk.Entry(tw)
+            self.entry_y_transformation.insert(index = 0, string = self.y_transform)
+            self.entry_y_transformation.grid(row = 8, column = 1, pady = 2)
         
-        self.combo_x_device = ttk.Combobox(tw, values=globals()['columns'])
-        try:
-            self.combo_x_device.current(self.x_current)
-            self.ax_update(ax = ax, event = None)
-        except:
-            pass
-        self.combo_x_device.bind("<<ComboboxSelected>>", lambda event: self.ax_update(ax, event))
-        self.combo_x_device.grid(row = 1, column = 1, pady = 2)
+        elif plot_flag == 'Map':
+            self.entry_title = tk.Entry(tw)
+            self.entry_title.insert(index = 0, string = self.title)
+            self.entry_title.grid(row = 0, column = 1, pady = 2)
+            
+            ax.set_title(self.entry_title.get(), fontsize = 8, pad = -5)
+            
+            button_close = tk.Button(tw, text = 'Save', command = lambda: self.hidesettings(ax))
+            button_close.grid(row = 0, column = 5, pady = 2)
+            
+            label_xlabel = tk.Label(tw, text = 'x label = ')
+            label_xlabel.grid(row = 2, column = 0, pady = 2, sticky = tk.W)
+            
+            self.entry_xlabel = tk.Entry(tw)
+            self.entry_xlabel.insert(index = 0, string = self.x_label)
+            self.entry_xlabel.grid(row = 2, column = 1)
         
-        label_log_x = tk.Label(tw, text = 'log')
-        label_log_x.grid(row = 1, column = 3, pady = 2)
-        
-        self.status_log_x = tk.IntVar()
-        self.status_log_x.set(int(self.x_log))
-        checkbox_log_x = tk.Checkbutton(tw, 
-                                             command= lambda: self.save_log_x_status(ax),
-                                             variable = self.status_log_x, offvalue = 0, onvalue = 1)
-        checkbox_log_x.grid(row = 1, column = 4, pady = 2)
-        CreateToolTip(checkbox_log_x, 'Set x logscale')
-        #self.save_log_x_status(ax)
-        
-        label_y_device = tk.Label(tw, text = 'y')
-        label_y_device.grid(row = 2, column = 0, pady = 2, sticky = tk.W)
-        
-        self.combo_y_device = ttk.Combobox(tw, values=globals()['columns'])
-        try:
-            self.combo_y_device.current(self.y_current)
-            self.ax_update(ax = ax, event = None)
-        except:
-            pass
-        self.combo_y_device.bind("<<ComboboxSelected>>", lambda event: self.ax_update(ax, event))
-        self.combo_y_device.grid(row = 2, column = 1, pady = 2)
-        
-        label_log_y = tk.Label(tw, text = 'log')
-        label_log_y.grid(row = 2, column = 3, pady = 2)
-        
-        self.status_log_y = tk.IntVar()
-        self.status_log_y.set(int(self.y_log))
-        checkbox_log_y = tk.Checkbutton(tw, 
-                                             command=lambda: self.save_log_y_status(ax),
-                                             variable = self.status_log_y, offvalue = 0, onvalue = 1)
-        checkbox_log_y.grid(row = 2, column = 4, pady = 2)
-        CreateToolTip(checkbox_log_y, 'Set y logscale')
-        
-        #self.save_log_y_status(ax)
-        
-        self.status_xlim = tk.IntVar()
-        self.status_xlim.set(int(self.x_autoscale))
-        
-        label_xlim = tk.Label(tw, text = 'x lim = ')
-        label_xlim.grid(row = 3, column = 0, pady = 2, sticky = tk.W)
-        
-        self.entry_x_from = tk.Entry(tw, width = 8)
-        self.entry_x_from.insert(index = 0, string = self.x_lim_left)
-        self.entry_x_from.grid(row = 3, column = 1, pady = 2, sticky = tk.W)
-        
-        label_dash_x = tk.Label(tw, text = ' - ')
-        label_dash_x.grid(row = 3, column = 1, pady = 2)
-        
-        self.entry_x_to = tk.Entry(tw, width = 8)
-        self.entry_x_to.insert(index = 0, string = self.x_lim_right)
-        self.entry_x_to.grid(row = 3, column = 1, pady = 2, sticky = tk.E)
-        
-        checkbox_xlim = tk.Checkbutton(tw, command = lambda: self.set_xlim(ax),
-                                       variable = self.status_xlim, offvalue = 0, onvalue = 1)
-        checkbox_xlim.grid(row = 3, column = 3, pady = 2)
-        CreateToolTip(checkbox_xlim, 'Set x autoscale on')
-        
-        #self.set_xlim(ax)
-        
-        self.status_ylim = tk.IntVar()
-        self.status_ylim.set(int(self.y_autoscale))
-        
-        label_ylim = tk.Label(tw, text = 'y lim = ')
-        label_ylim.grid(row = 4, column = 0, pady = 2, sticky = tk.W)
-        
-        self.entry_y_from = tk.Entry(tw, width = 8)
-        self.entry_y_from.insert(index = 0, string = self.y_lim_left)
-        self.entry_y_from.grid(row = 4, column = 1, pady = 2, sticky = tk.W)
+            label_ylabel = tk.Label(tw, text = 'y label = ')
+            label_ylabel.grid(row = 3, column = 0, pady = 2, sticky = tk.W)
+            
+            self.entry_ylabel = tk.Entry(tw)
+            self.entry_ylabel.insert(index = 0, string = self.y_label)
+            self.entry_ylabel.grid(row = 3, column = 1, pady = 2)
+            
+            label_zlabel = tk.Label(tw, text = 'z label = ')
+            label_zlabel.grid(row = 4, column = 0, pady = 2, sticky = tk.W)
+            
+            self.entry_zlabel = tk.Entry(tw)
+            self.entry_zlabel.insert(index = 0, string = self.z_label)
+            self.entry_zlabel.grid(row = 4, column = 1)
+            
+            label_z_device = tk.Label(tw, text = 'z')
+            label_z_device.grid(row = 1, column = 0, pady = 2, sticky = tk.W)
+            
+            self.combo_z_device = ttk.Combobox(tw, values=globals()['columns'])
+            try:
+                self.combo_z_device.current(self.z_current)
+                self.ax_update_map(ax = ax, event = None)
+            except:
+                pass
+            self.combo_z_device.bind("<<ComboboxSelected>>", lambda event: self.ax_update_map(ax, event))
+            self.combo_z_device.grid(row = 1, column = 1, pady = 2)
+            
+            label_x_transformation = tk.Label(tw, text = 'x = ')
+            label_x_transformation.grid(row = 5, column = 0, pady = 2, sticky = tk.W)
+            CreateToolTip(label_x_transformation, 'X transformation')
+            
+            self.entry_x_transformation = tk.Entry(tw)
+            self.entry_x_transformation.insert(index = 0, string = self.x_transform)
+            self.entry_x_transformation.grid(row = 5, column = 1, pady = 2)
+            
+            label_y_transformation = tk.Label(tw, text = 'y = ')
+            label_y_transformation.grid(row = 6, column = 0, pady = 2, sticky = tk.W)
+            CreateToolTip(label_y_transformation, 'Y transformation')
+            
+            self.entry_y_transformation = tk.Entry(tw)
+            self.entry_y_transformation.insert(index = 0, string = self.y_transform)
+            self.entry_y_transformation.grid(row = 6, column = 1, pady = 2)
+            
+            label_cmap = tk.Label(tw, text = 'Colormap')
+            label_cmap.grid(row = 7, column = 0, pady = 2)
+            
+            colormaps = list(plt.colormaps())
+            self.combo_cmap = ttk.Combobox(tw, values = colormaps)
+            try:
+                self.combo_cmap.current(colormaps.index(self.cmap))
+            except:
+                self.combo_cmap.current(0)
+            self.combo_cmap.bind("<<ComboboxSelected>>", lambda event: self.choose_cmap(ax, event))
+            self.combo_cmap.grid(row = 7, column = 1, pady = 2)
     
-        label_dash_y = tk.Label(tw, text = ' - ')
-        label_dash_y.grid(row = 4, column = 1, pady = 2)
-        
-        self.entry_y_to = tk.Entry(tw, width = 8)
-        self.entry_y_to.insert(index = 0, string = self.y_lim_right)
-        self.entry_y_to.grid(row = 4, column = 1, pady = 2, sticky = tk.E)
-        
-        checkbox_ylim = tk.Checkbutton(tw, command = lambda: self.set_ylim(ax),
-                                       variable = self.status_ylim, offvalue = 0, onvalue = 1)
-        checkbox_ylim.grid(row = 4, column = 3, pady = 2)
-        CreateToolTip(checkbox_ylim, 'Set y autoscale on')
-        
-        #self.set_ylim(ax)
-        
-        label_xlabel = tk.Label(tw, text = 'x label = ')
-        label_xlabel.grid(row = 5, column = 0, pady = 2, sticky = tk.W)
-        
-        self.entry_xlabel = tk.Entry(tw)
-        self.entry_xlabel.insert(index = 0, string = self.x_label)
-        self.entry_xlabel.grid(row = 5, column = 1)
-    
-        label_ylabel = tk.Label(tw, text = 'y label = ')
-        label_ylabel.grid(row = 6, column = 0, pady = 2, sticky = tk.W)
-        
-        self.entry_ylabel = tk.Entry(tw)
-        self.entry_ylabel.insert(index = 0, string = self.y_label)
-        self.entry_ylabel.grid(row = 6, column = 1, pady = 2)
-        
-        label_x_transformation = tk.Label(tw, text = 'x = ')
-        label_x_transformation.grid(row = 7, column = 0, pady = 2, sticky = tk.W)
-        CreateToolTip(label_x_transformation, 'X transformation')
-        
-        self.entry_x_transformation = tk.Entry(tw)
-        self.entry_x_transformation.insert(index = 0, string = self.x_transform)
-        self.entry_x_transformation.grid(row = 7, column = 1, pady = 2)
-        
-        label_y_transformation = tk.Label(tw, text = 'y = ')
-        label_y_transformation.grid(row = 8, column = 0, pady = 2, sticky = tk.W)
-        CreateToolTip(label_y_transformation, 'Y transformation')
-        
-        self.entry_y_transformation = tk.Entry(tw)
-        self.entry_y_transformation.insert(index = 0, string = self.y_transform)
-        self.entry_y_transformation.grid(row = 8, column = 1, pady = 2)
+        else:
+            raise Exception(f'plot_flag could only obtain values "Plot" or "Map", got {plot_flag}')
         
     def save_log_x_status(self, ax):
         if self.status_log_x.get() == 0:
@@ -5572,14 +5673,14 @@ class FigureSettings(object):
             globals()[f'y{var2str(ax)[2:]}_autoscale'] = True
         self.rewrite_preset()
         
-    def ax_update(self, ax, event):
+    def ax_update_plot(self, ax, event):
         
-        def axes_settings(i, pad = 0, tick_size = 4, label_size = 6, x_pad =0, y_pad = 1, title_size = 8, title_pad = -5):
-            globals()[f'ax{i}'].tick_params(axis='y', which='major', length = 0, pad=pad, labelsize=tick_size)
-            globals()[f'ax{i}'].tick_params(axis='x', which='major', length = 0, pad=pad + 1, labelsize=tick_size)
-            globals()[f'ax{i}'].set_xlabel('x', fontsize = label_size, labelpad = x_pad)
-            globals()[f'ax{i}'].set_ylabel('y', fontsize = label_size, labelpad = y_pad)
-            globals()[f'ax{i}'].set_title(f'Plot {i}', fontsize = title_size, pad = title_pad)
+        def axes_settings(i, pad = 0, tick_size = 4, label_size = 6, x_pad = 0, y_pad = 1, title_size = 8, title_pad = -5):
+            globals()[f'ax{i}'].tick_params(axis='y', which='both', length = 0, pad=pad, labelsize=tick_size)
+            globals()[f'ax{i}'].tick_params(axis='x', which='both', length = 0, pad=pad + 1, labelsize=tick_size)
+            globals()[f'ax{i}'].set_xlabel(self.entry_xlabel.get(), fontsize = label_size, labelpad = x_pad)
+            globals()[f'ax{i}'].set_ylabel(self.entry_ylabel.get(), fontsize = label_size, labelpad = y_pad)
+            globals()[f'ax{i}'].set_title(self.entry_title.get(), fontsize = title_size, pad = title_pad)
         
         ax_str = var2str(ax)
         
@@ -5600,71 +5701,161 @@ class FigureSettings(object):
         ax.set_ylim(ylims)
         ax.autoscale(enable = globals()[f'x{order}_autoscale'], axis = 'x')
         ax.autoscale(enable = globals()[f'y{order}_autoscale'], axis = 'y')
+        
+    def ax_update_map(self, ax, event):
+        
+        def axes_settings(i, pad = 0, tick_size = 4, label_size = 6, x_pad = 0, y_pad = 1, title_size = 8, title_pad = -5):
+            globals()[f'ax{i}'].tick_params(axis='y', which='both', length = 0, pad=pad, labelsize=tick_size)
+            globals()[f'ax{i}'].tick_params(axis='x', which='both', length = 0, pad=pad + 1, labelsize=tick_size)
+            globals()[f'ax{i}'].set_xlabel(self.entry_xlabel.get(), fontsize = label_size, labelpad = x_pad)
+            globals()[f'ax{i}'].set_ylabel(self.entry_ylabel.get(), fontsize = label_size, labelpad = y_pad)
+            globals()[f'colorbar{i}'].set_label(self.entry_zlabel.get(), fontsize = label_size, labelpad = x_pad)
+            globals()[f'colorbar{i}_label'] = self.entry_zlabel.get()
+            globals()[f'ax{i}'].set_title(self.entry_title.get(), fontsize = title_size, pad = title_pad)
+        
+        ax_str = var2str(ax)
+        
+        order = ax_str[2:]
+        
+        globals()[f'z{order}_status'] = self.combo_z_device.current()
+        
+        
+        ax.clear()
+        axes_settings(order)
+    
+    def choose_cmap(self, ax, event):
+        
+        ax_str = var2str(ax)
+        
+        order = ax_str[2:]
+        
+        globals()[f'cmap_{order}'] = plt.colormaps()[self.combo_cmap.current()]
+        
+        self.preset.loc[0, f'cmap{order}'] = globals()[f'cmap_{order}']
     
     def rewrite_preset(self):
         
-        self.preset.loc[0, f'title{self.position}'] = self.entry_title.get()
-        self.preset.loc[0, f'x{self.position}_current'] = self.combo_x_device.current()
-        self.preset.loc[0, f'y{self.position}_current'] = self.combo_y_device.current()
-        self.preset.loc[0, f'x{self.position}_log'] = self.status_log_x.get()
-        self.preset.loc[0, f'y{self.position}_log'] = self.status_log_y.get()
-        self.preset.loc[0, f'x{self.position}_lim_left'] = self.entry_x_from.get()
-        self.preset.loc[0, f'x{self.position}_lim_right'] = self.entry_x_to.get()
-        self.preset.loc[0, f'x{self.position}_autoscale'] = self.status_xlim.get()
-        self.preset.loc[0, f'y{self.position}_lim_left'] = self.entry_y_from.get()
-        self.preset.loc[0, f'y{self.position}_lim_right'] = self.entry_y_to.get()
-        self.preset.loc[0, f'y{self.position}_autoscale'] = self.status_ylim.get()
-        self.preset.loc[0, f'x{self.position}_label'] = self.entry_xlabel.get()
-        self.preset.loc[0, f'y{self.position}_label'] = self.entry_ylabel.get()
-        self.preset.loc[0, f'x{self.position}_transform'] = self.entry_x_transformation.get()
-        self.preset.loc[0, f'y{self.position}_transform'] = self.entry_y_transformation.get()
-        self.preset.to_csv(globals()['graph_preset_path'], index = False)
+        global plot_flag
+        
+        if plot_flag == 'Plot':
+            self.preset.loc[0, f'title{self.position}'] = self.entry_title.get()
+            self.preset.loc[0, f'x{self.position}_current'] = self.combo_x_device.current()
+            self.preset.loc[0, f'y{self.position}_current'] = self.combo_y_device.current()
+            self.preset.loc[0, f'x{self.position}_log'] = self.status_log_x.get()
+            self.preset.loc[0, f'y{self.position}_log'] = self.status_log_y.get()
+            self.preset.loc[0, f'x{self.position}_lim_left'] = self.entry_x_from.get()
+            self.preset.loc[0, f'x{self.position}_lim_right'] = self.entry_x_to.get()
+            self.preset.loc[0, f'x{self.position}_autoscale'] = self.status_xlim.get()
+            self.preset.loc[0, f'y{self.position}_lim_left'] = self.entry_y_from.get()
+            self.preset.loc[0, f'y{self.position}_lim_right'] = self.entry_y_to.get()
+            self.preset.loc[0, f'y{self.position}_autoscale'] = self.status_ylim.get()
+            self.preset.loc[0, f'x{self.position}_label'] = self.entry_xlabel.get()
+            self.preset.loc[0, f'y{self.position}_label'] = self.entry_ylabel.get()
+            self.preset.loc[0, f'x{self.position}_transform'] = self.entry_x_transformation.get()
+            self.preset.loc[0, f'y{self.position}_transform'] = self.entry_y_transformation.get()
+            self.preset.to_csv(globals()['graph_preset_path'], index = False)
+            
+        elif plot_flag == 'Map':
+            self.preset.loc[0, f'title{self.position}'] = self.entry_title.get()
+            self.preset.loc[0, f'z{self.position}_current'] = self.combo_z_device.current()
+            self.preset.loc[0, f'z{self.position}_label'] = self.entry_zlabel.get()
+            self.preset.loc[0, f'x{self.position}_label'] = self.entry_xlabel.get()
+            self.preset.loc[0, f'y{self.position}_label'] = self.entry_ylabel.get()
+            self.preset.loc[0, f'x{self.position}_transform'] = self.entry_x_transformation.get()
+            self.preset.loc[0, f'y{self.position}_transform'] = self.entry_y_transformation.get()
+            self.preset.to_csv(globals()['graph_preset_path'], index = False)
+    
+        else:
+            raise Exception(f'plot_flag could only obtain values "Plot" or "Map", got {plot_flag}')
     
     def hidesettings(self, ax):
         global x_transformation
         global y_transformation
+        global plot_flag
         
         tw = self.settings_window
-        if self.status_xlim.get() == 0:
+        
+        if plot_flag == 'Plot':
+            if self.status_xlim.get() == 0:
+                try:
+                    ax.set_xlim((float(self.entry_x_from.get()), float(self.entry_x_to.get())))
+                except:
+                    pass
+            if self.status_ylim.get() == 0:
+                try:
+                    ax.set_ylim((float(self.entry_y_from.get()), float(self.entry_y_to.get())))
+                except:
+                    pass
+            
             try:
-                ax.set_xlim((float(self.entry_x_from.get()), float(self.entry_x_to.get())))
+                ax.set_xlabel(self.entry_xlabel.get(), fontsize = 8)
             except:
                 pass
-        if self.status_ylim.get() == 0:
+            
             try:
-                ax.set_ylim((float(self.entry_y_from.get()), float(self.entry_y_to.get())))
+                ax.set_ylabel(self.entry_ylabel.get(), fontsize = 8)
+            except:
+                pass
+            
+            try:
+                ax.set_title(self.entry_title.get(), fontsize = 8, pad = -5)
+            except:
+                pass
+            
+            try:
+                globals()[f'x_transformation{var2str(ax)[2:]}'] = self.entry_x_transformation.get()
             except:
                 pass
         
-        try:
-            ax.set_xlabel(self.entry_xlabel.get(), fontsize = 8)
-        except:
-            pass
+            try:
+                globals()[f'y_transformation{var2str(ax)[2:]}'] = self.entry_y_transformation.get()
+            except:
+                pass
+            
+            self.rewrite_preset()
+            
+            if tw:
+                tw.destroy()
+                
+        elif plot_flag == 'Map':
+            
+            try:
+                ax.set_zlabel(self.entry_zlabel.get(), fontsize = 8)
+            except:
+                pass
+            
+            try:
+                ax.set_title(self.entry_title.get(), fontsize = 8, pad = -5)
+            except:
+                pass
+            
+            try:
+                ax.set_xlabel(self.entry_xlabel.get(), fontsize = 8)
+            except:
+                pass
+            
+            try:
+                ax.set_ylabel(self.entry_ylabel.get(), fontsize = 8)
+            except:
+                pass
+            
+            try:
+                globals()[f'x_transformation{var2str(ax)[2:]}'] = self.entry_x_transformation.get()
+            except:
+                pass
         
-        try:
-            ax.set_ylabel(self.entry_ylabel.get(), fontsize = 8)
-        except:
-            pass
-        
-        try:
-            ax.set_title(self.entry_title.get(), fontsize = 8, pad = -5)
-        except:
-            pass
-        
-        try:
-            globals()[f'x_transformation{var2str(ax)[2:]}'] = self.entry_x_transformation.get()
-        except:
-            pass
-    
-        try:
-            globals()[f'y_transformation{var2str(ax)[2:]}'] = self.entry_y_transformation.get()
-        except:
-            pass
-        
-        self.rewrite_preset()
-        
-        if tw:
-            tw.destroy()
+            try:
+                globals()[f'y_transformation{var2str(ax)[2:]}'] = self.entry_y_transformation.get()
+            except:
+                pass
+            
+            self.rewrite_preset()
+            
+            if tw:
+                tw.destroy()
+            
+        else:
+            raise Exception(f'plot_flag could only obtain values "Plot" or "Map", got {plot_flag}')
         
 def CreateFigureSettings(widget, ax):
     globals()[f'settingsFigure{var2str(ax)[2:]}'] = FigureSettings(widget)
@@ -5709,6 +5900,7 @@ class Graph():
         self.y_log2 = int(self.preset[f'y{self.order + 1}_log'].values[0])
         self.x_log3 = int(self.preset[f'x{self.order + 2}_log'].values[0])
         self.y_log3 = int(self.preset[f'y{self.order + 2}_log'].values[0])
+        self.cmap = str(self.preset[f'cmap{self.order}'].values[0])
         
         try:
             self.x_lim_left1 = float(self.preset[f'x{self.order}_lim_left'].values[0]) 
@@ -5853,6 +6045,7 @@ class Graph():
         if len(manual_sweep_flags) == 2:
             self.button_map = tk.Button(self.tw, text = '🗺', font = LARGE_FONT, command = self.switch)
             self.button_map.place(relx = 0.001, rely = 0.24)
+            globals()[f'cmap_{self.order}'] = self.cmap
             if plot_flag == 'Map':
                 CreateToolTip(self.button_map, 'Change to plot')
             if plot_flag == 'Plot':
