@@ -18,76 +18,177 @@ class sim900():
     def idn(self):
         value = get(self.sim900, '*IDN?')
         return value
+    
+    def config(self):
+        self.sim900.write('*CLS')
+        self.sim900.write('*RST')
         
     def volt1(self):
         ''' returns voltage of 1st port
         '''
-        time.sleep(0.02)
-        self.sim900.write('CONN 1, "\n"')
-        value = get(self.sim900, 'VOLT?')
-        self.sim900.write('\n')
+        try:
+            time.sleep(0.02)
+            self.sim900.write('CONN 1, "\n"')
+            value = get(self.sim900, 'VOLT?')
+            self.sim900.write('\n')
+            time.sleep(0.05)
+            self.sim900.write('CONN 1, "\n"')
+            value = get(self.sim900, 'VOLT?')
+            self.sim900.write('\n')
+        except:
+            try:
+                self.config()
+                self.volt1()
+            except Exception as e:
+                print(e)
+                return 
         return float(value)
     
     def volt2(self):
-        ''' returns voltage of 2nd port
+        ''' returns voltage of 1st port
         '''
-        time.sleep(0.02)
-        self.sim900.write('CONN 2, "\n"')
-        value = get(self.sim900, 'VOLT?')
-        self.sim900.write('\n')
+        try:
+            time.sleep(0.02)
+            self.sim900.write('CONN 2, "\n"')
+            value = get(self.sim900, 'VOLT?')
+            self.sim900.write('\n')
+            time.sleep(0.05)
+            self.sim900.write('CONN 2, "\n"')
+            value = get(self.sim900, 'VOLT?')
+            self.sim900.write('\n')
+        except:
+            try:
+                self.config()
+                self.volt2()
+            except Exception as e:
+                print(e)
+                return 
         return float(value)
     
     def volt3(self):
         ''' returns voltage of 3rd port
         '''
-        time.sleep(0.02)
-        self.sim900.write('CONN 3, "\n"')
-        value = get(self.sim900, 'VOLT?')
-        self.sim900.write('\n')
+        try:
+            time.sleep(0.02)
+            self.sim900.write('CONN 3, "\n"')
+            value = get(self.sim900, 'VOLT?')
+            self.sim900.write('\n')
+            time.sleep(0.05)
+            self.sim900.write('CONN 3, "\n"')
+            value = get(self.sim900, 'VOLT?')
+            self.sim900.write('\n')
+        except:
+            try:
+                self.config()
+                self.volt3()
+            except Exception as e:
+                print(e)
+                return 
         return float(value)
     
     def volt4(self):
         ''' returns voltage of 4th port
         '''
-        time.sleep(0.02)
-        self.sim900.write('CONN 4, "\n"')
-        value = get(self.sim900, 'VOLT?')
-        self.sim900.write('\n')
+        try:
+            time.sleep(0.02)
+            self.sim900.write('CONN 4, "\n"')
+            value = get(self.sim900, 'VOLT?')
+            self.sim900.write('\n')
+            time.sleep(0.05)
+            self.sim900.write('CONN 4, "\n"')
+            value = get(self.sim900, 'VOLT?')
+            self.sim900.write('\n')
+        except:
+            try:
+                self.config()
+                self.volt4()
+            except Exception as e:
+                print(e)
+                return 
         return float(value)
 
     def volt5(self):
         ''' returns voltage of 5th port
         '''
-        time.sleep(0.02)
-        self.sim900.write('CONN 5, "\n"')
-        value = get(self.sim900, 'VOLT?')
-        self.sim900.write('\n')
+        try:
+            time.sleep(0.02)
+            self.sim900.write('CONN 5, "\n"')
+            value = get(self.sim900, 'VOLT?')
+            self.sim900.write('\n')
+            time.sleep(0.05)
+            self.sim900.write('CONN 5, "\n"')
+            value = get(self.sim900, 'VOLT?')
+            self.sim900.write('\n')
+        except:
+            try:
+                self.config()
+                self.volt5()
+            except Exception as e:
+                print(e)
+                return 
         return float(value)
     
     def volt6(self):
         ''' returns voltage of 6th port
         '''
-        self.sim900.write('CONN 6, "\n"')
-        value = get(self.sim900, 'VOLT?')
-        self.sim900.write('\n')
+        try:
+            time.sleep(0.02)
+            self.sim900.write('CONN 6, "\n"')
+            value = get(self.sim900, 'VOLT?')
+            self.sim900.write('\n')
+            time.sleep(0.05)
+            self.sim900.write('CONN 6, "\n"')
+            value = get(self.sim900, 'VOLT?')
+            self.sim900.write('\n')
+        except:
+            try:
+                self.config()
+                self.volt6()
+            except Exception as e:
+                print(e)
+                return 
         return float(value)
     
     def volt7(self):
         ''' returns voltage of 7th port
         '''
-        time.sleep(0.02)
-        self.sim900.write('CONN 7, "\n"')
-        value = get(self.sim900, 'VOLT?')
-        self.sim900.write('\n')
+        try:
+            time.sleep(0.02)
+            self.sim900.write('CONN 7, "\n"')
+            value = get(self.sim900, 'VOLT?')
+            self.sim900.write('\n')
+            time.sleep(0.05)
+            self.sim900.write('CONN 7, "\n"')
+            value = get(self.sim900, 'VOLT?')
+            self.sim900.write('\n')
+        except:
+            try:
+                self.config()
+                self.volt7()
+            except Exception as e:
+                print(e)
+                return 
         return float(value)
     
     def volt8(self):
         ''' returns voltage of 8th port
         '''
-        time.sleep(0.02)
-        self.sim900.write('CONN 8, "\n"')
-        value = get(self.sim900, 'VOLT?')
-        self.sim900.write('\n')
+        try:
+            time.sleep(0.02)
+            self.sim900.write('CONN 8, "\n"')
+            value = get(self.sim900, 'VOLT?')
+            self.sim900.write('\n')
+            time.sleep(0.05)
+            self.sim900.write('CONN 8, "\n"')
+            value = get(self.sim900, 'VOLT?')
+            self.sim900.write('\n')
+        except:
+            try:
+                self.config()
+                self.volt8()
+            except Exception as e:
+                print(e)
+                return 
         return float(value)
     
     def set_volt1(self, value):
@@ -165,8 +266,9 @@ class sim900():
     
 def main():
     device = sim900('GPIB0::5::INSTR')
-    device.set_volt2(0.1)
-    print(device.volt2())
+    #device.set_volt2(1)
+    time.sleep(0.1)
+    print(f'Volt2 is {device.volt2()}')
     
 if __name__ == '__main__':
     main()

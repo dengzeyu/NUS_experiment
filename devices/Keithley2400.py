@@ -152,7 +152,7 @@ class keithley2400():
         if not hasattr(self, 'vnplc'):
             self.V_NPLC()
             
-        dv = float(value) - self.cur_volt
+        dv = abs(float(value) - self.cur_volt)
         nsteps = dv / (speed * (self.sdelay + self.vnplc / self.freq + self.tdelay))
         nsteps = int(round(nsteps))
         
@@ -194,7 +194,7 @@ class keithley2400():
         if not hasattr(self, 'inplc'):
             self.I_NPLC()
             
-        di = float(value) - self.cur_curr
+        di = abs(float(value) - self.cur_curr)
         nsteps = di / (speed * (self.sdelay + self.vnplc / self.freq + self.tdelay))
         nsteps = int(round(nsteps))
         
