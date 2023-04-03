@@ -1,4 +1,8 @@
 import pyvisa as visa
+from pymeasure.instruments.keithley.keithley2600 import Keithley2600
+from pymeasure.instruments import Instrument
+import numpy as np
+import time
 
 rm = visa.ResourceManager()
 
@@ -9,102 +13,222 @@ def get(device, command):
 
 class keithley_series_2600b():
     
-    def __init__(self, adress = 'GPIB0::26::INSTR'):
-        self.sm = rm.open_resource(
-            adress)
+    def __init__(self, adress = 'GPIB0::04::INSTR'):
+        self.k26 = Keithley2600(adress)
         
-        self.set_options = ['V', 'I', 'compl_curr', 'V_NPLC', 'I_NPLC', 'R_NPLC']
+        self.address = adress
         
-        self.get_options = ['V', 'I', 'R', 'compl_curr', 'V_NPLC', 'I_NPLC', 'R_NPLC', 'line_freq', 'Sdelay', 'TDelay']
+        self.set_options = ['A_source_current', 'A_compl_current', 'B_source_current', 'B_compl_current',
+                            'A_source_voltage', 'A_compl_voltage', 'B_source_voltage', 'B_compl_voltage',
+                            'A_NPLC', 'B_NPLC']
         
-    def IDN(self):
-        return get(self.sm, '*IDN?')
+        self.get_options = ['A_current', 'A_source_current', 'A_compl_current', 'B_current', 'B_source_current', 'B_compl_current',
+                            'A_voltage', 'A_source_voltage', 'A_compl_voltage', 'B_voltage', 'B_source_voltage', 'B_compl_voltage', 
+                            'A_NPLC', 'B_NPLC']
+        
+        self.sweepable = [True, False, True, False, True, False, True, False, False, False]
+        self.maxspeed = [0.01, None, 0.01, None, 5, None, 5, None, None, None]
+        
+    def open(self):
+        self.device = rm.open_resource(
+            self.adress)
+        
+    def FREQ(self):
+        #self.freq = self.k26.ChA.line_frequency
+        #TODO line frequency command
+        self.freq = 50
+        
+    def A_NPLC(self):
+        self.A_nplc = self.k26.ChA.measure_nplc
+        return self.A_nplc
     
-    def V(self):
-        try:
-            answer = get(self.sm, ':MEAS:VOLT?').split(',')[0]
-        except ValueError:
-            answer = get(self.sm, ':MEAS:VOLT?').split(',')[0]
-        return float(answer)
+    def B_NPLC(self):
+        self.B_nplc = self.k26.ChB.measure_nplc
+        return self.B_nplc
         
-    def I(self):
-        try:
-            answer = get(self.sm, ':MEAS:CURR?').split(',')[1]
-        except ValueError:
-            answer = get(self.sm, ':MEAS:CURR?').split(',')[1]
-        return float(answer)
-        
-    def R(self):
-        try:
-            answer = get(self.sm, ':MEAS:RES?').split(',')[2]
-        except ValueError:
-            answer = get(self.sm, ':MEAS:RES?').split(',')[2]
-        return float(answer)
-
-    def set_I_auto_range(self):
-        self.sm.write(':SENS:CURR:RANGE:AUTO 1')
-        
-    def off_I_auto_range(self):
-        self.sm.write(':SENS:CURR:RANGE:AUTO 0')
-        
-    def set_V_auto_range(self):
-        self.sm.write(':SENS:VOLT:RANGE:AUTO 1')
-        
-    def off_V_auto_range(self):
-        self.sm.write(':SENS:VOLT:RANGE:AUTO 0')
-        
-    def set_R_auto_range(self):
-        self.sm.write(':SENS:RES:RANGE:AUTO 1')
-        
-    def off_R_auto_range(self):
-        self.sm.write(':SENS:RES:RANGE:AUTO 0')
+    def A_current(self):
+        self.cur_A_current = self.k26.ChA.current
+        return self.cur_A_current
     
-    def set_I(self, value = 0):
-        self.sm.write(':SOUR:CURR:MODE FIXED')
-        self.sm.write(':SOUR:CURR ' + str(round(float(value), 5))) 
+    def B_current(self):
+        self.cur_B_current = self.k26.ChB.current
+        return self.cur_B_current
         
-    def set_V(self, value = 0, speed = None):
-        self.sm.write(':SOUR:VOLT:MODE FIXED')
-        self.sm.write(':SOUR:VOLT ' + str(round(float(value), 5))) 
-        
-    def set_compl_curr(self, value = 0):
-        self.sm.write(f':SENS:CURR:PROT {str(round(float(value), 5))}')\
-        
-    def V_NPLC(self):
-        return float(get(self.sm, ':SENS:VOLT:NPLC?'))
-        
-    def set_V_NPLC(self, value = 1):
-        self.sm.write(':SENS:VOLT:NPLC ' + str(round(float(value), 2)))
-        
-    def I_NPLC(self):
-        return float(get(self.sm, ':SENS:CURR:NPLC?'))
-        
-    def set_I_NPLC(self, value = 1):
-        self.sm.write(':SENS:CURR:NPLC ' + str(round(float(value), 2)))
-        
-    def R_NPLC(self):
-        return float(get(self.sm, ':SENS:RES:NPLC?'))
-        
-    def set_R_NPLC(self, value = 1):
-        self.sm.write(':SENS:RES:NPLC ' + str(round(float(value), 2)))
-        
-    def compl_curr(self):
-        answer = get(self.sm, ':SENS:CURR:PROT?')
-        return answer
-        
-    def line_freq(self):
-        return float(get(self.sm, ':SYST:LFR?'))
+    def A_source_current(self):
+        self.cur_A_source_current = self.k26.ChA.source_current
+        return self.cur_A_source_current
     
-    def Sdelay(self):
-        return float(get(self.sm, ':SOUR:DEL?'))
+    def B_source_current(self):
+        self.cur_B_source_current = self.k26.ChB.source_current
+        return self.cur_B_source_current
     
-    def Tdelay(self):
-        return float(get(self.sm, ':TRIG:DEL?'))
+    def A_compl_current(self):
+        return self.k26.ChA.compliance_current
     
+    def B_compl_current(self):
+        return self.k26.ChB.compliance_current
+    
+    def A_voltage(self):
+        self.cur_A_voltage = self.k26.ChA.voltage
+        return self.cur_A_voltage
+    
+    def B_voltage(self):
+        self.cur_B_voltage = self.k26.ChB.voltage
+        return self.cur_B_voltage
+        
+    def A_source_voltage(self):
+        self.cur_A_source_voltage = self.k26.ChA.source_voltage
+        return self.cur_A_source_voltage
+    
+    def B_source_voltage(self):
+        self.cur_B_source_voltage = self.k26.ChB.source_voltage
+        return self.cur_B_source_voltage
+    
+    def A_compl_voltage(self):
+        return self.k26.ChA.compliance_voltage
+    
+    def B_compl_voltage(self):
+        return self.k26.ChB.compliance_voltage
+    
+    def A_resistance(self):
+        return self.k26.ChA.resistance
+    
+    def B_resistance(self):
+        return self.k26.ChB.resistance
+    
+    def set_A_NPLC(self, value):
+        self.k26.ChA.measure_nplc = value
+        
+    def set_B_NPLC(self, value):
+        self.k26.ChB.measure_nplc = value
+        
+    def set_A_source_current(self, value: float, speed = None):
+        self.A_source_current()
+        self.A_NPLC()
+        self.FREQ()
+        
+        maxspeed = self.maxspeed[self.set_options.index('A_source_current')]
+        
+        if speed == None or speed == 'SetGet':
+            speed = maxspeed
+        else:
+            speed = min(speed, maxspeed)
+        
+        di = abs(float(value) - self.cur_A_source_current)
+        nsteps = di / (speed * (self.A_nplc / self.freq))
+        nsteps = int(round(nsteps))
+        nsteps = max(1, nsteps)
+        
+        dt = di / speed
+        dt = dt / nsteps
+        dt = abs(dt)
+        
+        currents = np.linspace(self.cur_A_source_current, value, nsteps)
+        
+        self.k26.ChA.source_output = 'ON'
+        self.k26.ChA.source_mode = 'current'
+        self.k26.ChA.auto_range_source()
+        
+        for current in currents:
+            self.k26.ChA.source_current = current
+            time.sleep(dt)
+            
+    def set_B_source_current(self, value: float, speed = None):
+        self.B_source_current()
+        self.B_NPLC()
+        self.FREQ()
+        
+        maxspeed = self.maxspeed[self.set_options.index('B_source_current')]
+        
+        if speed == None or speed == 'SetGet':
+            speed = maxspeed
+        else:
+            speed = min(speed, maxspeed)
+        
+        di = abs(float(value) - self.cur_B_source_current)
+        nsteps = di / (speed * (self.B_nplc / self.freq))
+        nsteps = int(round(nsteps))
+        nsteps = max(1, nsteps)
+        
+        dt = di / speed
+        dt = dt / nsteps
+        dt = abs(dt)
+        
+        currents = np.linspace(self.cur_B_source_current, value, nsteps)
+        
+        self.k26.ChB.source_output = 'ON'
+        self.k26.ChB.source_mode = 'current'
+        self.k26.ChB.auto_range_source()
+        
+        for current in currents:
+            self.k26.ChB.source_current = current
+            time.sleep(dt)
+            
+    def set_A_source_voltage(self, value: float, speed = None):
+        self.A_source_voltage()
+        self.A_NPLC()
+        self.FREQ()
+        
+        maxspeed = self.maxspeed[self.set_options.index('A_source_voltage')]
+        
+        if speed == None or speed == 'SetGet':
+            speed = maxspeed
+        else:
+            speed = min(speed, maxspeed)
+        
+        dv = abs(float(value) - self.cur_A_source_voltage)
+        nsteps = dv / (speed * (self.A_nplc / self.freq))
+        nsteps = int(round(nsteps))
+        nsteps = max(1, nsteps)
+        
+        dt = dv / speed
+        dt = dt / nsteps
+        dt = abs(dt)
+        
+        voltages = np.linspace(self.cur_A_source_voltage, value, nsteps)
+        
+        self.k26.ChA.source_output = 'ON'
+        self.k26.ChA.source_mode = 'voltage'
+        self.k26.ChA.auto_range_source()
+        
+        for voltage in voltages:
+            self.k26.ChA.source_voltage = voltage
+            time.sleep(dt)
+            
+    def set_B_source_voltage(self, value: float, speed = None):
+        self.B_source_voltage()
+        self.B_NPLC()
+        self.FREQ()
+        
+        maxspeed = self.maxspeed[self.set_options.index('A_source_voltage')]
+        
+        if speed == None or speed == 'SetGet':
+            speed = maxspeed
+        else:
+            speed = min(speed, maxspeed)
+        
+        dv = abs(float(value) - self.cur_B_source_voltage)
+        nsteps = dv / (speed * (self.B_nplc / self.freq))
+        nsteps = int(round(nsteps))
+        nsteps = max(1, nsteps)
+        
+        dt = dv / speed
+        dt = dt / nsteps
+        dt = abs(dt)
+        
+        voltages = np.linspace(self.cur_B_source_voltage, value, nsteps)
+        
+        self.k26.ChB.source_output = 'ON'
+        self.k26.ChB.source_mode = 'voltage'
+        self.k26.ChB.auto_range_source()
+        
+        for voltage in voltages:
+            self.k26.ChB.source_voltage = voltage
+            time.sleep(dt)
+        
 def main():
     device = keithley_series_2600b()
-    print(device.I())
-    print(device.IDN())
+    device.set_B_source_voltage(10, 1)
     
 if __name__ == '__main__':
     main()
