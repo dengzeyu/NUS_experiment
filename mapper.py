@@ -6,7 +6,6 @@ import threading as t
 
 class mapper():
     def __init__(self, parameters_to_read, from_slave: float, to_slave: float, num: int):
-        parameters_to_read = [i.replace('.', '_') for i in parameters_to_read]
         self.slave = np.array([])
         self.master = np.array([])
         self.from_slave = from_slave
@@ -22,6 +21,7 @@ class mapper():
     
     def append_master(self, value):
         self.master = np.concatenate((self.master, [value]))
+        print(self.master)
         
     def append_parameter(self, parameter: str, value):
         if hasattr(self, parameter):
@@ -49,15 +49,19 @@ class mapper():
         
         def concat(parameter):
             if not hasattr(self, f'map_{parameter}'):
-                self.__dict__[f'map_{parameter}'] = np.array([self.__dict__[parameter]])
+                if hasattr(self, parameter):
+                    self.__dict__[f'map_{parameter}'] = np.array([self.__dict__[parameter]])
+                else:
+                    self.__dict__[f'map_{parameter}'] = np.array([[]])
                 
             elif hasattr(self, f'map_{parameter}'):
-                self.__dict__[f'map_{parameter}'] = np.vstack([self.__dict__[f'map_{parameter}'], self.__dict__[parameter]])
+                if hasattr(self, parameter):
+                    self.__dict__[f'map_{parameter}'] = np.vstack([self.__dict__[f'map_{parameter}'], self.__dict__[parameter]])
+                else:
+                    self.__dict__[f'map_{parameter}'] = np.array([[]])
         
         for parameter in self.parameters_to_read:
-            self.__dict__[f'thread_{parameter}'] = t.Thread(target = concat, args = (parameter,))
-            self.__dict__[f'thread_{parameter}'].start()
-            self.__dict__[f'thread_{parameter}'].join()
+            concat(parameter)
             
     def check_sizes(self):
         
@@ -76,11 +80,7 @@ class mapper():
                 self.map_slave = np.hstack([self.map_slave, np.nan * np.ones(self.map_slave.shape[0])])
                 self.map_master = np.hstack([self.map_master, np.nan * np.ones(self.map_master.shape[0])])
                 for parameter in self.parameters_to_read:
-                    #stack(parameter)
-                    self.__dict__[parameter] = self.__dict__[parameter][args]
-                    self.__dict__[f'stack_thread_{parameter}'] = t.Thread(target = stack, args = (parameter,))
-                    self.__dict__[f'stack_thread_{parameter}'].start()
-                    self.__dict__[f'stack_thread_{parameter}'].join()
+                    stack(parameter)
                     
         if dif < 0: #current measurment has less points than the previous
             for i in range(abs(dif)):

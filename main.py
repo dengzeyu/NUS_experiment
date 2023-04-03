@@ -285,6 +285,7 @@ if not exists(graph_preset_path):
         dic[f'cmap{i}'] = ['viridis']
         dic[f'x{i}_transform'] = ['x']
         dic[f'y{i}_transform'] = ['y']
+        dic[f'y{i}_transform'] = ['z']
         
     dataframe = pd.DataFrame(dic)
     dataframe.to_csv(graph_preset_path, index = False)
@@ -451,14 +452,16 @@ def map_animation(i, n, filename):
         
         x = sweeper_write.mapper.map_slave
         y = sweeper_write.mapper.map_master
-        parameter = parameters_to_read[globals()[f'z{n}_status']].replace('.', '_')
+        parameter = parameters_to_read[globals()[f'z{n}_status']]
         z = getattr(sweeper_write.mapper, f'map_{parameter}')
         
         if x.shape[0] == 1:
             x = np.vstack([x, x])
             y = np.vstack([y, [i + 1 for i in y]])
             z = np.vstack([z, np.nan * np.ones(x.shape[1])])
-            
+          
+        z = ma.masked_invalid(z)  
+          
         try:
             x = eval(globals()[f'x_transformation{n}'], locals())
         except:
@@ -468,14 +471,17 @@ def map_animation(i, n, filename):
             y = eval(globals()[f'y_transformation{n}'], locals())
         except:
             pass
-            
-        Zm = ma.masked_invalid(z)
+        
+        try:
+            z = eval(globals()[f'z_transformation{n}'], locals())
+        except:
+            pass
         
         try:
             globals()[f'colorbar{n}'].remove()
         except:
             pass
-            
+
         title = ax.get_title()
         xlabel = ax.get_xlabel()
         ylabel = ax.get_ylabel()
@@ -484,7 +490,7 @@ def map_animation(i, n, filename):
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
         
-        colormap = ax.pcolor(Zm, cmap = globals()[f'cmap_{n}'], vmin=np.nanmin(z), vmax=np.nanmax(z), shading = 'flat')
+        colormap = ax.pcolor(z, cmap = globals()[f'cmap_{n}'], vmin=np.nanmin(z), vmax=np.nanmax(z), shading = 'flat')
         globals()[f'colorbar{n}'] = ax.get_figure().colorbar(colormap, ax = ax)
         globals()[f'colorbar{n}'].ax.tick_params(labelsize=5)
         try:
@@ -518,19 +524,23 @@ def map_animation(i, n, filename):
         if len(x_tick_labels) != 1:
             x_ticks.append(round((abs((x_tick_labels[-1] - x_tick_labels[-2])) / 2), 2))
         
+        y_ticks = np.arange(len(y_ticks)) + 0.5
+        
         if len(y_ticks) > 6:
-            ax.set_yticks((np.arange(len(y_ticks)) + np.array(y_ticks))[::len(y_ticks) // 6])
+            ax.set_yticks(y_ticks[::len(y_ticks) // 6])
             ax.set_yticklabels(y_tick_labels[::len(y_tick_labels) // 6])
         else:
-            ax.set_yticks((np.arange(len(y_ticks)) + np.array(y_ticks)))
+            ax.set_yticks(y_ticks)
             ax.set_yticklabels(y_tick_labels)
             
+        x_ticks = np.arange(len(x_ticks)) + 0.5
+            
         if len(x_ticks) > 6:
-            ax.set_xticks((np.arange(len(x_ticks)) + np.array(x_ticks))[::len(x_ticks) // 6])
-            ax.set_xticklabels(x_tick_labels[::len(x_tick_labels) // 6])
+            ax.set_xticks(x_ticks)
+            ax.set_xticklabels(x_tick_labels[::len(x_tick_labels) // 6], rotation=30)
         else:
-            ax.set_xticks((np.arange(len(x_ticks)) + np.array(x_ticks)))
-            ax.set_xticklabels(x_tick_labels)
+            ax.set_xticks(x_ticks)
+            ax.set_xticklabels(x_tick_labels, rotation=30)
 
 def my_animate(i, n, filename):
     # function to animate graph on each step
@@ -4650,6 +4660,7 @@ class Sweeper_write(threading.Thread):
             
             global dataframe
             global data
+            global manual_sweep_flag
             
             for parameter in self.parameters_to_read:
                 index_dot = len(parameter) - parameter[::-1].find('.') - 1
@@ -4659,8 +4670,9 @@ class Sweeper_write(threading.Thread):
                 try:
                     parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
                                               option)()
-                    self.mapper.append_parameter(str(parameter).replace('.', '_'), parameter_value)
-                    dataframe.append("{:.3e}".format(parameter_value))
+                    if len(manual_sweep_flags) == 2:
+                        self.mapper.append_parameter(str(parameter), parameter_value)
+                    dataframe.append(parameter_value)
                 except:
                     dataframe.append(None)
         
@@ -4741,6 +4753,8 @@ class Sweeper_write(threading.Thread):
             
         def step(axis = 1, value = None, back = False):
             
+            '''performs a step along sweep axis'''
+            
             def try_tozero():
                 
                 def try_go(axis, value):
@@ -4757,8 +4771,6 @@ class Sweeper_write(threading.Thread):
                         pass
                 except:
                     pass
-            
-            '''performs a step along sweep axis'''
             
             global zero_time
             global dataframe
@@ -4872,11 +4884,11 @@ class Sweeper_write(threading.Thread):
             ind = [0]
             basic_name = filename_sweep[len(cur_dir)+ 1:-4]
             if '-' in basic_name:
-                basic_name = basic_name[:basic_name.find('-')]
+                basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('-') - 1)] #all before last -
             if '_' in basic_name:
-                basic_name = basic_name[:basic_name.find('_')]
-            if '_' in basic_name:
-                basic_name = basic_name[:basic_name.find('_')]
+                basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('_') - 1)] #all before last _
+            #if '_' in basic_name:
+            #    basic_name = basic_name[:basic_name.find('_')]
             print(f'Basic name is {basic_name}')
             for file in files:
                 if basic_name in file and 'manual' not in file:
@@ -5217,10 +5229,6 @@ class Sweeper_write(threading.Thread):
                 external_loop_back_and_forth()
                 self.sweeper_flag2 == False
     
-            print(self.mapper.map_master)
-            print(self.mapper.map_slave)
-            print(self.mapper.map_Time_Random)
-    
             self.sweeper_flag2 == False
     
         if self.sweeper_flag3 == True:
@@ -5418,6 +5426,7 @@ class FigureSettings(object):
         self.cmap = str(self.preset[f'cmap{self.position}'].values[0])
         self.x_transform = str(self.preset[f'x{self.position}_transform'].values[0])
         self.y_transform = str(self.preset[f'y{self.position}_transform'].values[0])
+        self.z_transform = str(self.preset[f'z{self.position}_transform'].values[0])
         
         if plot_flag == 'Plot':
         
@@ -5591,7 +5600,7 @@ class FigureSettings(object):
             label_z_device = tk.Label(tw, text = 'z')
             label_z_device.grid(row = 1, column = 0, pady = 2, sticky = tk.W)
             
-            self.combo_z_device = ttk.Combobox(tw, values=globals()['columns'])
+            self.combo_z_device = ttk.Combobox(tw, values=globals()['columns'][3:])
             try:
                 self.combo_z_device.current(self.z_current)
                 self.ax_update_map(ax = ax, event = None)
@@ -5616,8 +5625,16 @@ class FigureSettings(object):
             self.entry_y_transformation.insert(index = 0, string = self.y_transform)
             self.entry_y_transformation.grid(row = 6, column = 1, pady = 2)
             
+            label_z_transformation = tk.Label(tw, text = 'z = ')
+            label_z_transformation.grid(row = 7, column = 0, pady = 2, sticky = tk.W)
+            CreateToolTip(label_z_transformation, 'z transformation')
+            
+            self.entry_z_transformation = tk.Entry(tw)
+            self.entry_z_transformation.insert(index = 0, string = self.z_transform)
+            self.entry_z_transformation.grid(row = 7, column = 1, pady = 2)
+            
             label_cmap = tk.Label(tw, text = 'Colormap')
-            label_cmap.grid(row = 7, column = 0, pady = 2)
+            label_cmap.grid(row = 8, column = 0, pady = 2)
             
             colormaps = list(plt.colormaps())
             self.combo_cmap = ttk.Combobox(tw, values = colormaps)
@@ -5626,7 +5643,7 @@ class FigureSettings(object):
             except:
                 self.combo_cmap.current(0)
             self.combo_cmap.bind("<<ComboboxSelected>>", lambda event: self.choose_cmap(ax, event))
-            self.combo_cmap.grid(row = 7, column = 1, pady = 2)
+            self.combo_cmap.grid(row = 8, column = 1, pady = 2)
     
         else:
             raise Exception(f'plot_flag could only obtain values "Plot" or "Map", got {plot_flag}')
@@ -5763,6 +5780,7 @@ class FigureSettings(object):
             self.preset.loc[0, f'y{self.position}_label'] = self.entry_ylabel.get()
             self.preset.loc[0, f'x{self.position}_transform'] = self.entry_x_transformation.get()
             self.preset.loc[0, f'y{self.position}_transform'] = self.entry_y_transformation.get()
+            self.preset.loc[0, f'z{self.position}_transform'] = self.entry_z_transformation.get()
             self.preset.to_csv(globals()['graph_preset_path'], index = False)
     
         else:
@@ -5846,6 +5864,11 @@ class FigureSettings(object):
         
             try:
                 globals()[f'y_transformation{var2str(ax)[2:]}'] = self.entry_y_transformation.get()
+            except:
+                pass
+            
+            try:
+                globals()[f'z_transformation{var2str(ax)[2:]}'] = self.entry_z_transformation.get()
             except:
                 pass
             
@@ -6249,6 +6272,10 @@ class Graph():
             self.combo_x1.config(value = columns)
             self.label_y1.place(relx=0.15, rely=0.76)
             self.label_x1.configure(text = 'x')
+            try:
+                globals()[f'colorbar{self.order}'].remove()
+            except:
+                pass
             plot_flag = 'Plot'
         else:
             raise Exception(f'plot_flag could only obtain values "Plot" or "Map", got {plot_flag}')

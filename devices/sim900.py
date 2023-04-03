@@ -164,7 +164,7 @@ class sim900():
     
     
 def main():
-    device = sim900('GPIB0::2::INSTR')
+    device = sim900('GPIB0::5::INSTR')
     device.set_volt2(0.1)
     print(device.volt2())
     
