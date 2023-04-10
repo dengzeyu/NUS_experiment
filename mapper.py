@@ -1,8 +1,4 @@
 import numpy as np
-import numpy.ma as ma
-from scipy import interpolate
-import multiprocessing as mp
-import threading as t
 
 class mapper():
     def __init__(self, parameters_to_read, from_slave: float, to_slave: float, num: int):

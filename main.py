@@ -75,11 +75,11 @@ for ind, device in enumerate(device_classes):
 
 print('Devices import succes')
 
-matplotlib.use("TkAgg")
-plt.rcParams['animation.html'] = 'jshtml'
+#matplotlib.use("TkAgg")
+#plt.rcParams['animation.html'] = 'jshtml'
 LARGE_FONT = ('Verdana', 12)
 SUPER_LARGE = ('Verdana', 16)
-style.use('seaborn-whitegrid')
+#style.use('seaborn-whitegrid')
 
 # Check if everything connected properly
 rm = visa.ResourceManager()
@@ -228,7 +228,6 @@ def create_preset(dimension):
              dic['status_back_and_forth' + str(i+1)] = [0]
              dic['status_manual' + str(i+1)] = [0]
              dic['manual_filename' + str(i+1)] = ''
-             dic['master_option' + str(i+1)] = 0
         dic['condition'] = ''
         dic['filename_sweep'] = filename_sweep
         dataframe = pd.DataFrame(dic)
@@ -536,7 +535,7 @@ def map_animation(i, n, filename):
         x_ticks = np.arange(len(x_ticks)) + 0.5
             
         if len(x_ticks) > 6:
-            ax.set_xticks(x_ticks)[::len(x_ticks) // 6]
+            ax.set_xticks(x_ticks[::len(x_ticks) // 6])
             ax.set_xticklabels(x_tick_labels[::len(x_tick_labels) // 6], rotation=30)
         else:
             ax.set_xticks(x_ticks)
@@ -1939,10 +1938,8 @@ class Sweeper2d(tk.Frame):
         self.manual_filenames = [self.preset['manual_filename1'].values[0], self.preset['manual_filename2'].values[0]]
         self.status_back_and_forth_master = tk.IntVar(value = int(self.preset['status_back_and_forth1'].values[0]))
         self.status_manual1 = tk.IntVar(value = int(self.preset['status_manual1'].values[0]))
-        self.master_option1 = int(self.preset['master_option1'].values[0])
         self.status_back_and_forth_slave = tk.IntVar(value = int(self.preset['status_back_and_forth2'].values[0]))
         self.status_manual2 = tk.IntVar(value = int(self.preset['status_manual2'].values[0]))
-        self.master_option2 = int(self.preset['master_option2'].values[0])
         self.condition = str(self.preset['condition'].values[0])
         self.filename_sweep = self.preset['filename_sweep'][0]
         try:
@@ -1969,22 +1966,11 @@ class Sweeper2d(tk.Frame):
         label_to_read = tk.Label(self, text='To read:', font=LARGE_FONT)
         label_to_read.place(relx=0.45, rely=0.12)
         
-        label_hierarchy = tk.Label(self, text = 'Hierarchy:', font=LARGE_FONT)
-        label_hierarchy.place(relx = 0.05, rely = 0.17)
+        label_master = tk.Label(self, text = 'Master', font = LARGE_FONT)
+        label_master.place(relx = 0.15, rely = 0.17)
         
-        self.master_option = ['', 'Master', 'Slave']
-
-        self.combo_master1 = ttk.Combobox(self, value = self.master_option)
-        self.combo_master1.bind(
-            "<<ComboboxSelected>>", self.update_master2_combo)
-        self.combo_master1.current(self.master_option1)
-        self.combo_master1.place(relx = 0.15, rely = 0.17)
-        
-        self.combo_master2 = ttk.Combobox(self, value = self.master_option)
-        self.combo_master2.bind(
-            "<<ComboboxSelected>>", self.update_master1_combo)
-        self.combo_master2.current(self.master_option2)
-        self.combo_master2.place(relx = 0.3, rely = 0.17)
+        label_slave = tk.Label(self, text = 'Slave', font = LARGE_FONT)
+        label_slave.place(relx = 0.3, rely = 0.17)
 
         label_devices = tk.Label(self, text = 'Devices:', font=LARGE_FONT)
         label_devices.place(relx = 0.05, rely = 0.21)
@@ -2245,34 +2231,6 @@ class Sweeper2d(tk.Frame):
             self, text='📊', font = SUPER_LARGE, command=lambda: self.open_graph())
         graph_button.place(relx=0.7, rely=0.8)
         CreateToolTip(graph_button, 'Graph')
-        
-    def update_master2_combo(self, event, interval = 100):
-        if self.combo_master1['value'][self.combo_master1.current()] == '':
-            self.combo_master2['value'] = self.master_option
-            self.combo_master2.after(interval)
-        if self.combo_master1['value'][self.combo_master1.current()] == 'Master':
-            self.combo_master2['value'] = ['', 'Slave']
-            self.combo_master2.after(interval)
-        if self.combo_master1['value'][self.combo_master1.current()] == 'Slave':
-            self.combo_master2['value'] = ['', 'Master']
-            self.combo_master2.after(interval)
-        if self.combo_master1.current() != self.master_option1:
-            self.preset.loc[0, 'master_option1'] = self.combo_master1.current()
-            self.preset.to_csv(globals()['sweeper2d_path'], index = False)
-            
-    def update_master1_combo(self, event, interval = 100):
-        if self.combo_master2['value'][self.combo_master1.current()] == '':
-            self.combo_master1['value'] = self.master_option
-            self.combo_master1.after(interval)
-        if self.combo_master2['value'][self.combo_master1.current()] == 'Master':
-            self.combo_master1['value'] = ['', 'Slave']
-            self.combo_master1.after(interval)
-        if self.combo_master2['value'][self.combo_master1.current()] == 'Slave':
-            self.combo_master1['value'] = ['', 'Master']
-            self.combo_master1.after(interval)
-        if self.combo_master2.current() != self.master_option2:
-            self.preset.loc[0, 'master_option2'] = self.combo_master2.current()
-            self.preset.to_csv(globals()['sweeper2d_path'], index = False)
 
     def update_sweep_parameters1(self, event, interval=100):
         global types_of_devices
@@ -2448,8 +2406,7 @@ class Sweeper2d(tk.Frame):
         if self.count_option1 == 'step':
             step1 = ratio_sweep1 
             ratio_sweep1 = ratio_sweep1 / delay_factor1
-            if globals()['sweeper_write'].sweepable1 != True:
-                globals()['sweeper_write'].step1 = step1
+            globals()['sweeper_write'].step1 = step1
             
         if self.count_option2 == 'step':
             step2 = ratio_sweep2 
@@ -2650,7 +2607,6 @@ class Sweeper2d(tk.Frame):
         global columns
         global manual_sweep_flags
         global manual_filenames
-        global master_lock
         global zero_time
         global back_and_forth_master
         global back_and_forth_slave
@@ -2671,28 +2627,12 @@ class Sweeper2d(tk.Frame):
 
         # creating columns
         device_to_sweep1 = list_of_devices[self.combo_to_sweep1.current()]
-        parameters = device_to_sweep1.set_options
-        parameter_to_sweep1 = parameters[self.sweep_options1.current()]
+        parameters1 = device_to_sweep1.set_options
+        parameter_to_sweep1 = parameters1[self.sweep_options1.current()]
         
         device_to_sweep2 = list_of_devices[self.combo_to_sweep2.current()]
-        parameters = device_to_sweep2.set_options
-        parameter_to_sweep2 = parameters[self.sweep_options2.current()]
-        
-        if self.combo_master1['value'][self.combo_master1.current()] == 'Slave' and self.combo_master2['value'][self.combo_maste2.current()] == 'Master':
-            master_lock = True
-            
-            device_dub = device_to_sweep1
-            device_to_sweep1 = device_to_sweep2
-            device_to_sweep2 = device_dub
-            
-            parameter_dub = parameter_to_sweep1
-            parameter_to_sweep1 = parameter_to_sweep2
-            parameter_to_sweep2 = parameter_dub
-            
-            manual_sweep_flags = manual_sweep_flags[::-1]
-            manual_filenames = manual_filenames[::-1]
-            
-            back_and_forth_slave, back_and_forth_master = back_and_forth_master, back_and_forth_slave
+        parameters2 = device_to_sweep2.set_options
+        parameter_to_sweep2 = parameters2[self.sweep_options2.current()]
         
         columns_device1 = self.combo_to_sweep1['values'][self.combo_to_sweep1.current()]
         columns_parameters1 = self.sweep_options1['values'][self.sweep_options1.current()]
@@ -2700,11 +2640,8 @@ class Sweeper2d(tk.Frame):
         columns_device2 = self.combo_to_sweep2['values'][self.combo_to_sweep2.current()]
         columns_parameters2 = self.sweep_options2['values'][self.sweep_options2.current()]
         
-        columns = ['Time', columns_device1 + '.' + columns_parameters1 + '_sweep',
+        columns = ['time', columns_device1 + '.' + columns_parameters1 + '_sweep',
                    columns_device2 + '.' + columns_parameters2 + '_sweep']
-        
-        if self.combo_master1['value'][self.combo_master1.current()] == 'Master' and self.combo_master2['value'][self.combo_master2.current()] == 'Slave':
-            master_lock = True
             
         for option in parameters_to_read:
             columns.append(option)
@@ -2786,13 +2723,10 @@ class Sweeper3d(tk.Frame):
         self.manual_filenames = [self.preset['manual_filename1'].values[0], self.preset['manual_filename2'].values[0], self.preset['manual_filename3'].values[0]]
         self.status_back_and_forth_master = tk.IntVar(value = int(self.preset['status_back_and_forth1'].values[0]))
         self.status_manual1 = tk.IntVar(value = int(self.preset['status_manual1'].values[0]))
-        self.master_option1 = int(self.preset['master_option1'].values[0])
         self.status_back_and_forth_slave = tk.IntVar(value = int(self.preset['status_back_and_forth2'].values[0]))
         self.status_manual2 = tk.IntVar(value = int(self.preset['status_manual2'].values[0]))
-        self.master_option2 = int(self.preset['master_option2'].values[0])
         self.status_back_and_forth_slave_slave = tk.IntVar(value = int(self.preset['status_back_and_forth3'].values[0]))
         self.status_manual3 = tk.IntVar(value = int(self.preset['status_manual3'].values[0]))
-        self.master_option3 = int(self.preset['master_option3'].values[0])
         self.filename_sweep = self.preset['filename_sweep'].values[0]
         self.condition = str(self.preset['condition'].values[0])
         try:
@@ -2817,31 +2751,19 @@ class Sweeper3d(tk.Frame):
         label_to_sweep2.place(relx=0.3, rely=0.12)
 
         label_to_sweep3 = tk.Label(self, text='To sweep:', font=LARGE_FONT)
-        label_to_sweep3.place(relx=0.3, rely=0.12)
+        label_to_sweep3.place(relx=0.45, rely=0.12)
 
         label_to_read = tk.Label(self, text='To read:', font=LARGE_FONT)
         label_to_read.place(relx=0.6, rely=0.12)
 
-        label_hierarchy = tk.Label(self, text = 'Hierarchy:', font=LARGE_FONT)
-        label_hierarchy.place(relx = 0.05, rely = 0.17)
-
-        self.combo_master1 = ttk.Combobox(self, value = ['', 'Master', 'Slave', 'Slave-slave'])
-        self.combo_master1.bind(
-            "<<ComboboxSelected>>", self.update_master23_combo)
-        self.combo_master1.current(self.master_option1)
-        self.combo_master1.place(relx = 0.15, rely = 0.17)
+        label_master = tk.Label(self, text = 'Master', font = LARGE_FONT)
+        label_master.place(relx = 0.15, rely = 0.17)
         
-        self.combo_master2 = ttk.Combobox(self, value = ['', 'Master', 'Slave', 'Slave-slave'])
-        self.combo_master2.bind(
-            "<<ComboboxSelected>>", self.update_master13_combo)
-        self.combo_master2.current(self.master_option2)
-        self.combo_master2.place(relx = 0.3, rely = 0.17)
+        label_slave = tk.Label(self, text = 'Slave', font = LARGE_FONT)
+        label_slave.place(relx = 0.3, rely = 0.17)
         
-        self.combo_master3 = ttk.Combobox(self, value = ['', 'Master', 'Slave', 'Slave-slave'])
-        self.combo_master3.bind(
-            "<<ComboboxSelected>>", self.update_master12_combo)
-        self.combo_master3.current(self.master_option3)
-        self.combo_master3.place(relx = 0.45, rely = 0.17)
+        label_slave_slave = tk.Label(self, text = 'Slave slave', font = LARGE_FONT)
+        label_slave_slave.place(relx = 0.45, rely = 0.17)
         
         label_devices = tk.Label(self, text = 'Devices:', font=LARGE_FONT)
         label_devices.place(relx = 0.05, rely = 0.21)
@@ -2902,10 +2824,6 @@ class Sweeper3d(tk.Frame):
         back_and_forth_master = 1
         back_and_forth_slave = 1
         back_and_forth_slave_slave = 1
-        
-        self.save_back_and_forth_master_status()
-        self.save_back_and_forth_slave_status()
-        self.save_back_and_forth_slave_slave_status()
     
         self.back_and_forth_master_count = 2
     
@@ -2966,6 +2884,10 @@ class Sweeper3d(tk.Frame):
         label_back_and_forth_slave = tk.Label(self, text = '🔁', font = SUPER_LARGE)
         label_back_and_forth_slave.place(relx = 0.5135, rely = 0.61)
         CreateToolTip(label_back_and_forth_slave, 'Back and forth sweep\nfor this axis')
+
+        self.save_back_and_forth_master_status()
+        self.save_back_and_forth_slave_status()
+        self.save_back_and_forth_slave_slave_status()
 
         self.devices = tk.StringVar()
         self.devices.set(value=parameters_to_read)
@@ -3186,81 +3108,6 @@ class Sweeper3d(tk.Frame):
             self, text='📊', font = SUPER_LARGE, command=lambda: self.open_graph())
         graph_button.place(relx=0.75, rely=0.8)
         CreateToolTip(graph_button, 'Graph')
-
-    def update_master23_combo(self, event, interval = 100):
-        if self.combo_master1['value'][self.combo_master1.current()] == '':
-            self.combo_master2['value'] = self.master_option
-            self.combo_master2.after(interval)
-            self.combo_master3['value'] = self.master_option
-            self.combo_master3.after(interval)
-        if self.combo_master1['value'][self.combo_master1.current()] == 'Master':
-            self.combo_master2['value'] = ['', 'Slave', 'Slave-slave']
-            self.combo_master2.after(interval)
-            self.combo_master3['value'] = ['', 'Slave', 'Slave-slave']
-            self.combo_master3.after(interval)
-        if self.combo_master1['value'][self.combo_master1.current()] == 'Slave':
-            self.combo_master2['value'] = ['', 'Master', 'Slave-slave']
-            self.combo_master2.after(interval)
-            self.combo_master3['value'] = ['', 'Master', 'Slave-slave']
-            self.combo_master3.after(interval)
-        if self.combo_master1['value'][self.combo_master1.current()] == 'Slave-slave':
-            self.combo_master2['value'] = ['', 'Master', 'Slave']
-            self.combo_master2.after(interval)
-            self.combo_master3['value'] = ['', 'Master', 'Slave']
-            self.combo_master3.after(interval)
-        if self.combo_master1.current() != self.master_option1:
-            self.preset.loc[0, 'master_option1'] = self.combo_master1.current()
-            self.preset.to_csv(globals()['sweeper3d_path'], index = False)
-        
-    def update_master13_combo(self, event, interval = 100):
-        if self.combo_master2['value'][self.combo_master2.current()] == '':
-            self.combo_master1['value'] = self.master_option
-            self.combo_master1.after(interval)
-            self.combo_master3['value'] = self.master_option
-            self.combo_master3.after(interval)
-        if self.combo_master2['value'][self.combo_master2.current()] == 'Master':
-            self.combo_master1['value'] = ['', 'Slave', 'Slave-slave']
-            self.combo_master1.after(interval)
-            self.combo_master3['value'] = ['', 'Slave', 'Slave-slave']
-            self.combo_master3.after(interval)
-        if self.combo_master2['value'][self.combo_master2.current()] == 'Slave':
-            self.combo_master1['value'] = ['', 'Master', 'Slave-slave']
-            self.combo_master1.after(interval)
-            self.combo_master3['value'] = ['', 'Master', 'Slave-slave']
-            self.combo_master3.after(interval)
-        if self.combo_master2['value'][self.combo_master2.current()] == 'Slave-slave':
-            self.combo_master1['value'] = ['', 'Master', 'Slave']
-            self.combo_master1.after(interval)
-            self.combo_master3['value'] = ['', 'Master', 'Slave']
-            self.combo_master3.after(interval)
-        if self.combo_master2.current() != self.master_option2:
-            self.preset.loc[0, 'master_option2'] = self.combo_master2.current()
-            self.preset.to_csv(globals()['sweeper3d_path'], index = False)
-
-    def update_master12_combo(self, event, interval = 100):
-        if self.combo_master3['value'][self.combo_master3.current()] == '':
-            self.combo_master1['value'] = self.master_option
-            self.combo_master1.after(interval)
-            self.combo_master2['value'] = self.master_option
-            self.combo_master2.after(interval)
-        if self.combo_master3['value'][self.combo_master3.current()] == 'Master':
-            self.combo_master1['value'] = ['', 'Slave', 'Slave-slave']
-            self.combo_master1.after(interval)
-            self.combo_master2['value'] = ['', 'Slave', 'Slave-slave']
-            self.combo_master2.after(interval)
-        if self.combo_master3['value'][self.combo_master3.current()] == 'Slave':
-            self.combo_master1['value'] = ['', 'Master', 'Slave-slave']
-            self.combo_master1.after(interval)
-            self.combo_master2['value'] = ['', 'Master', 'Slave-slave']
-            self.combo_master2.after(interval)
-        if self.combo_master3['value'][self.combo_master3.current()] == 'Slave-slave':
-            self.combo_master1['value'] = ['', 'Master', 'Slave']
-            self.combo_master1.after(interval)
-            self.combo_master2['value'] = ['', 'Master', 'Slave']
-            self.combo_master2.after(interval)
-        if self.combo_master3.current() != self.master_option3:
-            self.preset.loc[0, 'master_option3'] = self.combo_master3.current()
-            self.preset.to_csv(globals()['sweeper3d_path'], index = False)
 
     def update_sweep_parameters1(self, event, interval=100):
         global types_of_devices
@@ -3506,14 +3353,12 @@ class Sweeper3d(tk.Frame):
         if self.count_option1 == 'step':
             step1 = ratio_sweep1 
             ratio_sweep1 = ratio_sweep1 / delay_factor1
-            if globals()['sweeper_write'].sweepable1 != True:
-                globals()['sweeper_write'].step1 = step1
+            globals()['sweeper_write'].step1 = step1
         
         if self.count_option2 == 'step':
             step2 = ratio_sweep2 
             ratio_sweep2 = ratio_sweep2 / delay_factor2
-            if globals()['sweeper_write'].sweepable2 != True:
-                globals()['sweeper_write'].step2 = step2
+            globals()['sweeper_write'].step2 = step2
             
         if self.count_option3 == 'step':
             step3 = ratio_sweep3 
@@ -3732,7 +3577,6 @@ class Sweeper3d(tk.Frame):
         global columns
         global manual_filenames
         global manual_sweep_flags
-        global master_lock
         global zero_time
         global back_and_forth_master
         global back_and_forth_slave
@@ -3754,69 +3598,19 @@ class Sweeper3d(tk.Frame):
 
         # creating columns
         device_to_sweep1 = list_of_devices[self.combo_to_sweep1.current()]
-        parameters = device_to_sweep1.set_options
-        parameter_to_sweep1 = parameters[self.sweep_options1.current()]
+        parameters1 = device_to_sweep1.set_options
+        parameter_to_sweep1 = parameters1[self.sweep_options1.current()]
         
         device_to_sweep2 = list_of_devices[self.combo_to_sweep2.current()]
-        parameters = device_to_sweep2.set_options
-        parameter_to_sweep2 = parameters[self.sweep_options2.current()]
+        parameters2 = device_to_sweep2.set_options
+        parameter_to_sweep2 = parameters2[self.sweep_options2.current()]
         
         device_to_sweep3 = list_of_devices[self.combo_to_sweep3.current()]
-        parameters = device_to_sweep3.set_options
-        parameter_to_sweep3 = parameters[self.sweep_options3.current()]
+        parameters3 = device_to_sweep3.set_options
+        parameter_to_sweep3 = parameters3[self.sweep_options3.current()]
         
         manual_filenames = self.manual_filenames
         manual_sweep_flags = self.manual_sweep_flags
-        
-        if self.combo_master1['value'][self.combo_master1.current()] == 'Slave-slave' and self.combo_master2['value'][self.combo_master2.current()] == 'Slave' and self.combo_master3['value'][self.combo_master3.current()] == 'Master':
-            master_lock = True
-            '''change 1, 2, 3 -> 3, 2, 1'''
-            
-            device_to_sweep1, device_to_sweep3 = device_to_sweep3, device_to_sweep1
-            parameter_to_sweep1, parameter_to_sweep3 = parameter_to_sweep3, parameter_to_sweep1
-            back_and_forth_master, back_and_forth_slave_slave = back_and_forth_slave_slave, back_and_forth_master
-            manual_sweep_flags[0], manual_sweep_flags[2] = manual_sweep_flags[2], manual_sweep_flags[0]
-            manual_filenames[0], manual_filenames[2] = manual_filenames[2], manual_filenames[0]
-
-        if self.combo_master1['value'][self.combo_master1.current()] == 'Slave-slave' and self.combo_master2['value'][self.combo_master2.current()] == 'Master' and self.combo_master3['value'][self.combo_master3.current()] == 'Slave':
-            master_lock = True
-            '''change 1, 2, 3 -> 3, 1, 2'''
-            
-            device_to_sweep1, device_to_sweep2, device_to_sweep3 = device_to_sweep3, device_to_sweep1, device_to_sweep2
-            parameter_to_sweep1, parameter_to_sweep2, parameter_to_sweep3 = parameter_to_sweep3, parameter_to_sweep1, parameter_to_sweep2
-            back_and_forth_master, back_and_forth_slave, back_and_forth_slave_slave = back_and_forth_slave_slave, back_and_forth_master, back_and_forth_slave
-            manual_sweep_flags[0], manual_sweep_flags[1], manual_sweep_flags[2] = manual_sweep_flags[2], manual_sweep_flags[0], manual_sweep_flags[1]
-            manual_filenames[0], manual_filenames[1], manual_filenames[2] = manual_filenames[2], manual_filenames[0], manual_filenames[1]
-        
-        if self.combo_master1['value'][self.combo_master1.current()] == 'Slave' and self.combo_master2['value'][self.combo_master2.current()] == 'Master' and self.combo_master3['value'][self.combo_master3.current()] == 'Slave-slave':
-            master_lock = True
-            '''change 1, 2, 3 -> 2, 1, 3'''
-            
-            device_to_sweep1, device_to_sweep2 = device_to_sweep2, device_to_sweep1
-            parameter_to_sweep1, parameter_to_sweep2 = parameter_to_sweep2, parameter_to_sweep1
-            back_and_forth_master, back_and_forth_slave = back_and_forth_slave, back_and_forth_master
-            manual_sweep_flags[0], manual_sweep_flags[1] = manual_sweep_flags[1], manual_sweep_flags[0]
-            manual_filenames[0], manual_filenames[1] = manual_filenames[1], manual_filenames[0]
-            
-        if self.combo_master1['value'][self.combo_master1.current()] == 'Slave' and self.combo_master2['value'][self.combo_master2.current()] == 'Slave-slave' and self.combo_master3['value'][self.combo_master3.current()] == 'Master':
-            master_lock = True
-            '''change 1, 2, 3 -> 2, 3, 1'''
-            
-            device_to_sweep1, device_to_sweep2, device_to_sweep3 = device_to_sweep2, device_to_sweep3, device_to_sweep1
-            parameter_to_sweep1, parameter_to_sweep2, parameter_to_sweep3 = parameter_to_sweep2, parameter_to_sweep3, parameter_to_sweep1
-            back_and_forth_master, back_and_forth_slave, back_and_forth_slave_slave = back_and_forth_slave, back_and_forth_slave_slave, back_and_forth_master
-            manual_sweep_flags[0], manual_sweep_flags[1], manual_sweep_flags[2] = manual_sweep_flags[1], manual_sweep_flags[2], manual_sweep_flags[0]
-            manual_filenames[0], manual_filenames[1], manual_filenames[2] = manual_filenames[1], manual_filenames[2], manual_filenames[0]
-            
-        if self.combo_master1['value'][self.combo_master1.current()] == 'Master' and self.combo_master2['value'][self.combo_master2.current()] == 'Slave-slave' and self.combo_master3['value'][self.combo_master3.current()] == 'Slave':
-            master_lock = True
-            '''change 1, 2, 3 -> 1, 3, 2'''
-            
-            device_to_sweep2, device_to_sweep3 = device_to_sweep3, device_to_sweep2
-            parameter_to_sweep2, parameter_to_sweep3 = parameter_to_sweep3, parameter_to_sweep2
-            back_and_forth_slave, back_and_forth_slave_slave = back_and_forth_slave_slave, back_and_forth_slave
-            manual_sweep_flags[1], manual_sweep_flags[2] = manual_sweep_flags[2], manual_sweep_flags[1]
-            manual_filenames[1], manual_filenames[2] = manual_filenames[2], manual_filenames[1]
         
         columns_device1 = self.combo_to_sweep1['values'][self.combo_to_sweep1.current()]
         columns_parameters1 = self.sweep_options1['values'][self.sweep_options1.current()]
@@ -4665,8 +4459,8 @@ class Sweeper_write(threading.Thread):
                 try:
                     parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
                                               option)()
-                    #if len(manual_sweep_flags) == 2:
-                    #    self.mapper.append_parameter(str(parameter), parameter_value)
+                    if len(manual_sweep_flags) == 2:
+                        self.mapper.append_parameter(str(parameter), parameter_value)
                     dataframe.append(parameter_value)
                 except:
                     dataframe.append(None)
@@ -4986,17 +4780,17 @@ class Sweeper_write(threading.Thread):
                 point = current_point()
                 if self.isinarea(point = point, grid_area = self.grid_space, sweep_dimension = len(manual_sweep_flags)):
                     update_dataframe()
-                   # if self.sweepable2 == True:
-                    #    self.mapper.append_slave(value = self.current_value)
-                  #  else:
-                      #  self.mapper.append_slave(value = self.value2)
+                    if self.sweepable2 == True:
+                        self.mapper.append_slave(value = self.current_value)
+                    else:
+                        self.mapper.append_slave(value = self.value2)
                     step(2, value2)
                     append_read_parameters()
                     tofile() 
                 else:
                     if manual_sweep_flags[1] == 0:
                         self.value2 += self.step2
-                   # self.mapper.append_slave(value = np.nan)
+                    self.mapper.append_slave(value = np.nan)
             elif len(manual_sweep_flags) == 3:
                 point = current_point()
                 if self.isinarea(point = point, grid_area = self.grid_space, sweep_dimension = len(manual_sweep_flags)):
@@ -5073,10 +4867,10 @@ class Sweeper_write(threading.Thread):
             else:
                 raise Exception('back_and_forth_slave is not correct, needs >= 1, but got ', back_and_forth_slave)
            
-           # if len(manual_sweep_flags) == 2:
-           #     self.mapper.concatenate_all()
-              #  self.mapper.clear_slave()
-              #  self.mapper.clear_parameters()
+            if len(manual_sweep_flags) == 2:
+                self.mapper.concatenate_all()
+                self.mapper.clear_slave()
+                self.mapper.clear_parameters()
                
             if not hasattr(self, 'time2'):
                 self.time2 = time.perf_counter()
@@ -5092,8 +4886,8 @@ class Sweeper_write(threading.Thread):
                 while condition(cur_axis) and manual_sweep_flags[-2] == 0:
                     if len(manual_sweep_flags) == 3:
                         update_dataframe(True)
-                   # if len(manual_sweep_flags) == 2:
-                   #     self.mapper.append_master(value = self.value1)
+                    if len(manual_sweep_flags) == 2:
+                        self.mapper.append_master(value = self.value1)
                     step(cur_axis)
                     if len(manual_sweep_flags) == 2:
                         globals()['dataframe_after'] = [*globals()['dataframe']]
