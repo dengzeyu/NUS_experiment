@@ -76,10 +76,10 @@ for ind, device in enumerate(device_classes):
 print('Devices import succes')
 
 #matplotlib.use("TkAgg")
-#plt.rcParams['animation.html'] = 'jshtml'
+plt.rcParams['animation.html'] = 'jshtml'
 LARGE_FONT = ('Verdana', 12)
 SUPER_LARGE = ('Verdana', 16)
-#style.use('seaborn-whitegrid')
+style.use('seaborn-whitegrid')
 
 # Check if everything connected properly
 rm = visa.ResourceManager()
@@ -1616,9 +1616,7 @@ class Sweeper1d(tk.Frame):
         if self.count_option1 == 'ratio' and self.label_ratio['text'].startswith('Step'):
             self.label_ratio.configure(text = 'Ratio, \n Δ/s')
             self.update()
-            
-        print('Im executed')
-        
+
         self.preset.loc[0, 'count_option1'] = self.count_option1
         self.preset.to_csv(globals()['sweeper1d_path'], index = False)
         
@@ -1651,18 +1649,30 @@ class Sweeper1d(tk.Frame):
         global ratio_sweep1
         global delay_factor1
         
+        delta = float(self.entry_to.get()) - float(self.entry_from.get())
+        step1 = globals()['sweeper_write'].step1
+        
         try:
-            from_sweep1 = float(self.entry_from.get())
+            if step1 < 0 and delta > 0 or step1 > 0 and delta < 0:
+                from_sweep1 = float(self.entry_to.get())
+            elif step1 >= 0 and delta >= 0 or step1 <= 0 and delta <= 0:
+                from_sweep1 = float(self.entry_from.get())
         except ValueError:
             pass
         
         try:
-            to_sweep1 = float(self.entry_to.get())
+            if step1 < 0 and delta > 0 or step1 > 0 and delta < 0:
+                to_sweep1 = float(self.entry_from.get())
+            elif step1 >= 0 and delta >= 0 or step1 <= 0 and delta <= 0:
+                to_sweep1 = float(self.entry_to.get())
         except ValueError:
             pass
         
         try:
-            ratio_sweep1 = float(self.entry_ratio.get())
+            if step1 < 0 and delta > 0 or step1 > 0 and delta < 0:
+                ratio_sweep1 = - float(self.entry_ratio.get())
+            elif step1 >= 0 and delta > 0 or step1 <= 0 and delta < 0:
+                ratio_sweep1 = float(self.entry_ratio.get())
         except ValueError:
             pass
         
@@ -1677,9 +1687,6 @@ class Sweeper1d(tk.Frame):
             if globals()['sweeper_write'].sweepable1 != True:
                 globals()['sweeper_write'].step1 = step1
         
-        if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
-            ratio_sweep1 = -ratio_sweep1
-            
         self.rewrite_preset()
         
     def update_listbox(self, interval = 10000):
@@ -2363,18 +2370,32 @@ class Sweeper2d(tk.Frame):
         global ratio_sweep2
         global delay_factor2
         
+        delta1 = float(self.entry_to1.get()) - float(self.entry_from1.get())
+        step1 = globals()['sweeper_write'].step1
+        delta2 = float(self.entry_to2.get()) - float(self.entry_from2.get())
+        step2 = globals()['sweeper_write'].step2
+        
         try:
-            from_sweep1 = float(self.entry_from1.get())
+            if step1 < 0 and delta1 > 0 or step1 > 0 and delta1 < 0:
+                from_sweep1 = float(self.entry_to1.get())
+            elif step1 >= 0 and delta1 >= 0 or step1 <= 0 and delta1 <= 0:
+                from_sweep1 = float(self.entry_from1.get())
         except ValueError:
             pass
         
         try:
-            to_sweep1 = float(self.entry_to1.get())
+            if step1 < 0 and delta1 > 0 or step1 > 0 and delta1 < 0:
+                to_sweep1 = float(self.entry_from1.get())
+            elif step1 >= 0 and delta1 >= 0 or step1 <= 0 and delta1 <= 0:
+                to_sweep1 = float(self.entry_to1.get())
         except ValueError:
             pass
         
         try:
-            ratio_sweep1 = float(self.entry_ratio1.get())
+            if step1 < 0 and delta1 > 0 or step1 > 0 and delta1 < 0:
+                ratio_sweep1 = -float(self.entry_ratio1.get())
+            elif step1 >= 0 and delta1 >= 0 or step1 <= 0 and delta1 <= 0:
+                ratio_sweep1 = float(self.entry_ratio1.get())
         except ValueError:
             pass
         
@@ -2384,17 +2405,26 @@ class Sweeper2d(tk.Frame):
             pass
         
         try:
-            from_sweep2 = float(self.entry_from2.get())
+            if step2 < 0 and delta2 > 0 or step2 > 0 and delta2 < 0:
+                from_sweep2 = float(self.entry_to2.get())
+            elif step2 >= 0 and delta2 >= 0 or step2 <= 0 and delta2 <= 0:
+                from_sweep2 = float(self.entry_from2.get())
         except ValueError:
             pass
         
         try:
-            to_sweep2 = float(self.entry_to2.get())
+            if step2 < 0 and delta2 > 0 or step2 > 0 and delta2 < 0:
+                to_sweep2 = float(self.entry_from2.get())
+            elif step2 >= 0 and delta2 >= 0 or step2 <= 0 and delta2 <= 0:
+                to_sweep2 = float(self.entry_to2.get())
         except ValueError:
             pass
         
         try:
-            ratio_sweep2 = float(self.entry_ratio2.get())
+            if step2 < 0 and delta2 > 0 or step2 > 0 and delta2 < 0:
+                ratio_sweep2 = - float(self.entry_ratio2.get())
+            elif step2 >= 0 and delta2 >= 0 or step2 <= 0 and delta2 <= 0:
+                ratio_sweep2 = float(self.entry_ratio2.get())
         except ValueError:
             pass
         
@@ -2413,12 +2443,6 @@ class Sweeper2d(tk.Frame):
             ratio_sweep2 = ratio_sweep2 / delay_factor2
             if globals()['sweeper_write'].sweepable2 != True:
                 globals()['sweeper_write'].step2 = step2
-        
-        if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
-            ratio_sweep1 = -ratio_sweep1
-            
-        if from_sweep2 > to_sweep2 and ratio_sweep2 > 0:
-            ratio_sweep2 = -ratio_sweep2
             
         self.rewrite_preset()
         
@@ -3290,18 +3314,34 @@ class Sweeper3d(tk.Frame):
         global ratio_sweep3
         global delay_factor3
         
+        delta1 = float(self.entry_to1.get()) - float(self.entry_from1.get())
+        step1 = globals()['sweeper_write'].step1
+        delta2 = float(self.entry_to2.get()) - float(self.entry_from2.get())
+        step2 = globals()['sweeper_write'].step2
+        delta3 = float(self.entry_to3.get()) - float(self.entry_from3.get())
+        step3 = globals()['sweeper_write'].step3
+        
         try:
-            from_sweep1 = float(self.entry_from1.get())
+            if step1 < 0 and delta1 > 0 or step1 > 0 and delta1 < 0:
+                from_sweep1 = float(self.entry_to1.get())
+            elif step1 >= 0 and delta1 >= 0 or step1 <= 0 and delta1 <= 0:
+                from_sweep1 = float(self.entry_from1.get())
         except ValueError:
             pass
         
         try:
-            to_sweep1 = float(self.entry_to1.get())
+            if step1 < 0 and delta1 > 0 or step1 > 0 and delta1 < 0:
+                to_sweep1 = float(self.entry_from1.get())
+            elif step1 >= 0 and delta1 >= 0 or step1 <= 0 and delta1 <= 0:
+                to_sweep1 = float(self.entry_to1.get())
         except ValueError:
             pass
         
         try:
-            ratio_sweep1 = float(self.entry_ratio1.get())
+            if step1 < 0 and delta1 > 0 or step1 > 0 and delta1 < 0:
+                ratio_sweep1 = -float(self.entry_ratio1.get())
+            elif step1 >= 0 and delta1 >= 0 or step1 <= 0 and delta1 <= 0:
+                ratio_sweep1 = float(self.entry_ratio1.get())
         except ValueError:
             pass
         
@@ -3311,17 +3351,26 @@ class Sweeper3d(tk.Frame):
             pass
         
         try:
-            from_sweep2 = float(self.entry_from2.get())
+            if step2 < 0 and delta2 > 0 or step2 > 0 and delta2 < 0:
+                from_sweep2 = float(self.entry_to2.get())
+            elif step2 >= 0 and delta2 >= 0 or step2 <= 0 and delta2 <= 0:
+                from_sweep2 = float(self.entry_from2.get())
         except ValueError:
             pass
         
         try:
-            to_sweep2 = float(self.entry_to2.get())
+            if step2 < 0 and delta2 > 0 or step2 > 0 and delta2 < 0:
+                to_sweep2 = float(self.entry_from2.get())
+            elif step2 >= 0 and delta2 >= 0 or step2 <= 0 and delta2 <= 0:
+                to_sweep2 = float(self.entry_to2.get())
         except ValueError:
             pass
         
         try:
-            ratio_sweep2 = float(self.entry_ratio2.get())
+            if step2 < 0 and delta2 > 0 or step2 > 0 and delta2 < 0:
+                ratio_sweep2 = - float(self.entry_ratio2.get())
+            elif step2 >= 0 and delta2 >= 0 or step2 <= 0 and delta2 <= 0:
+                ratio_sweep2 = float(self.entry_ratio2.get())
         except ValueError:
             pass
         
@@ -3331,17 +3380,26 @@ class Sweeper3d(tk.Frame):
             pass
         
         try:
-            from_sweep3 = float(self.entry_from3.get())
+            if step3 < 0 and delta3 > 0 or step3 > 0 and delta3 < 0:
+                from_sweep3 = float(self.entry_to3.get())
+            elif step3 >= 0 and delta3 >= 0 or step3 <= 0 and delta3 <= 0:
+                from_sweep3 = float(self.entry_from3.get())
         except ValueError:
             pass
         
         try:
-            to_sweep3 = float(self.entry_to3.get())
+            if step3 < 0 and delta3 > 0 or step3 > 0 and delta3 < 0:
+                to_sweep3 = float(self.entry_from3.get())
+            elif step3 >= 0 and delta3 >= 0 or step3 <= 0 and delta3 <= 0:
+                to_sweep3 = float(self.entry_to3.get())
         except ValueError:
             pass
         
         try:
-            ratio_sweep3 = float(self.entry_ratio3.get())
+            if step3 < 0 and delta3 > 0 or step3 > 0 and delta3 < 0:
+                ratio_sweep3 = - float(self.entry_ratio3.get())
+            elif step3 >= 0 and delta3 >= 0 or step3 <= 0 and delta3 <= 0:
+                ratio_sweep3 = float(self.entry_ratio3.get())
         except ValueError:
             pass
         
@@ -3365,15 +3423,6 @@ class Sweeper3d(tk.Frame):
             ratio_sweep3 = ratio_sweep3 / delay_factor3
             if globals()['sweeper_write'].sweepable3 != True:
                 globals()['sweeper_write'].step3 = step3
-        
-        if from_sweep1 > to_sweep1 and ratio_sweep1 > 0:
-            ratio_sweep1 = -ratio_sweep1
-            
-        if from_sweep2 > to_sweep2 and ratio_sweep2 > 0:
-            ratio_sweep2 = -ratio_sweep2
-            
-        if from_sweep3 > to_sweep3 and ratio_sweep3 > 0:
-            ratio_sweep3 = -ratio_sweep3
             
         self.rewrite_preset()
         
