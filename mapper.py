@@ -21,7 +21,6 @@ class mapper():
     
     def append_master(self, value):
         self.master = np.concatenate((self.master, [value]))
-        print(self.master)
         
     def append_parameter(self, parameter: str, value):
         if hasattr(self, parameter):

@@ -285,7 +285,7 @@ if not exists(graph_preset_path):
         dic[f'cmap{i}'] = ['viridis']
         dic[f'x{i}_transform'] = ['x']
         dic[f'y{i}_transform'] = ['y']
-        dic[f'y{i}_transform'] = ['z']
+        dic[f'z{i}_transform'] = ['z']
         
     dataframe = pd.DataFrame(dic)
     dataframe.to_csv(graph_preset_path, index = False)
@@ -536,7 +536,7 @@ def map_animation(i, n, filename):
         x_ticks = np.arange(len(x_ticks)) + 0.5
             
         if len(x_ticks) > 6:
-            ax.set_xticks(x_ticks)
+            ax.set_xticks(x_ticks)[::len(x_ticks) // 6]
             ax.set_xticklabels(x_tick_labels[::len(x_tick_labels) // 6], rotation=30)
         else:
             ax.set_xticks(x_ticks)
@@ -4387,12 +4387,7 @@ class Sweeper_write(threading.Thread):
             self.sweepable2 = False
             
             self.sweepable3 = False
-                
-            if hasattr(device_to_sweep2, 'sweepable'):
-                if device_to_sweep2.sweepable[device_to_sweep2.set_options.index(parameter_to_sweep2)]:
-                            self.sweepable2 = True
-                            self.upcoming_value2 = self.value2
-                            
+
             if hasattr(device_to_sweep3, 'sweepable') and len(manual_sweep_flags) == 3:
                 if device_to_sweep3.sweepable[device_to_sweep3.set_options.index(parameter_to_sweep3)]:
                             self.sweepable3 = True
@@ -4481,6 +4476,8 @@ class Sweeper_write(threading.Thread):
                             if not np.isnan(space[i][j][k][0]):
                                 self.grid_space.append(space[i][j][k])
                                 
+        print(self.grid_space)
+                                
 
     def func(self, tup, condition_str, sweep_dimension):
         '''input: tup - tuple, contains coordinates of phase space of sweep parameters,
@@ -4520,9 +4517,7 @@ class Sweeper_write(threading.Thread):
         conditions = condition_str.split('\n')
         
         dict_operations = {' == ': isequal, ' != ': notequal, ' > ': ismore, 
-                           ' < ': isless, ' >= ': ismoreequal, ' <= ': islessequal, 
-                             '==': isequal, '!=': notequal, '>': ismore, 
-                             '<': isless, '>=': ismoreequal, '<=': islessequal}
+                           ' < ': isless, ' >= ': ismoreequal, ' <= ': islessequal}
         
         dict_variables = {'x': 'tup[0]', 'X': 'tup[0]', 'y': 'tup[1]', 'Y': 'tup[1]',
                           'z': 'tup[2]', 'Z': 'tup[2]', 'Master': 'tup[0]', 'Slave': 'tup[1]',
@@ -4532,7 +4527,7 @@ class Sweeper_write(threading.Thread):
             for variable in list(dict_variables.keys()):
                 condition = condition.replace(variable, dict_variables[variable])
             
-            for operation in list(dict_operations):
+            for operation in list(dict_operations.keys()):
                 if operation in condition:
                 
                     lhs = condition.split(operation)[0]
@@ -4670,8 +4665,8 @@ class Sweeper_write(threading.Thread):
                 try:
                     parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
                                               option)()
-                    if len(manual_sweep_flags) == 2:
-                        self.mapper.append_parameter(str(parameter), parameter_value)
+                    #if len(manual_sweep_flags) == 2:
+                    #    self.mapper.append_parameter(str(parameter), parameter_value)
                     dataframe.append(parameter_value)
                 except:
                     dataframe.append(None)
@@ -4721,7 +4716,7 @@ class Sweeper_write(threading.Thread):
             if getattr(self, f'sweepable{axis}') == True and manual_sweep_flags[int(axis) - 1] == 0:
                 eps = abs(from_sweep - to_sweep) * (0.001)
             else:
-                eps = float(getattr(self, f'step{axis}')) * 0.01
+                eps = abs(float(getattr(self, f'step{axis}')) * 0.01)
                 
             print(f'Epsilon = {eps}')
                 
@@ -4745,9 +4740,9 @@ class Sweeper_write(threading.Thread):
                     result = (value >= to_sweep - eps and value <= from_sweep + eps)
                 
             if speed > 0:
-                print('Condition checked, result is ' + str(result) + f'\nBoundaries are [{from_sweep};{to_sweep}), Value is {value}, Ratio is positive')
+                print('Condition checked, result is ' + str(result) + f'\nBoundaries are [{from_sweep};{to_sweep}], Value is {value}, Ratio is positive')
             else:
-                print('Condition checked, result is ' + str(result) + f'\nBoundaries are [{from_sweep};{to_sweep}), Value is {value}, Ratio is negative')
+                print('Condition checked, result is ' + str(result) + f'\nBoundaries are [{from_sweep};{to_sweep}], Value is {value}, Ratio is negative')
                 
             return result
             
@@ -4887,8 +4882,8 @@ class Sweeper_write(threading.Thread):
                 basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('-') - 1)] #all before last -
             if '_' in basic_name:
                 basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('_') - 1)] #all before last _
-            #if '_' in basic_name:
-            #    basic_name = basic_name[:basic_name.find('_')]
+            if '_' in basic_name:
+                basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('_') - 1)] #all before last _
             print(f'Basic name is {basic_name}')
             for file in files:
                 if basic_name in file and 'manual' not in file:
@@ -4991,17 +4986,17 @@ class Sweeper_write(threading.Thread):
                 point = current_point()
                 if self.isinarea(point = point, grid_area = self.grid_space, sweep_dimension = len(manual_sweep_flags)):
                     update_dataframe()
-                    if self.sweepable2 == True:
-                        self.mapper.append_slave(value = self.current_value)
-                    else:
-                        self.mapper.append_slave(value = self.value2)
+                   # if self.sweepable2 == True:
+                    #    self.mapper.append_slave(value = self.current_value)
+                  #  else:
+                      #  self.mapper.append_slave(value = self.value2)
                     step(2, value2)
                     append_read_parameters()
                     tofile() 
                 else:
                     if manual_sweep_flags[1] == 0:
                         self.value2 += self.step2
-                    self.mapper.append_slave(value = np.nan)
+                   # self.mapper.append_slave(value = np.nan)
             elif len(manual_sweep_flags) == 3:
                 point = current_point()
                 if self.isinarea(point = point, grid_area = self.grid_space, sweep_dimension = len(manual_sweep_flags)):
@@ -5068,6 +5063,8 @@ class Sweeper_write(threading.Thread):
                 for i in range(1, walks + 1):
                     inner_loop_single(direction = round(2 * (i % 2) - 1))
                     step(axis = len(manual_sweep_flags), back = True)
+                    if not self.sweepable1 == True:
+                        step(axis = len(manual_sweep_flags), back = True)
                     back_and_forth_transposition(len(manual_sweep_flags))
                         
                 if walks % 2 == 1:
@@ -5076,10 +5073,10 @@ class Sweeper_write(threading.Thread):
             else:
                 raise Exception('back_and_forth_slave is not correct, needs >= 1, but got ', back_and_forth_slave)
            
-            if len(manual_sweep_flags) == 2:
-                self.mapper.concatenate_all()
-                self.mapper.clear_slave()
-                self.mapper.clear_parameters()
+           # if len(manual_sweep_flags) == 2:
+           #     self.mapper.concatenate_all()
+              #  self.mapper.clear_slave()
+              #  self.mapper.clear_parameters()
                
             if not hasattr(self, 'time2'):
                 self.time2 = time.perf_counter()
@@ -5095,8 +5092,8 @@ class Sweeper_write(threading.Thread):
                 while condition(cur_axis) and manual_sweep_flags[-2] == 0:
                     if len(manual_sweep_flags) == 3:
                         update_dataframe(True)
-                    if len(manual_sweep_flags) == 2:
-                        self.mapper.append_master(value = self.value1)
+                   # if len(manual_sweep_flags) == 2:
+                   #     self.mapper.append_master(value = self.value1)
                     step(cur_axis)
                     if len(manual_sweep_flags) == 2:
                         globals()['dataframe_after'] = [*globals()['dataframe']]
@@ -5142,6 +5139,8 @@ class Sweeper_write(threading.Thread):
                 for i in range(1, walks + 1):
                     external_loop_single(round(2 * (i % 2) - 1))
                     step(axis = len(manual_sweep_flags) - 1, back = True)
+                    if not self.sweepable2 == True:
+                        step(axis = len(manual_sweep_flags) - 1, back = True)
                     back_and_forth_transposition(len(manual_sweep_flags) - 1)
                     
                 if back_and_forth_master % 2 == 1:
@@ -5191,6 +5190,8 @@ class Sweeper_write(threading.Thread):
                 for i in range(1, walks + 1):
                     master_loop_single(round(2 * (i % 2) - 1))
                     step(axis = 1, back = True)
+                    if not self.sweepable3 == True:
+                        step(axis = 1, back = True)
                     back_and_forth_transposition(1)
                     
                 if back_and_forth_master % 2 == 1:
@@ -5259,6 +5260,10 @@ class Sweeper_write(threading.Thread):
                 
         if self.setget_flag == True:
             setget_write()
+        
+        self.sweepable1 = False
+        self.sweepable2 = False
+        self.sweepable3 = False
 
 class VerticalNavigationToolbar2Tk(NavigationToolbar2Tk):
     def __init__(self, canvas, window):
