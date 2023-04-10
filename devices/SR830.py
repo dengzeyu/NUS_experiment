@@ -1,7 +1,6 @@
-import pandas as pd
+from pymeasure.instruments.srs import SR830
+
 import pyvisa as visa
-import numpy as np
-import time
 
 rm = visa.ResourceManager()
 
@@ -14,302 +13,124 @@ def get(device, command):
 
 class sr830():
 
-    def __init__(self, adress='GPIB0::11::INSTR'):
+    def __init__(self, adress='GPIB0::3::INSTR'):
 
-        self.sr830 = rm.open_resource(
-            adress, write_termination='\n', read_termination='\n')
+        self.sr830 = SR830(adress)
+        
+        self.set_options = ['amplitude', 'frequency', 'phase', 'sensitivity', 
+                            'time_constant', 'low_pass_filter_slope', 'synchronous_filter_status',
+                            'AUX1_output', 'AUX2_output', 'AUX3_output', 'AUX4_output', 'Write']
 
-        self.modes_ch1_options = ['X', 'R', 'X noise', 'AUX in 1', 'AUX in 2']
-
-        self.modes_ch2_options = ['Y', 'Θ', 'Y noise', 'AUX in 3', 'AUX in 4']
-
-        self.sensitivity_options = ['2 nV/fA', '5 nV/fA', '10 nV/fA',
-                                    '20 nV/fA', '50 nV/fA', '100 nV/fA',
-                                    '200 nV/fA', '500 nV/fA', '1 μV/pA',
-                                    '2 μV/pA', '5 μV/pA', '10 μV/pA',
-                                    '20 μV/pA', '50 μV/pA', '100 μV/pA',
-                                    '200 μV/pA', '500 μV/pA',
-                                    '1 mV/nA', '2 mV/nA', '5 mV/nA', '10 mV/nA',
-                                    '20 mV/nA', '50 mV/nA', '100 mV/nA',
-                                    '200 mV/nA', '500 mV/nA', '1 V/μA']
-
-        self.time_constant_options = ['10 μs', '30 μs', '100 μs',
-                                      '300 μs', '1 ms', '3 ms',
-                                      '10 ms', '30 ms', '100 ms',
-                                      '300 ms', '1 s', '3 s',
-                                      '10 s', '30 s', '100 s',
-                                      '300 s', '1 ks', '3 ks',
-                                      '10 ks', '30 ks']
-
-        self.low_pass_filter_slope_options = ['6 dB/oct', '12 dB/oct',
-                                              '18 dB/oct', '24 dB/oct']
-
-        self.synchronous_filter_status_options = ['On', 'Off']
-
-        self.remote_status_options = ['lock', 'Unlock']
-
-        self.set_options = ['amplitude', 'frequency', 'phase', 'AUX1_output', 'AUX2_output', 'AUX3_output', 'AUX4_output']
-
-        self.get_options = ['x', 'y', 'r', 'Θ', 'ch1', 'ch2',
-                            'AUX1_input', 'AUX2_input', 'AUX3_input', 'AUX4_input', 'amplitude', 'frequency', 'phase']
+        self.get_options = ['x', 'y', 'r', 'Θ', 'sensitivity', 
+                            'time_constant', 'low_pass_filter_slope', 'synchronous_filter_status',
+                            'AUX1_input', 'AUX2_input', 'AUX3_input', 'AUX4_input', 
+                            'amplitude', 'frequency', 'phase', 'Read']
 
     def IDN(self):
-        answer = get(self.sr830, '*IDN?')
+        device = rm.open_resource(
+            self.adress)
+        answer = get(device, '*IDN?')
+        device.close()
+        return answer
+    
+    def Write(self):
+        return self.Read()
+    
+    def Read(self):
+        device = rm.open_resource(
+            self.adress)
+        answer = device.read()
+        device.close()
         return answer
 
     def x(self):
-        try:
-            answer = float(get(self.sr830, 'OUTP?1'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OUTP?1'))
-        if str(answer)[-4:] == 'e-00' or str(answer)[-4:] == 'e+00':
-            answer = float(get(self.sr830, 'OUTP?1'))
-        return answer
+        return self.sr830.x
 
     def y(self):
-        try:
-            answer = float(get(self.sr830, 'OUTP?2'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OUTP?2'))
-        if str(answer)[-4:] == 'e-00' or str(answer)[-4:] == 'e+00':
-            answer = float(get(self.sr830, 'OUTP?2'))
-        return answer
+        return self.sr830.y
 
     def r(self):
-        try:
-            answer = float(get(self.sr830, 'OUTP?3'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OUTP?3'))
-        if str(answer)[-4:] == 'e-00' or str(answer)[-4:] == 'e+00':
-            answer = float(get(self.sr830, 'OUTP?3'))
-        return answer
+        return self.sr830.magnitude
 
     def Θ(self):
-        try:
-            answer = float(get(self.sr830, 'OUTP?4'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OUTP?4'))
-        return answer
+        return self.sr830.theta
 
     def frequency(self):
-        try:
-            answer = float(get(self.sr830, 'FREQ?'))
-        except ValueError:
-            answer = float(get(self.sr830, 'FREQ?'))
-        return answer
+        return self.sr830.frequency
 
     def phase(self):
-        try:
-            answer = float(get(self.sr830, 'PHAS?'))
-        except ValueError:
-            answer = float(get(self.sr830, 'PHAS?'))
-        return answer
+        return self.sr830.phase
 
     def amplitude(self):
-        try:
-            answer = float(get(self.sr830, 'SLVL?'))
-        except ValueError:
-            answer = float(get(self.sr830, 'SLVL?'))
-        return answer
+        return self.sr830.sine_voltage
 
     def sensitivity(self):
-        try:
-            answer = float(get(self.sr830, 'SENS?'))
-        except ValueError:
-            answer = float(get(self.sr830, 'SENS?'))
-        return answer
+        return self.sr830.sensitivity
 
     def time_constant(self):
-        try:
-            answer = int(get(self.sr830, 'OFLT?'))
-        except ValueError:
-            answer = int(get(self.sr830, 'OFLT?'))
-        return answer
+        return self.sr830.time_constant
 
     def low_pass_filter_slope(self):
-        try:
-            answer = int(get(self.sr830, 'OFSL?'))
-        except ValueError:
-            answer = int(get(self.sr830, 'OFSL?'))
-        return answer
+        return self.sr830.filter_slope
 
     def synchronous_filter_status(self):
-        try:
-            answer = int(get(self.sr830, 'SYNC?'))
-        except ValueError:
-            answer = int(get(self.sr830, 'SYNC?'))
-        return answer
-
-    def remote(self):
-        try:
-            answer = int(get(self.sr830, 'OVRM?'))
-        except ValueError:
-            answer = int(get(self.sr830, 'OVRM?'))
-        return answer
-
-    def ch1(self):
-        try:
-            answer = float(get(self.sr830, 'OUTR?1'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OUTR?1'))
-        if str(answer)[-4:] == 'e-00' or str(answer)[-4:] == 'e+00':
-            answer = float(get(self.sr830, 'OUTR?1'))
-        return answer
-
-    def ch2(self):
-        try:
-            answer = float(get(self.sr830, 'OUTR?2'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OUTR?2'))
-        if str(answer)[-4:] == 'e-00' or str(answer)[-4:] == 'e+00':
-            answer = float(get(self.sr830, 'OUTR?2'))
-        return answer
-
-    def parameter(self):
-        dataframe = pd.DataFrame({'Sensitivity': [self.sensitivity()],
-                                  'Time_constant': [self.time_constant()],
-                                  'Low_pass_filter_slope': [self.low_pass_filter_slope()],
-                                  'Synchronous_filter_status': [self.synchronous_filter_status()],
-                                  'Remote': [self.remote()],
-                                  'Amplitude': [self.amplitude()],
-                                  'Frequency': [self.frequency()],
-                                  'Phase': [self.phase()]})
-        return dataframe
-
-    def channels(self):
-        dataframe = pd.DataFrame({'Ch1': [self.ch1()], 'Ch2': [self.ch2()]})
-        return dataframe
-
-    def data(self):
-        try:
-            return [time.perf_counter(), self.x, self.y]
-        except:
-            pass
-        # return [time.perf_counter() - zero_time, float(np.random.randint(10)), float(np.random.randint(10))]
+        return self.sr830.filter_synchronous
 
     def AUX1_input(self):
-        try:
-            answer = float(get(self.sr830, 'OAUX?1'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OAUX?1'))
-        return answer
+        return self.sr830.aux_in_1
 
     def AUX2_input(self):
-        try:
-            answer = float(get(self.sr830, 'OAUX?2'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OAUX?2'))
-        return answer
+        return self.sr830.aux_in_2
 
     def AUX3_input(self):
-        try:
-            answer = float(get(self.sr830, 'OAUX?3'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OAUX?3'))
-        return answer
+        return self.sr830.aux_in_3
 
     def AUX4_input(self):
-        try:
-            answer = float(get(self.sr830, 'OAUX?4'))
-        except ValueError:
-            answer = float(get(self.sr830, 'OAUX?4'))
-        return answer
-
-    def set_ch1_mode(self, mode=0):
-        line = 'DDEF1,' + str(mode) + ',0'
-        self.sr830.write(line)
-
-    def set_ch2_mode(self, mode=0):
-        line = 'DDEF2,' + str(mode) + ',0'
-        self.sr830.write(line)
+        return self.sr830.aux_in_4
+    
+    def set_write(self, value):
+        device = rm.open_resource(
+            self.adress)
+        device.write(value)
+        device.close()
 
     def set_frequency(self, value=30.0):
-        if value < 1e-3:
-            value = 1e-3
-        line = 'FREQ' + str(value)
-        self.sr830.write(line)
+        self.sr830.frequency = value
 
     def set_phase(self, value=0.0):
-        line = 'PHAS' + str(value)
-        self.sr830.write(line)
+        self.sr830.phase = value
 
     def set_amplitude(self, value=0.5):
-        if value < 4e-3:
-            value = 4e-3
-        line = 'SLVL' + str(value)
-        self.sr830.write(line)
+        self.sr830.sine_voltage = value
 
     def set_sensitivity(self, value=24):
-        try: 
-            value = int(value)
-        except:
-            try:
-                value = self.sensitivity_options.index(value)
-            except:
-                value = 24
-        
-        line = 'SENS' + str(value)
-        self.sr830.write(line)
+        self.sr830.sensitivity = value
 
     def set_time_constant(self, value=19):
-        try: 
-            value = int(value)
-        except:
-            try:
-                value = self.time_constant_options.index(value)
-            except:
-                value = 219
-        
-        line = 'OFLT' + str(value)
-        self.sr830.write(line)
+        self.sr830.time_constant = value
 
     def set_low_pass_filter_slope(self, value=3):
-        try: 
-            value = int(value)
-        except:
-            try:
-                value = self.low_pass_filter_slope_options.index(value)
-            except:
-                value = 3
-        
-        line = 'OFSL' + str(value)
-        self.sr830.write(line)
+        self.sr830.filter_slope = value
 
     def set_synchronous_filter_status(self, value=0):
-        try: 
-            value = int(value)
-        except:
-            try:
-                value = self.synchronous_filter_status_options.index(value)
-            except:
-                value = 0
-        
-        line = 'SYNC' + str(value)
-        self.sr830.write(line)
-
-    def set_remote(self, mode=1):
-        line = 'OVRM' + str(mode)
-        self.sr830.write(line)
+        self.sr830.filter_synchronous = value
 
     def set_AUX1_output(self, value=0):
-        line = 'AUXV1,' + str(value)
-        self.sr830.write(line)
+        self.sr830.aux_out_1 = value
 
     def set_AUX2_output(self, value=0):
-        line = 'AUXV2,' + str(value)
-        self.sr830.write(line)
+        self.sr830.aux_out_2 = value
 
     def set_AUX3_output(self, value=0):
-        line = 'AUXV3,' + str(value)
-        self.sr830.write(line)
+        self.sr830.aux_out_3 = value
 
     def set_AUX4_output(self, value=0):
-        line = 'AUXV4,' + str(value)
-        self.sr830.write(line)
+        self.sr830.aux_out_4 = value
         
 def main():
     device = sr830()
-    print(device.IDN())
+    print(device.x())
     
 if __name__ == '__main__':
     main()
+    
