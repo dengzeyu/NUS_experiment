@@ -285,7 +285,14 @@ if not exists(graph_preset_path):
         dic[f'x{i}_transform'] = ['x']
         dic[f'y{i}_transform'] = ['y']
         dic[f'z{i}_transform'] = ['z']
-        
+        if i % 3 == 1:
+            dic[f'title_map{i}'] = [f'Map {i}']
+            dic[f'x{i}_label_map'] = ['x']
+            dic[f'y{i}_label_map'] = ['y']
+            dic[f'z{i}_label_map'] = ['z']
+            dic[f'x{i}_transform_map'] = ['x']
+            dic[f'y{i}_transform_map'] = ['y']
+            dic[f'z{i}_transform_map'] = ['z']
     dataframe = pd.DataFrame(dic)
     dataframe.to_csv(graph_preset_path, index = False)
 
@@ -432,6 +439,7 @@ def plot_animation(i, n , filename):
     ax.autoscale(enable = autoscale_x, axis = 'x')
     ax.autoscale(enable = autoscale_y, axis = 'y')
     
+    plt.rcParams['axes.grid'] = True
     ax.plot(x, y, '-', lw=1, color=color)
     
     #globals()[f'graph_object{globals()["cur_animation_num"] - 3}'].update()
@@ -489,6 +497,7 @@ def map_animation(i, n, filename):
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
         
+        plt.rcParams['axes.grid'] = False
         colormap = ax.pcolor(z, cmap = globals()[f'cmap_{n}'], vmin=np.nanmin(z), vmax=np.nanmax(z), shading = 'flat')
         globals()[f'colorbar{n}'] = ax.get_figure().colorbar(colormap, ax = ax)
         globals()[f'colorbar{n}'].ax.tick_params(labelsize=5)
@@ -4559,7 +4568,7 @@ class Sweeper_write(threading.Thread):
             if getattr(self, f'sweepable{axis}') == True and manual_sweep_flags[int(axis) - 1] == 0:
                 eps = abs(from_sweep - to_sweep) * (0.001)
             else:
-                eps = abs(float(getattr(self, f'step{axis}')) * 0.01)
+                eps = abs(float(getattr(self, f'step{axis}')) * 0.1)
                 
             print(f'Epsilon = {eps}')
                 
@@ -5271,7 +5280,6 @@ class FigureSettings(object):
         self.x_label = str(self.preset[f'x{self.position}_label'].values[0])
         self.y_label = str(self.preset[f'y{self.position}_label'].values[0])
         self.z_label = str(self.preset[f'z{self.position}_label'].values[0])
-        self.cmap = str(self.preset[f'cmap{self.position}'].values[0])
         self.x_transform = str(self.preset[f'x{self.position}_transform'].values[0])
         self.y_transform = str(self.preset[f'y{self.position}_transform'].values[0])
         self.z_transform = str(self.preset[f'z{self.position}_transform'].values[0])
@@ -5414,12 +5422,24 @@ class FigureSettings(object):
             self.entry_y_transformation.insert(index = 0, string = self.y_transform)
             self.entry_y_transformation.grid(row = 8, column = 1, pady = 2)
         
-        elif plot_flag == 'Map':
-            self.entry_title = tk.Entry(tw)
-            self.entry_title.insert(index = 0, string = self.title)
-            self.entry_title.grid(row = 0, column = 1, pady = 2)
+        elif plot_flag == 'Map' and int(var2str(ax)[2:]) % 3 == 1:
             
-            ax.set_title(self.entry_title.get(), fontsize = 8, pad = -5)
+            self.preset = pd.read_csv(globals()['graph_preset_path'], sep = ',')
+            self.preset = self.preset.fillna('')
+            self.title_map = str(self.preset[f'title_map{self.position}'].values[0])
+            self.x_label_map = str(self.preset[f'x{self.position}_label_map'].values[0])
+            self.y_label_map = str(self.preset[f'y{self.position}_label_map'].values[0])
+            self.z_label_map = str(self.preset[f'z{self.position}_label_map'].values[0])
+            self.cmap = str(self.preset[f'cmap{self.position}'].values[0])
+            self.x_transform_map = str(self.preset[f'x{self.position}_transform_map'].values[0])
+            self.y_transform_map = str(self.preset[f'y{self.position}_transform_map'].values[0])
+            self.z_transform_map = str(self.preset[f'z{self.position}_transform_map'].values[0])
+            
+            self.entry_title_map = tk.Entry(tw)
+            self.entry_title_map.insert(index = 0, string = self.title_map)
+            self.entry_title_map.grid(row = 0, column = 1, pady = 2)
+            
+            ax.set_title(self.entry_title_map.get(), fontsize = 8, pad = -5)
             
             button_close = tk.Button(tw, text = 'Save', command = lambda: self.hidesettings(ax))
             button_close.grid(row = 0, column = 5, pady = 2)
@@ -5427,59 +5447,59 @@ class FigureSettings(object):
             label_xlabel = tk.Label(tw, text = 'x label = ')
             label_xlabel.grid(row = 2, column = 0, pady = 2, sticky = tk.W)
             
-            self.entry_xlabel = tk.Entry(tw)
-            self.entry_xlabel.insert(index = 0, string = self.x_label)
-            self.entry_xlabel.grid(row = 2, column = 1)
+            self.entry_xlabel_map = tk.Entry(tw)
+            self.entry_xlabel_map.insert(index = 0, string = self.x_label_map)
+            self.entry_xlabel_map.grid(row = 2, column = 1)
         
             label_ylabel = tk.Label(tw, text = 'y label = ')
             label_ylabel.grid(row = 3, column = 0, pady = 2, sticky = tk.W)
             
-            self.entry_ylabel = tk.Entry(tw)
-            self.entry_ylabel.insert(index = 0, string = self.y_label)
-            self.entry_ylabel.grid(row = 3, column = 1, pady = 2)
+            self.entry_ylabel_map = tk.Entry(tw)
+            self.entry_ylabel_map.insert(index = 0, string = self.y_label_map)
+            self.entry_ylabel_map.grid(row = 3, column = 1, pady = 2)
             
             label_zlabel = tk.Label(tw, text = 'z label = ')
             label_zlabel.grid(row = 4, column = 0, pady = 2, sticky = tk.W)
             
-            self.entry_zlabel = tk.Entry(tw)
-            self.entry_zlabel.insert(index = 0, string = self.z_label)
-            self.entry_zlabel.grid(row = 4, column = 1)
+            self.entry_zlabel_map = tk.Entry(tw)
+            self.entry_zlabel_map.insert(index = 0, string = self.z_label_map)
+            self.entry_zlabel_map.grid(row = 4, column = 1)
             
             label_z_device = tk.Label(tw, text = 'z')
             label_z_device.grid(row = 1, column = 0, pady = 2, sticky = tk.W)
             
-            self.combo_z_device = ttk.Combobox(tw, values=globals()['columns'][3:])
+            self.combo_z_device_map = ttk.Combobox(tw, values=globals()['columns'][3:])
             try:
-                self.combo_z_device.current(self.z_current)
+                self.combo_z_device_map.current(self.z_current)
                 self.ax_update_map(ax = ax, event = None)
             except:
                 pass
-            self.combo_z_device.bind("<<ComboboxSelected>>", lambda event: self.ax_update_map(ax, event))
-            self.combo_z_device.grid(row = 1, column = 1, pady = 2)
+            self.combo_z_device_map.bind("<<ComboboxSelected>>", lambda event: self.ax_update_map(ax, event))
+            self.combo_z_device_map.grid(row = 1, column = 1, pady = 2)
             
             label_x_transformation = tk.Label(tw, text = 'x = ')
             label_x_transformation.grid(row = 5, column = 0, pady = 2, sticky = tk.W)
             CreateToolTip(label_x_transformation, 'X transformation')
             
-            self.entry_x_transformation = tk.Entry(tw)
-            self.entry_x_transformation.insert(index = 0, string = self.x_transform)
-            self.entry_x_transformation.grid(row = 5, column = 1, pady = 2)
+            self.entry_x_transformation_map = tk.Entry(tw)
+            self.entry_x_transformation_map.insert(index = 0, string = self.x_transform_map)
+            self.entry_x_transformation_map.grid(row = 5, column = 1, pady = 2)
             
             label_y_transformation = tk.Label(tw, text = 'y = ')
             label_y_transformation.grid(row = 6, column = 0, pady = 2, sticky = tk.W)
             CreateToolTip(label_y_transformation, 'Y transformation')
             
-            self.entry_y_transformation = tk.Entry(tw)
-            self.entry_y_transformation.insert(index = 0, string = self.y_transform)
-            self.entry_y_transformation.grid(row = 6, column = 1, pady = 2)
+            self.entry_y_transformation_map = tk.Entry(tw)
+            self.entry_y_transformation_map.insert(index = 0, string = self.y_transform_map)
+            self.entry_y_transformation_map.grid(row = 6, column = 1, pady = 2)
             
             label_z_transformation = tk.Label(tw, text = 'z = ')
             label_z_transformation.grid(row = 7, column = 0, pady = 2, sticky = tk.W)
             CreateToolTip(label_z_transformation, 'z transformation')
             
-            self.entry_z_transformation = tk.Entry(tw)
-            self.entry_z_transformation.insert(index = 0, string = self.z_transform)
-            self.entry_z_transformation.grid(row = 7, column = 1, pady = 2)
+            self.entry_z_transformation_map = tk.Entry(tw)
+            self.entry_z_transformation_map.insert(index = 0, string = self.z_transform_map)
+            self.entry_z_transformation_map.grid(row = 7, column = 1, pady = 2)
             
             label_cmap = tk.Label(tw, text = 'Colormap')
             label_cmap.grid(row = 8, column = 0, pady = 2)
@@ -5621,14 +5641,14 @@ class FigureSettings(object):
             self.preset.to_csv(globals()['graph_preset_path'], index = False)
             
         elif plot_flag == 'Map':
-            self.preset.loc[0, f'title{self.position}'] = self.entry_title.get()
-            self.preset.loc[0, f'z{self.position}_current'] = self.combo_z_device.current()
-            self.preset.loc[0, f'z{self.position}_label'] = self.entry_zlabel.get()
-            self.preset.loc[0, f'x{self.position}_label'] = self.entry_xlabel.get()
-            self.preset.loc[0, f'y{self.position}_label'] = self.entry_ylabel.get()
-            self.preset.loc[0, f'x{self.position}_transform'] = self.entry_x_transformation.get()
-            self.preset.loc[0, f'y{self.position}_transform'] = self.entry_y_transformation.get()
-            self.preset.loc[0, f'z{self.position}_transform'] = self.entry_z_transformation.get()
+            self.preset.loc[0, f'title_map{self.position}'] = self.entry_title_map.get()
+            self.preset.loc[0, f'z{self.position}_current'] = self.combo_z_device_map.current()
+            self.preset.loc[0, f'z{self.position}_label_map'] = self.entry_zlabel_map.get()
+            self.preset.loc[0, f'x{self.position}_label_map'] = self.entry_xlabel_map.get()
+            self.preset.loc[0, f'y{self.position}_label_map'] = self.entry_ylabel_map.get()
+            self.preset.loc[0, f'x{self.position}_transform_map'] = self.entry_x_transformation_map.get()
+            self.preset.loc[0, f'y{self.position}_transform_map'] = self.entry_y_transformation_map.get()
+            self.preset.loc[0, f'z{self.position}_transform_map'] = self.entry_z_transformation_map.get()
             self.preset.to_csv(globals()['graph_preset_path'], index = False)
     
         else:
@@ -5686,32 +5706,32 @@ class FigureSettings(object):
         elif plot_flag == 'Map':
             
             try:
-                ax.set_zlabel(self.entry_zlabel.get(), fontsize = 8)
+                ax.set_zlabel(self.entry_zlabel_map.get(), fontsize = 8)
             except:
                 pass
             
             try:
-                ax.set_title(self.entry_title.get(), fontsize = 8, pad = -5)
+                ax.set_title(self.entry_title_map.get(), fontsize = 8, pad = -5)
             except:
                 pass
             
             try:
-                ax.set_xlabel(self.entry_xlabel.get(), fontsize = 8)
+                ax.set_xlabel(self.entry_xlabel_map.get(), fontsize = 8)
             except:
                 pass
             
             try:
-                ax.set_ylabel(self.entry_ylabel.get(), fontsize = 8)
+                ax.set_ylabel(self.entry_ylabel_map.get(), fontsize = 8)
             except:
                 pass
             
             try:
-                globals()[f'x_transformation{var2str(ax)[2:]}'] = self.entry_x_transformation.get()
+                globals()[f'x_transformation{var2str(ax)[2:]}'] = self.entry_x_transformation_map.get()
             except:
                 pass
         
             try:
-                globals()[f'y_transformation{var2str(ax)[2:]}'] = self.entry_y_transformation.get()
+                globals()[f'y_transformation{var2str(ax)[2:]}'] = self.entry_y_transformation_map.get()
             except:
                 pass
             
@@ -6104,6 +6124,7 @@ class Graph():
         global columns
         
         if plot_flag == 'Plot':
+            plot_flag = 'Map'
             self.combo_y1.place_forget()
             self.label_y1.place_forget()
             self.label_x1.configure(text = 'z')
@@ -6114,8 +6135,11 @@ class Graph():
                 self.combo_x1.current(0)
                 globals()[f'z{self.order}_status'] = 0
             globals()[f'ax{self.order}'].clear()
-            plot_flag = 'Map'
+            ax = globals()[f'ax{self.order}']
+            globals()[f'settingsFigure{self.order}'].showsettings(ax)
+            globals()[f'settingsFigure{self.order}'].hidesettings(ax)
         elif plot_flag == 'Map':
+            plot_flag = 'Plot'
             self.combo_y1.place(relx=0.165, rely=0.76)
             self.combo_x1.config(value = columns)
             self.label_y1.place(relx=0.15, rely=0.76)
@@ -6124,7 +6148,9 @@ class Graph():
                 globals()[f'colorbar{self.order}'].remove()
             except:
                 pass
-            plot_flag = 'Plot'
+            ax = globals()[f'ax{self.order}']
+            globals()[f'settingsFigure{self.order}'].showsettings(ax)
+            globals()[f'settingsFigure{self.order}'].hidesettings(ax)
         else:
             raise Exception(f'plot_flag could only obtain values "Plot" or "Map", got {plot_flag}')
         

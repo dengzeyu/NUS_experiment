@@ -63,11 +63,6 @@ class mapper():
         def stack(parameter):
             self.__dict__[f'map_{parameter}'] = np.hstack([self.__dict__[f'map_{parameter}'], [np.nan * np.ones(self.__dict__[f'map_{parameter}'].shape[0])].T])
         
-        args = np.argsort(self.slave)
-        if self.to_slave < self.from_slave:
-            args = args[::-1]
-        self.slave = self.slave[args]
-        
         dif = self.slave.shape[0] - self.map_slave.shape[1]
         
         if dif > 0: #current measurment has more points than the previous:
@@ -81,7 +76,6 @@ class mapper():
             for i in range(abs(dif)):
                 self.slave = np.concatenate((self.slave, [np.nan]))
                 for parameter in self.parameters_to_read:
-                    self.__dict__[parameter] = self.__dict__[parameter][args]
                     self.__dict__[parameter] = np.concatenate((self.__dict__[parameter], [np.nan]))
     
     def clear_slave(self):
