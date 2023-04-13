@@ -61,14 +61,14 @@ class mapper():
     def check_sizes(self):
         
         def stack(parameter):
-            self.__dict__[f'map_{parameter}'] = np.hstack([self.__dict__[f'map_{parameter}'], [np.nan * np.ones(self.__dict__[f'map_{parameter}'].shape[0])].T])
+            self.__dict__[f'map_{parameter}'] = np.hstack([self.__dict__[f'map_{parameter}'], np.array([np.nan * np.ones(self.__dict__[f'map_{parameter}'].shape[0])]).T])
         
         dif = self.slave.shape[0] - self.map_slave.shape[1]
         
         if dif > 0: #current measurment has more points than the previous:
             for i in range(dif):
-                self.map_slave = np.hstack([self.map_slave, [np.nan * np.ones(self.map_slave.shape[0])].T])
-                self.map_master = np.hstack([self.map_master, [np.nan * np.ones(self.map_master.shape[0])].T])
+                self.map_slave = np.hstack([self.map_slave, np.array([np.nan * np.ones(self.map_slave.shape[0])]).T])
+                self.map_master = np.hstack([self.map_master, np.array([np.nan * np.ones(self.map_master.shape[0])]).T])
                 for parameter in self.parameters_to_read:
                     stack(parameter)
                     

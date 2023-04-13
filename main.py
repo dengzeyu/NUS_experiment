@@ -75,7 +75,7 @@ for ind, device in enumerate(device_classes):
 
 print('Devices import succes')
 
-#matplotlib.use("TkAgg")
+matplotlib.use("TkAgg")
 plt.rcParams['animation.html'] = 'jshtml'
 LARGE_FONT = ('Verdana', 12)
 SUPER_LARGE = ('Verdana', 16)
@@ -471,23 +471,23 @@ def map_animation(i, n, filename):
           
         try:
             x = eval(globals()[f'x_transformation{n}'], locals())
-        except:
-            pass
+        except Exception as e:
+            print(e)
         
         try:
             y = eval(globals()[f'y_transformation{n}'], locals())
-        except:
-            pass
+        except Exception as e:
+            print(e)
         
         try:
             z = eval(globals()[f'z_transformation{n}'], locals())
-        except:
-            pass
+        except Exception as e:
+            print(e)
         
         try:
             globals()[f'colorbar{n}'].remove()
-        except:
-            pass
+        except Exception as e:
+            print(e)
 
         title = ax.get_title()
         xlabel = ax.get_xlabel()
@@ -4914,8 +4914,10 @@ class Sweeper_write(threading.Thread):
             elif walks > 1:
                 for i in range(1, walks + 1):
                     inner_loop_single(direction = round(2 * (i % 2) - 1))
+                    if globals()['fastmode_flag'] == True:
+                        step(axis = max(1, len(manual_sweep_flags) - 1))
                     step(axis = len(manual_sweep_flags), back = True)
-                    if not self.sweepable1 == True:
+                    if not getattr(self, f'sweepable{len(manual_sweep_flags)}') == True:
                         step(axis = len(manual_sweep_flags), back = True)
                     back_and_forth_transposition(len(manual_sweep_flags))
                         
@@ -4991,7 +4993,7 @@ class Sweeper_write(threading.Thread):
                 for i in range(1, walks + 1):
                     external_loop_single(round(2 * (i % 2) - 1))
                     step(axis = len(manual_sweep_flags) - 1, back = True)
-                    if not self.sweepable2 == True:
+                    if not getattr(self, f'sweepable{len(manual_sweep_flags) - 1}') == True:
                         step(axis = len(manual_sweep_flags) - 1, back = True)
                     back_and_forth_transposition(len(manual_sweep_flags) - 1)
                     
@@ -5042,7 +5044,7 @@ class Sweeper_write(threading.Thread):
                 for i in range(1, walks + 1):
                     master_loop_single(round(2 * (i % 2) - 1))
                     step(axis = 1, back = True)
-                    if not self.sweepable3 == True:
+                    if not self.sweepable1 == True:
                         step(axis = 1, back = True)
                     back_and_forth_transposition(1)
                     
@@ -5284,7 +5286,7 @@ class FigureSettings(object):
         self.y_transform = str(self.preset[f'y{self.position}_transform'].values[0])
         self.z_transform = str(self.preset[f'z{self.position}_transform'].values[0])
         
-        if plot_flag == 'Plot':
+        if plot_flag == 'Plot' or int(var2str(ax)[2:]) % 3 != 1:
         
             self.entry_title = tk.Entry(tw)
             self.entry_title.insert(index = 0, string = self.title)
@@ -5592,17 +5594,17 @@ class FigureSettings(object):
         def axes_settings(i, pad = 0, tick_size = 4, label_size = 6, x_pad = 0, y_pad = 1, title_size = 8, title_pad = -5):
             globals()[f'ax{i}'].tick_params(axis='y', which='both', length = 0, pad=pad, labelsize=tick_size)
             globals()[f'ax{i}'].tick_params(axis='x', which='both', length = 0, pad=pad + 1, labelsize=tick_size)
-            globals()[f'ax{i}'].set_xlabel(self.entry_xlabel.get(), fontsize = label_size, labelpad = x_pad)
-            globals()[f'ax{i}'].set_ylabel(self.entry_ylabel.get(), fontsize = label_size, labelpad = y_pad)
-            globals()[f'colorbar{i}'].set_label(self.entry_zlabel.get(), fontsize = label_size, labelpad = x_pad)
-            globals()[f'colorbar{i}_label'] = self.entry_zlabel.get()
-            globals()[f'ax{i}'].set_title(self.entry_title.get(), fontsize = title_size, pad = title_pad)
+            globals()[f'ax{i}'].set_xlabel(self.entry_xlabel_map.get(), fontsize = label_size, labelpad = x_pad)
+            globals()[f'ax{i}'].set_ylabel(self.entry_ylabel_map.get(), fontsize = label_size, labelpad = y_pad)
+            globals()[f'colorbar{i}'].set_label(self.entry_zlabel_map.get(), fontsize = label_size, labelpad = x_pad)
+            globals()[f'colorbar{i}_label'] = self.entry_zlabel_map.get()
+            globals()[f'ax{i}'].set_title(self.entry_title_map.get(), fontsize = title_size, pad = title_pad)
         
         ax_str = var2str(ax)
         
         order = ax_str[2:]
         
-        globals()[f'z{order}_status'] = self.combo_z_device.current()
+        globals()[f'z{order}_status'] = self.combo_z_device_map.current()
         
         
         ax.clear()
@@ -5736,7 +5738,7 @@ class FigureSettings(object):
                 pass
             
             try:
-                globals()[f'z_transformation{var2str(ax)[2:]}'] = self.entry_z_transformation.get()
+                globals()[f'z_transformation{var2str(ax)[2:]}'] = self.entry_z_transformation_map.get()
             except:
                 pass
             
