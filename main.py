@@ -116,6 +116,8 @@ to_sweep3 = float
 ratio_sweep3 = float
 delay_factor3 = float
 stepper_flag = False
+fastmode_slave_flag = False
+fastmode_master_flag = False
 
 plot_flag = 'Plot'
 
@@ -569,7 +571,7 @@ zero_time = time.perf_counter()
 
 class Universal_frontend(tk.Tk):
 
-    def __init__(self, classes, start, size = '1920x1080', title = 'Lock in test', *args, **kwargs):
+    def __init__(self, classes, start, size = '1920x1080', title = 'Unisweep', *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
 
         tk.Tk.iconbitmap(self)
@@ -1440,14 +1442,78 @@ class Sweeper1d(tk.Frame):
         
         self.save_back_and_forth_master_status()
     
+        class BackAndForthMaster(object):
+            
+            def __init__(self, widget, parent):
+                self.master_toplevel = None
+                self.master_widget = widget
+                self.parent = parent
+            
+            def show_toplevel(self):
+                x, y, _, _ = self.master_widget.bbox('all')
+                x = x + self.master_widget.winfo_rootx()
+                y = y + self.master_widget.winfo_rooty()
+                self.master_toplevel = tw = tk.Toplevel(self.master_widget)
+                tw.wm_geometry("+%d+%d" % (x, y))
+                label_back_and_forth_slave = tk.Label(tw, text = 'Set number of back and forth\n walks for slave axis', font = LARGE_FONT)
+                label_back_and_forth_slave.grid(row = 0, column = 0, pady = 2)
+                
+                self.combo_back_and_forth_master = ttk.Combobox(tw, value = [2, 'custom', 'continious'])
+                self.combo_back_and_forth_master.grid(row = 1, column = 0, pady = 2)
+                
+                def update_back_and_forth_master_count():
+                    if self.combo_back_and_forth_master.current() == 0:
+                        self.parent.back_and_forth_master_count = 2
+                    elif self.combo_back_and_forth_master.current() == -1:
+                        self.parent.back_and_forth_master_count = int(self.combo_back_and_forth_master.get())
+                    elif self.combo_back_and_forth_master.current() == 2:
+                        self.parent.back_and_forth_master_count = int(1e6)
+                    else:
+                        raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_master.get())}')
+                
+                button_set_back_and_forth_master = tk.Button(tw, text = 'Set', command = update_back_and_forth_master_count)
+                button_set_back_and_forth_master.grid(row = 1, column = 1, pady = 2)
+                
+                def hide_toplevel():
+                    tw = self.master_toplevel
+                    self.master_toplevel = None
+                    tw.destroy()
+                
+                tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
+                
+        def CreateMasterToplevel(widget, parent):
+            
+            toplevel = BackAndForthMaster(widget, parent)
+            
+            def show(event):
+                toplevel.show_toplevel()
+                
+            widget.bind('<Button-3>', show)    
+    
         self.checkbox_back_and_forth_master = ttk.Checkbutton(self,
                                            variable=self.status_back_and_forth_master, onvalue=1,
                                            offvalue=0, command=lambda: self.save_back_and_forth_master_status())
         self.checkbox_back_and_forth_master.place(relx=0.23, rely=0.56)
+        CreateMasterToplevel(self.checkbox_back_and_forth_master, self)
         
-        label_back_and_forth_master = tk.Label(self, text = '🔁', font = SUPER_LARGE)
-        label_back_and_forth_master.place(relx = 0.2435, rely = 0.55)
-        CreateToolTip(label_back_and_forth_master, 'Back and forth sweep\nfor this axis')
+        self.label_back_and_forth_master = tk.Label(self, text = '🔁', font = SUPER_LARGE)
+        self.label_back_and_forth_master.place(relx = 0.2435, rely = 0.55)
+        CreateToolTip(self.label_back_and_forth_master, 'Back and forth sweep for this axis \nRight click to configure')
+        CreateMasterToplevel(self.label_back_and_forth_master, self)
+
+        def stepper_mode():
+            global stepper_flag
+            
+            if stepper_flag == True:
+                stepper_flag = False
+            elif stepper_flag == False:
+                stepper_flag = True
+
+        self.checkbox_stepper = tk.Checkbutton(self, text = r'🦶', font = LARGE_FONT, command = stepper_mode)
+        if stepper_flag == True:
+            self.checkbox_stepper.select()
+        self.checkbox_stepper.place(relx = 0.275, rely = 0.555)
+        CreateToolTip(self.checkbox_stepper, 'Stepper mode')
 
         self.devices = tk.StringVar()
         self.devices.set(value=parameters_to_read)
@@ -1510,6 +1576,151 @@ class Sweeper1d(tk.Frame):
             self.combo_to_sweep1.current(0)
             if self.combo_to_sweep1['values'][0] != '':
                 self.update_sweep_parameters(event = None)
+
+        class ChangeName(object):
+            
+            def __init__(self, widget, parent):
+                self.name_toplevel = None
+                self.name_widget = widget
+                self.parent = parent
+            
+            def show_toplevel(self):
+                x = y = 0
+                x = x + self.name_widget.winfo_rootx()
+                y = y + self.name_widget.winfo_rooty()
+                self.name_toplevel = tw = tk.Toplevel(self.name_widget)
+                tw.wm_geometry("+%d+%d" % (x, y))
+                
+                label_names = tk.Label(tw, text = 'Change names:', font = LARGE_FONT)
+                label_names.grid(row = 0, column = 0, pady = 2)
+                    
+                def update_combo_set_parameters(event, interval = 100):
+                    global types_of_devices
+                    global list_of_devices
+                    ind = self.combo_devices.current()
+                    class_of_sweeper_device = types_of_devices[ind]
+                    device = list_of_devices[ind]
+                    
+                    if self.combo_devices.current() != -1:
+                        self.selected_device = ind
+                    if class_of_sweeper_device != 'Not a class':
+                        self.combo_set_parameters['values'] = getattr(device, 'set_options')
+                        self.combo_set_parameters.after(interval)
+                    else:
+                        self.combo_set_parameters['values'] = ['']
+                        self.combo_set_parameters.current(0)
+                        self.combo_set_parameters.after(interval)
+
+                def update_names_devices():
+                    new_device_name = self.combo_devices.get()
+                    new_device_values = list(self.combo_devices['values'])
+                    new_device_values[self.selected_device] = new_device_name
+                    self.combo_devices['values'] = new_device_values
+                    self.combo_devices.after(1)
+                    
+                    try:
+                        self.parent.combo_to_sweep1['values'] = new_device_values
+                        self.parent.combo_to_sweep1.current(self.selected_device)
+                    except:
+                        pass
+                    
+                    self.parent.after(1)
+                    
+                def update_names_set_parameters():
+                    new_set_parameter_name = self.combo_set_parameters.get()
+                    new_set_parameters_values = list(self.combo_set_parameters['values'])
+                    new_set_parameters_values[self.selected_set_option] = new_set_parameter_name
+                    self.combo_set_parameters['values'] = new_set_parameters_values
+                    try:
+                        self.parent.sweep_options1['values'] = new_set_parameters_values
+                        self.parent.sweep_options1.current(self.selected_set_options)
+                    except:
+                        pass
+                    self.parent.after(1)
+                    
+                def update_names_get_parameters(interval = 1000):
+                    new_get_parameter_name = self.combo_get_parameters.get()
+                    new_get_parameters_values = list(self.combo_get_parameters['values'])
+                    new_get_parameters_values[self.selected_get_option] = new_get_parameter_name
+                    
+                    self.parent.dict_lstbox[self.combo_get_parameters['values'][self.combo_get_parameters.current()]] = new_get_parameter_name
+                    
+                    self.combo_get_parameters['values'] = new_get_parameters_values
+                    
+                    self.parent.devices.set(value=new_get_parameters_values)
+                    self.parent.lstbox_to_read.after(interval)
+                    
+                def select_set_option(event):
+                    if self.combo_set_parameters.current() != -1:
+                        self.selected_set_option = self.combo_set_parameters.current()
+                        
+                def select_get_option(event):
+                    if self.combo_get_parameters.current() != -1:
+                        self.selected_get_option = self.combo_get_parameters.current()
+                
+                self.combo_devices = ttk.Combobox(tw, value = self.parent.combo_to_sweep1['values'])
+                self.combo_devices.current(0)
+                self.combo_devices.bind(
+                    "<<ComboboxSelected>>", update_combo_set_parameters)
+                self.combo_devices.grid(row = 1, column = 0, pady = 2)
+                
+                self.combo_set_parameters = ttk.Combobox(tw, value = [''])
+                device_class = types_of_devices[0]
+                if device_class != 'Not a class':
+                    try:
+                        self.combo_set_parameters['values'] = self.parent.sweep_options1['values']
+                    except: 
+                        self.combo_set_parameters['values'] = getattr(list_of_devices[0], 'set_options')
+                    self.combo_set_parameters.current(0)
+                    self.combo_set_parameters.bind(
+                        "<<ComboboxSelected>>", select_set_option)
+                else:
+                    self.combo_set_parameters['values'] = ['']
+                    self.combo_set_parameters.current(0)
+                self.combo_set_parameters.grid(row = 2, column = 0, pady = 2)
+                
+                parameters = parameters_to_read
+                
+                if len(parameters) == 0:
+                    parameters = ['']
+                
+                self.combo_get_parameters = ttk.Combobox(tw, value = parameters)
+                self.combo_get_parameters.current(0)
+                self.combo_get_parameters.bind(
+                    "<<ComboboxSelected>>", select_get_option)
+                self.combo_get_parameters.grid(row = 3, column = 0, pady = 2)
+                
+                button_change_name_device = tk.Button(tw, text = 'Change device name', command = update_names_devices)
+                button_change_name_device.grid(row = 1, column = 1, pady = 2)
+                
+                self.selected_device = 0
+                self.selected_set_option = 0
+                self.selected_get_option = 0
+                
+                button_change_name_set_parameters = tk.Button(tw, text = 'Change set name', command = update_names_set_parameters)
+                button_change_name_set_parameters.grid(row = 2, column = 1, pady = 2)
+                
+                button_change_name_get_parameters = tk.Button(tw, text = 'Change get name', command = update_names_get_parameters)
+                button_change_name_get_parameters.grid(row = 3, column = 1, pady = 2)
+                
+                def hide_toplevel():
+                    tw = self.name_toplevel
+                    self.name_toplevel = None
+                    tw.destroy()
+                
+                tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
+                
+        def CreateNameToplevel(widget, parent):
+            
+            toplevel = ChangeName(widget, parent)
+            
+            def show(event):
+                toplevel.show_toplevel()
+                
+            widget.bind('<Button-3>', show) 
+            
+        CreateNameToplevel(self.sweep_options1, self)
+        CreateNameToplevel(self.combo_to_sweep1, self)
 
         label_from = tk.Label(self, text='From', font=LARGE_FONT)
         label_from.place(relx=0.12, rely=0.24)
@@ -1574,10 +1785,6 @@ class Sweeper1d(tk.Frame):
         self.entry_filename.place(relx = 0.97 - width / 100, rely = 0.9)
 
         self.script = ''
-
-        button_settings = tk.Button(self, text = '⚙️', font = SUPER_LARGE, command = lambda: self.open_settings())
-        button_settings.place(relx = 0.85, rely = 0.15)
-        CreateToolTip(button_settings, 'Settings')
 
         button_filename = tk.Button(
             self, text = 'Browse...', command=lambda: self.set_filename_sweep())
@@ -1780,11 +1987,7 @@ class Sweeper1d(tk.Frame):
         if self.entry_filename.get() != self.filename_sweep:
             self.preset.loc[0, 'filename_sweep'] = self.entry_filename.get()
             self.preset.to_csv(globals()['sweeper1d_path'], index = False)
-
-    def open_settings(self):        
-        self.window_settings = Universal_frontend((Settings,), Settings)
-        self.window_settings.mainloop()
-
+            
     def open_graph(self):
         
         global cur_animation_num
@@ -2039,23 +2242,150 @@ class Sweeper2d(tk.Frame):
         self.save_back_and_forth_master_status()
         self.save_back_and_forth_slave_status()
     
+        class BackAndForthMaster(object):
+            
+            def __init__(self, widget, parent):
+                self.master_toplevel = None
+                self.master_widget = widget
+                self.parent = parent
+            
+            def show_toplevel(self):
+                x, y, _, _ = self.master_widget.bbox('all')
+                x = x + self.master_widget.winfo_rootx()
+                y = y + self.master_widget.winfo_rooty()
+                self.master_toplevel = tw = tk.Toplevel(self.master_widget)
+                tw.wm_geometry("+%d+%d" % (x, y))
+                label_back_and_forth_slave = tk.Label(tw, text = 'Set number of back and forth\n walks for slave axis', font = LARGE_FONT)
+                label_back_and_forth_slave.grid(row = 0, column = 0, pady = 2)
+                
+                self.combo_back_and_forth_master = ttk.Combobox(tw, value = [2, 'custom', 'continious'])
+                self.combo_back_and_forth_master.grid(row = 1, column = 0, pady = 2)
+                
+                def update_back_and_forth_master_count():
+                    if self.combo_back_and_forth_master.current() == 0:
+                        self.parent.back_and_forth_master_count = 2
+                    elif self.combo_back_and_forth_master.current() == -1:
+                        self.parent.back_and_forth_master_count = int(self.combo_back_and_forth_slave.get())
+                    elif self.combo_back_and_forth_master.current() == 2:
+                        self.parent.back_and_forth_master_count = int(1e6)
+                    else:
+                        raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_master.get())}')
+                
+                button_set_back_and_forth_master = tk.Button(tw, text = 'Set', command = update_back_and_forth_master_count)
+                button_set_back_and_forth_master.grid(row = 1, column = 1, pady = 2)
+                
+                def hide_toplevel():
+                    tw = self.master_toplevel
+                    self.master_toplevel = None
+                    tw.destroy()
+                
+                tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
+                
+        def CreateMasterToplevel(widget, parent):
+            
+            toplevel = BackAndForthMaster(widget, parent)
+            
+            def show(event):
+                toplevel.show_toplevel()
+                
+            widget.bind('<Button-3>', show)
+    
+        class BackAndForthSlave(object):
+            
+            def __init__(self, widget, parent):
+                self.slave_toplevel = None
+                self.slave_widget = widget
+                self.parent = parent
+            
+            def show_toplevel(self):
+                x, y, _, _ = self.slave_widget.bbox('all')
+                x = x + self.slave_widget.winfo_rootx()
+                y = y + self.slave_widget.winfo_rooty()
+                self.slave_toplevel = tw = tk.Toplevel(self.slave_widget)
+                tw.wm_geometry("+%d+%d" % (x, y))
+                label_back_and_forth_slave = tk.Label(tw, text = 'Set number of back and forth\n walks for slave axis', font = LARGE_FONT)
+                label_back_and_forth_slave.grid(row = 0, column = 0, pady = 2)
+                
+                self.combo_back_and_forth_slave = ttk.Combobox(tw, value = [2, 'custom', 'continious'])
+                self.combo_back_and_forth_slave.grid(row = 1, column = 0, pady = 2)
+                
+                def update_back_and_forth_slave_count():
+                    if self.combo_back_and_forth_slave.current() == 0:
+                        self.parent.back_and_forth_slave_count = 2
+                    elif self.combo_back_and_forth_slave.current() == -1:
+                        self.parent.back_and_forth_slave_count = int(self.combo_back_and_forth_slave.get())
+                    elif self.combo_back_and_forth_slave.current() == 2:
+                        self.parent.back_and_forth_slave_count = int(1e6)
+                    else:
+                        raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_slave.get())}')
+                
+                button_set_back_and_forth_slave = tk.Button(tw, text = 'Set', command = update_back_and_forth_slave_count)
+                button_set_back_and_forth_slave.grid(row = 1, column = 1, pady = 2)
+                
+                label_fast_master = tk.Label(tw, text = 'Fast mode')
+                label_fast_master.grid(row = 2, column = 0, pady = 2)
+                
+                checkbox_status = tk.IntVar()
+                checkbox_status.set(int(globals()['fastmode_master_flag']))
+                
+                checkbox_fast_master = ttk.Checkbutton(tw, variable = checkbox_status, onvalue = 1, offvalue = 0)
+                checkbox_fast_master.grid(row = 2, column = 1, pady = 1)
+                
+                def hide_toplevel():
+                    tw = self.slave_toplevel
+                    self.slave_toplevel = None
+                    if checkbox_status.get() == 1:
+                        globals()['fastmode_master_flag'] = True
+                    else:
+                        globals()['fastmode_master_flag'] = False
+                    tw.destroy()
+                
+                tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
+                
+        def CreateSlaveToplevel(widget, parent):
+            
+            toplevel = BackAndForthSlave(widget, parent)
+            
+            def show(event):
+                toplevel.show_toplevel()
+                
+            widget.bind('<Button-3>', show)
+    
         self.checkbox_back_and_forth_master = ttk.Checkbutton(self,
                                            variable=self.status_back_and_forth_master, onvalue=1,
                                            offvalue=0, command=lambda: self.save_back_and_forth_master_status())
         self.checkbox_back_and_forth_master.place(relx=0.22, rely=0.61)
+        CreateMasterToplevel(self.checkbox_back_and_forth_master, self)
         
-        label_back_and_forth_slave = tk.Label(self, text = '🔁', font = SUPER_LARGE)
-        label_back_and_forth_slave.place(relx = 0.2335, rely = 0.6)
-        CreateToolTip(label_back_and_forth_slave, 'Back and forth sweep\nfor this axis')
+        self.label_back_and_forth_master = tk.Label(self, text = '🔁', font = SUPER_LARGE)
+        self.label_back_and_forth_master.place(relx = 0.2335, rely = 0.6)
+        CreateToolTip(self.label_back_and_forth_master, 'Back and forth sweep\nfor this axis \nRight click to configure')
+        CreateMasterToplevel(self.label_back_and_forth_master, self)
 
         self.checkbox_back_and_forth_slave = ttk.Checkbutton(self,
                                            variable=self.status_back_and_forth_slave, onvalue=1,
                                            offvalue=0, command=lambda: self.save_back_and_forth_slave_status())
         self.checkbox_back_and_forth_slave.place(relx=0.38, rely=0.61)
+        CreateSlaveToplevel(self.checkbox_back_and_forth_slave, self)
         
-        label_back_and_forth_slave = tk.Label(self, text = '🔁', font = SUPER_LARGE)
-        label_back_and_forth_slave.place(relx = 0.3935, rely = 0.6)
-        CreateToolTip(label_back_and_forth_slave, 'Back and forth sweep\nfor this axis')
+        self.label_back_and_forth_slave = tk.Label(self, text = '🔁', font = SUPER_LARGE)
+        self.label_back_and_forth_slave.place(relx = 0.3935, rely = 0.6)
+        CreateToolTip(self.label_back_and_forth_slave, 'Back and forth sweep\nfor this axis')
+        CreateSlaveToplevel(self.label_back_and_forth_slave, self)
+    
+        def stepper_mode():
+            global stepper_flag
+            
+            if stepper_flag == True:
+                stepper_flag = False
+            elif stepper_flag == False:
+                stepper_flag = True
+
+        self.checkbox_stepper = tk.Checkbutton(self, text = r'🦶', font = LARGE_FONT, command = stepper_mode)
+        if stepper_flag == True:
+            self.checkbox_stepper.select()
+        self.checkbox_stepper.place(relx = 0.425, rely = 0.605)
+        CreateToolTip(self.checkbox_stepper, 'Stepper mode')
     
         devices = tk.StringVar()
         devices.set(value=parameters_to_read)
@@ -2089,6 +2419,164 @@ class Sweeper2d(tk.Frame):
             self, text="▶", command=lambda: self.start_sweeping(), font = LARGE_FONT)
         self.button_start_sweeping.place(relx=0.525, rely=0.21 + self.lstbox_height, height= 90, width=30)
         CreateToolTip(self.button_start_sweeping, 'Start sweeping')
+        
+        class ChangeName(object):
+            
+            def __init__(self, widget, parent):
+                self.name_toplevel = None
+                self.name_widget = widget
+                self.parent = parent
+            
+            def show_toplevel(self):
+                x = y = 0
+                x = x + self.name_widget.winfo_rootx()
+                y = y + self.name_widget.winfo_rooty()
+                self.name_toplevel = tw = tk.Toplevel(self.name_widget)
+                tw.wm_geometry("+%d+%d" % (x, y))
+                
+                label_names = tk.Label(tw, text = 'Change names:', font = LARGE_FONT)
+                label_names.grid(row = 0, column = 0, pady = 2)
+                    
+                def update_combo_set_parameters(event, interval = 100):
+                    global types_of_devices
+                    global list_of_devices
+                    ind = self.combo_devices.current()
+                    class_of_sweeper_device = types_of_devices[ind]
+                    device = list_of_devices[ind]
+                    
+                    if self.combo_devices.current() != -1:
+                        self.selected_device = ind
+                    if class_of_sweeper_device != 'Not a class':
+                        self.combo_set_parameters['values'] = getattr(device, 'set_options')
+                        self.combo_set_parameters.after(interval)
+                    else:
+                        self.combo_set_parameters['values'] = ['']
+                        self.combo_set_parameters.current(0)
+                        self.combo_set_parameters.after(interval)
+
+                def update_names_devices():
+                    new_device_name = self.combo_devices.get()
+                    new_device_values = list(self.combo_devices['values'])
+                    new_device_values[self.selected_device] = new_device_name
+                    self.combo_devices['values'] = new_device_values
+                    self.combo_devices.after(1)
+                    
+                    try:
+                        self.parent.combo_to_sweep1['values'] = new_device_values
+                        self.parent.combo_to_sweep1.current(self.selected_device)
+                    except:
+                        pass
+                    try:
+                        self.parent.combo_to_sweep2['values'] = new_device_values
+                        self.parent.combo_to_sweep2.current(self.selected_device)
+                    except:
+                        pass
+                    
+                    self.parent.after(1)
+                    
+                def update_names_set_parameters():
+                    new_set_parameter_name = self.combo_set_parameters.get()
+                    new_set_parameters_values = list(self.combo_set_parameters['values'])
+                    new_set_parameters_values[self.selected_set_option] = new_set_parameter_name
+                    self.combo_set_parameters['values'] = new_set_parameters_values
+                    try:
+                        self.parent.sweep_options1['values'] = new_set_parameters_values
+                        self.parent.sweep_options1.current(self.selected_set_options)
+                    except:
+                        pass
+                    try:
+                        self.parent.sweep_options2['values'] = new_set_parameters_values
+                        self.parent.sweep_options2.current(self.selected_set_options)
+                    except:
+                        pass
+
+                    self.parent.after(1)
+                    
+                def update_names_get_parameters(interval = 1000):
+                    new_get_parameter_name = self.combo_get_parameters.get()
+                    new_get_parameters_values = list(self.combo_get_parameters['values'])
+                    new_get_parameters_values[self.selected_get_option] = new_get_parameter_name
+                    
+                    self.parent.dict_lstbox[self.combo_get_parameters['values'][self.combo_get_parameters.current()]] = new_get_parameter_name
+                    
+                    self.combo_get_parameters['values'] = new_get_parameters_values
+                    
+                    self.parent.devices.set(value=new_get_parameters_values)
+                    self.parent.lstbox_to_read.after(interval)
+                    
+                def select_set_option(event):
+                    if self.combo_set_parameters.current() != -1:
+                        self.selected_set_option = self.combo_set_parameters.current()
+                        
+                def select_get_option(event):
+                    if self.combo_get_parameters.current() != -1:
+                        self.selected_get_option = self.combo_get_parameters.current()
+                
+                self.combo_devices = ttk.Combobox(tw, value = self.parent.combo_to_sweep1['values'])
+                self.combo_devices.current(0)
+                self.combo_devices.bind(
+                    "<<ComboboxSelected>>", update_combo_set_parameters)
+                self.combo_devices.grid(row = 1, column = 0, pady = 2)
+                
+                self.combo_set_parameters = ttk.Combobox(tw, value = [''])
+                device_class = types_of_devices[0]
+                if device_class != 'Not a class':
+                    try:
+                        self.combo_set_parameters['values'] = self.parent.sweep_options1['values']
+                    except: 
+                        self.combo_set_parameters['values'] = getattr(list_of_devices[0], 'set_options')
+                    self.combo_set_parameters.current(0)
+                    self.combo_set_parameters.bind(
+                        "<<ComboboxSelected>>", select_set_option)
+                else:
+                    self.combo_set_parameters['values'] = ['']
+                    self.combo_set_parameters.current(0)
+                self.combo_set_parameters.grid(row = 2, column = 0, pady = 2)
+                
+                parameters = parameters_to_read
+                
+                if len(parameters) == 0:
+                    parameters = ['']
+                
+                self.combo_get_parameters = ttk.Combobox(tw, value = parameters)
+                self.combo_get_parameters.current(0)
+                self.combo_get_parameters.bind(
+                    "<<ComboboxSelected>>", select_get_option)
+                self.combo_get_parameters.grid(row = 3, column = 0, pady = 2)
+                
+                button_change_name_device = tk.Button(tw, text = 'Change device name', command = update_names_devices)
+                button_change_name_device.grid(row = 1, column = 1, pady = 2)
+                
+                self.selected_device = 0
+                self.selected_set_option = 0
+                self.selected_get_option = 0
+                
+                button_change_name_set_parameters = tk.Button(tw, text = 'Change set name', command = update_names_set_parameters)
+                button_change_name_set_parameters.grid(row = 2, column = 1, pady = 2)
+                
+                button_change_name_get_parameters = tk.Button(tw, text = 'Change get name', command = update_names_get_parameters)
+                button_change_name_get_parameters.grid(row = 3, column = 1, pady = 2)
+                
+                def hide_toplevel():
+                    tw = self.name_toplevel
+                    self.name_toplevel = None
+                    tw.destroy()
+                
+                tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
+                
+        def CreateNameToplevel(widget, parent):
+            
+            toplevel = ChangeName(widget, parent)
+            
+            def show(event):
+                toplevel.show_toplevel()
+                
+            widget.bind('<Button-3>', show) 
+            
+        CreateNameToplevel(self.sweep_options1, self)
+        CreateNameToplevel(self.combo_to_sweep1, self)
+        CreateNameToplevel(self.sweep_options2, self)
+        CreateNameToplevel(self.combo_to_sweep2, self)
         
         if len(parameters_to_read) < 10:
             self.lstbox_to_read.place(relx=0.45, rely=0.16)
@@ -2226,6 +2714,7 @@ class Sweeper2d(tk.Frame):
         self.text_condition.delete('1.0', tk.END)
         self.text_condition.insert(tk.END, self.condition)
         self.text_condition.place(relx = 0.12, rely = 0.7)
+        CreateToolTip(self.text_condition, 'Master sweep: x\nSlave sweep: y\nSet condition for a sweep map \nRight click to configure script')
 
         self.filename_textvariable = tk.StringVar(self, value = self.filename_sweep)
         width = int(len(self.filename_textvariable.get()) * 0.95)
@@ -2234,10 +2723,113 @@ class Sweeper2d(tk.Frame):
         self.entry_filename.place(relx = 0.97 - width / 100, rely = 0.9)
 
         self.script = ''
+        
+        class Script(object):
+            
+            def __init__(self, widget, parent):
+                self.script_toplevel = None
+                self.script_widget = widget
+                self.parent = parent
+            
+            def show_toplevel(self):
+                x = y = 0
+                self.script_toplevel = tw = tk.Toplevel(self.script_widget)
+                tw.wm_geometry("+%d+%d" % (x, y))
+                
+                label_script = tk.Label(tw, text = 'Manual script', font = LARGE_FONT)
+                label_script.grid(row = 0, column = 0, pady = 2)
+                
+                def ctrlEvent(event):
+                    if event.state == 4 and event.keysym == 'c':
+                        content = self.text_script.selection_get()
+                        tw.clipboard_clear()
+                        tw.clipboard_append(content)
+                        return "break"
+                    elif event.state == 4 and event.keysym == 'v':
+                        self.text_script.insert('end', tw.selection_get(selection='CLIPBOARD'))
+                        return "break"
+                    elif event.state == 4 and event.keysym == 'a':
+                        self.text_script.tag_add("sel", "1.0","end")
+                        return "break"
+                    elif event.state == 4 and event.keysym == 'z':
+                        self.text_script.delete('sel.first','sel.last')
+                        return "break"
+                    
+                self.text_script = tk.Text(tw, width = 60, height = 10)
+                self.text_script.grid(row = 1, column = 0, pady = 2, rowspan = 3)
+                self.text_script.configure(font = LARGE_FONT)
+                self.text_script.bind("<Key>", ctrlEvent)
+                
+                def explore_script(interval = 1):
+                    script_filename = tk.filedialog.askopenfilename(initialdir=cur_dir,
+                                                                             title='Select a manual sweeper',
+                                                                             filetypes=('all files', '*.*'))
+                    with open(script_filename, 'r') as file:
+                        try:
+                            file.open()
+                            script = file.read()
+                        except:
+                            file.close()
+                        finally:
+                            file.close()
+                            
+                    self.text_script.delete(0, tk.END)
+                    self.text_script.insert(tk.END, script)
+                    self.text_script.after(interval)
+                    
+                def set_script():
+                    self.parent.script = self.text_script.get(1.0, tk.END)[:-1]
+                    
+                def save_script():
+                    self.script_filename = tk.filedialog.asksaveasfilename(title='Save the file',
+                                                                     initialfile=os.path.join(core_dir, 'config', f'script{datetime.today().strftime("%H_%M_%d_%m_%Y")}'),
+                                                                     defaultextension='.csv')
+                    
+                    set_script()
+                    
+                    with open(self.script_filename, 'w') as file:
+                        try:
+                            file.open()
+                            file.write(self.parent.script)
+                        except:
+                            file.close()
+                        finally:
+                            file.close()
+                
+                button_explore_script = tk.Button(
+                    tw, text='🔎', font = SUPER_LARGE, command = explore_script)
+                button_explore_script.grid(row = 1, column = 1, pady = 2)
+                CreateToolTip(button_explore_script, 'Explore existing script')
+                
+                button_save_script = tk.Button(
+                    tw, text='💾', font = SUPER_LARGE, command = save_script)
+                button_save_script.grid(row = 2, column = 1, pady = 2)
+                CreateToolTip(button_save_script, 'Save this script')
+                
+                self.script_filename = ''
+                
+                button_set_script = tk.Button(
+                    tw, text = 'Apply script', font = LARGE_FONT, command = set_script)
+                button_set_script.grid(row = 3, column = 1, pady = 2)
 
-        button_settings = tk.Button(self, text = '⚙️', font = SUPER_LARGE, command = lambda: self.open_settings())
-        button_settings.place(relx = 0.85, rely = 0.15)
-        CreateToolTip(button_settings, 'Settings')
+                def hide_toplevel():
+                    tw = self.script_toplevel
+                    self.script_toplevel = None
+        
+                    tw.destroy()
+                
+                tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
+            
+        def CreateScriptToplevel(widget, parent):
+            
+            toplevel = Script(widget, parent)
+            
+            def show(event):
+                toplevel.show_toplevel()
+                
+            widget.bind('<Button-3>', show) 
+            
+        CreateScriptToplevel(self.text_condition, self)
 
         button_filename = tk.Button(
             self, text = 'Browse...', command=lambda: self.set_filename_sweep())
@@ -2529,10 +3121,6 @@ class Sweeper2d(tk.Frame):
         #update preset
         self.preset.loc[0, f'manual_filename{i}'] = str(self.manual_filenames[i - 1])
         self.preset.to_csv(globals()['sweeper2d_path'], index = False)
-
-    def open_settings(self):        
-        self.window_settings = Universal_frontend((Settings,), Settings)
-        self.window_settings.mainloop()
 
     def explore_files(self, i):
         self.manual_filenames[i] = tk.filedialog.askopenfilename(initialdir=cur_dir,
@@ -2859,15 +3447,65 @@ class Sweeper3d(tk.Frame):
         back_and_forth_slave_slave = 1
     
         self.back_and_forth_master_count = 2
+        
+        class BackAndForthMaster(object):
+            
+            def __init__(self, widget, parent):
+                self.master_toplevel = None
+                self.master_widget = widget
+                self.parent = parent
+            
+            def show_toplevel(self):
+                x, y, _, _ = self.master_widget.bbox('all')
+                x = x + self.master_widget.winfo_rootx()
+                y = y + self.master_widget.winfo_rooty()
+                self.master_toplevel = tw = tk.Toplevel(self.master_widget)
+                tw.wm_geometry("+%d+%d" % (x, y))
+                label_back_and_forth_master = tk.Label(tw, text = 'Set number of back and forth\n walks for master axis', font = LARGE_FONT)
+                label_back_and_forth_master.grid(row = 0, column = 0, pady = 2)
+                
+                self.combo_back_and_forth_master = ttk.Combobox(tw, value = [2, 'custom', 'continious'])
+                self.combo_back_and_forth_master.grid(row = 1, column = 0, pady = 2)
+                
+                def update_back_and_forth_master_count():
+                    if self.combo_back_and_forth_master.current() == 0:
+                        self.parent.back_and_forth_master_count = 2
+                    elif self.combo_back_and_forth_master.current() == -1:
+                        self.parent.back_and_forth_master_count = int(self.combo_back_and_forth_master.get())
+                    elif self.combo_back_and_forth_master.current() == 2:
+                        self.parent.back_and_forth_master_count = int(1e6)
+                    else:
+                        raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_master.get())}')
+                
+                button_set_back_and_forth_master = tk.Button(tw, text = 'Set', command = update_back_and_forth_master_count)
+                button_set_back_and_forth_master.grid(row = 1, column = 1, pady = 2)
+                
+                def hide_toplevel():
+                    tw = self.master_toplevel
+                    self.master_toplevel = None
+                    tw.destroy()
+                
+                tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
+                
+        def CreateMasterToplevel(widget, parent):
+            
+            toplevel = BackAndForthMaster(widget, parent)
+            
+            def show(event):
+                toplevel.show_toplevel()
+                
+            widget.bind('<Button-3>', show)
     
         self.checkbox_back_and_forth_master = ttk.Checkbutton(self,
                                            variable=self.status_back_and_forth_master, onvalue=1,
                                            offvalue=0, command=lambda: self.save_back_and_forth_master_status())
         self.checkbox_back_and_forth_master.place(relx=0.22, rely=0.62)
+        CreateMasterToplevel(self.checkbox_back_and_forth_master, self)
         
-        label_back_and_forth_master = tk.Label(self, text = '🔁', font = SUPER_LARGE)
-        label_back_and_forth_master.place(relx = 0.2335, rely = 0.61)
-        CreateToolTip(label_back_and_forth_master, 'Back and forth sweep\nfor this axis')
+        self.label_back_and_forth_master = tk.Label(self, text = '🔁', font = SUPER_LARGE)
+        self.label_back_and_forth_master.place(relx = 0.2335, rely = 0.61)
+        CreateToolTip(self.label_back_and_forth_master, 'Back and forth sweep\nfor this axis \n Right click to configure')
+        CreateMasterToplevel(self.label_back_and_forth_master, self)
 
         self.combo_to_sweep2 = ttk.Combobox(self, value=list_of_devices_addresses)
         self.combo_to_sweep2.bind(
@@ -2883,15 +3521,78 @@ class Sweeper3d(tk.Frame):
                 self.update_sweep_parameters2(event = None)
     
         self.back_and_forth_slave_count = 2
+        
+        class BackAndForthSlave(object):
+            
+            def __init__(self, widget, parent):
+                self.slave_toplevel = None
+                self.slave_widget = widget
+                self.parent = parent
+            
+            def show_toplevel(self):
+                x, y, _, _ = self.slave_widget.bbox('all')
+                x = x + self.slave_widget.winfo_rootx()
+                y = y + self.slave_widget.winfo_rooty()
+                self.slave_toplevel = tw = tk.Toplevel(self.slave_widget)
+                tw.wm_geometry("+%d+%d" % (x, y))
+                label_back_and_forth_slave = tk.Label(tw, text = 'Set number of back and forth\n walks for slave axis', font = LARGE_FONT)
+                label_back_and_forth_slave.grid(row = 0, column = 0, pady = 2)
+                
+                self.combo_back_and_forth_slave = ttk.Combobox(tw, value = [2, 'custom', 'continious'])
+                self.combo_back_and_forth_slave.grid(row = 1, column = 0, pady = 2)
+                
+                def update_back_and_forth_slave_count():
+                    if self.combo_back_and_forth_slave.current() == 0:
+                        self.parent.back_and_forth_slave_count = 2
+                    elif self.combo_back_and_forth_slave.current() == -1:
+                        self.parent.back_and_forth_slave_count = int(self.combo_back_and_forth_slave.get())
+                    elif self.combo_back_and_forth_slave.current() == 2:
+                        self.parent.back_and_forth_slave_count = int(1e6)
+                    else:
+                        raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_slave.get())}')
+                
+                button_set_back_and_forth_slave = tk.Button(tw, text = 'Set', command = update_back_and_forth_slave_count)
+                button_set_back_and_forth_slave.grid(row = 1, column = 1, pady = 2)
+                
+                label_fast_master = tk.Label(tw, text = 'Fast mode')
+                label_fast_master.grid(row = 2, column = 0, pady = 2)
+                
+                checkbox_status = tk.IntVar()
+                checkbox_status.set(int(globals()['fastmode_master_flag']))
+                
+                checkbox_fast_master = ttk.Checkbutton(tw, variable = checkbox_status, onvalue = 1, offvalue = 0)
+                checkbox_fast_master.grid(row = 2, column = 1, pady = 1)
+                
+                def hide_toplevel():
+                    tw = self.slave_toplevel
+                    self.slave_toplevel = None
+                    if checkbox_status.get() == 1:
+                        globals()['fastmode_master_flag'] = True
+                    else:
+                        globals()['fastmode_master_flag'] = False
+                    tw.destroy()
+                
+                tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
+                
+        def CreateSlaveToplevel(widget, parent):
+            
+            toplevel = BackAndForthSlave(widget, parent)
+            
+            def show(event):
+                toplevel.show_toplevel()
+                
+            widget.bind('<Button-3>', show)
     
         self.checkbox_back_and_forth_slave = ttk.Checkbutton(self,
                                            variable=self.status_back_and_forth_slave, onvalue=1,
                                            offvalue=0, command=lambda: self.save_back_and_forth_slave_status())
         self.checkbox_back_and_forth_slave.place(relx=0.35, rely=0.62)
+        CreateSlaveToplevel(self.checkbox_back_and_forth_slave, self)
         
-        label_back_and_forth_slave = tk.Label(self, text = '🔁', font = SUPER_LARGE)
-        label_back_and_forth_slave.place(relx = 0.3635, rely = 0.61)
-        CreateToolTip(label_back_and_forth_slave, 'Back and forth sweep\nfor this axis')
+        self.label_back_and_forth_slave = tk.Label(self, text = '🔁', font = SUPER_LARGE)
+        self.label_back_and_forth_slave.place(relx = 0.3635, rely = 0.61)
+        CreateToolTip(self.label_back_and_forth_slave, 'Back and forth sweep\nfor this axis \n Right click to configure')
+        CreateSlaveToplevel(self.label_back_and_forth_slave, self)
 
         self.combo_to_sweep3 = ttk.Combobox(self, value=list_of_devices_addresses)
         self.combo_to_sweep3.current(0)
@@ -2908,15 +3609,92 @@ class Sweeper3d(tk.Frame):
                 self.update_sweep_parameters3(event = None)
         
         self.back_and_forth_slave_slave_count = 2
+        
+        class BackAndForthSlaveSlave(object):
+            
+            def __init__(self, widget, parent):
+                self.slave_slave_toplevel = None
+                self.slave_slave_widget = widget
+                self.parent = parent
+            
+            def show_toplevel(self):
+                x, y, _, _ = self.slave_slave_widget.bbox('all')
+                x = x + self.slave_slave_widget.winfo_rootx()
+                y = y + self.slave_slave_widget.winfo_rooty()
+                self.slave_slave_toplevel = tw = tk.Toplevel(self.slave_slave_widget)
+                tw.wm_geometry("+%d+%d" % (x, y))
+                label_back_and_forth_slave = tk.Label(tw, text = 'Set number of back and forth\n walks for slave-slave axis', font = LARGE_FONT)
+                label_back_and_forth_slave.grid(row = 0, column = 0, pady = 2)
+                
+                self.combo_back_and_forth_slave_slave = ttk.Combobox(tw, value = [2, 'custom', 'continious'])
+                self.combo_back_and_forth_slave_slave.grid(row = 1, column = 0, pady = 2)
+                
+                def update_back_and_forth_slave_slave_count():
+                    if self.combo_back_and_forth_slave_slave.current() == 0:
+                        self.parent.back_and_forth_slave_slave_count = 2
+                    elif self.parent.combo_back_and_forth_slave_slave.current() == -1:
+                        self.back_and_forth_slave_slave_count = int(self.combo_back_and_forth_slave.get())
+                    elif self.parent.combo_back_and_forth_slave_slave.current() == 2:
+                        self.back_and_forth_slave_slave_count = int(1e6)
+                    else:
+                        raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_slave_slave.get())}')
+                
+                button_set_back_and_forth_slave_slave = tk.Button(tw, text = 'Set', command = update_back_and_forth_slave_slave_count)
+                button_set_back_and_forth_slave_slave.grid(row = 1, column = 1, pady = 2)
+                
+                label_fast_master = tk.Label(tw, text = 'Fast mode')
+                label_fast_master.grid(row = 2, column = 0, pady = 2)
+                
+                checkbox_status = tk.IntVar()
+                checkbox_status.set(int(globals()['fastmode_master_flag']))
+                
+                checkbox_fast_slave_ = ttk.Checkbutton(tw, variable = checkbox_status, onvalue = 1, offvalue = 0)
+                checkbox_fast_slave_.grid(row = 2, column = 1, pady = 1)
+                
+                def hide_toplevel():
+                    tw = self.slave_slave_toplevel
+                    self.slave_slave_toplevel = None
+                    if checkbox_status.get() == 1:
+                        globals()['fastmode_slave_flag'] = True
+                    else:
+                        globals()['fastmode_slave_flag'] = False
+                    tw.destroy()
+                
+                tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
+                
+        def CreateSlaveSlaveToplevel(widget, parent):
+            
+            toplevel = BackAndForthSlaveSlave(widget, parent)
+            
+            def show(event):
+                toplevel.show_toplevel()
+                
+            widget.bind('<Button-3>', show)
     
         self.checkbox_back_and_forth_slave_slave = ttk.Checkbutton(self,
                                            variable=self.status_back_and_forth_slave_slave, onvalue=1,
                                            offvalue=0, command=lambda: self.save_back_and_forth_slave_slave_status())
         self.checkbox_back_and_forth_slave_slave.place(relx=0.5, rely=0.62)
+        CreateSlaveSlaveToplevel(self.checkbox_back_and_forth_slave_slave, parent)
         
-        label_back_and_forth_slave = tk.Label(self, text = '🔁', font = SUPER_LARGE)
-        label_back_and_forth_slave.place(relx = 0.5135, rely = 0.61)
-        CreateToolTip(label_back_and_forth_slave, 'Back and forth sweep\nfor this axis')
+        self.label_back_and_forth_slave = tk.Label(self, text = '🔁', font = SUPER_LARGE)
+        self.label_back_and_forth_slave.place(relx = 0.5135, rely = 0.61)
+        CreateToolTip(self.label_back_and_forth_slave, 'Back and forth sweep\nfor this axis \n Right click to configure')
+        CreateSlaveSlaveToplevel(self.label_back_and_forth_slave, parent)
+
+        def stepper_mode():
+            global stepper_flag
+            
+            if stepper_flag == True:
+                stepper_flag = False
+            elif stepper_flag == False:
+                stepper_flag = True
+        
+        self.checkbox_stepper = tk.Checkbutton(self, text = r'🦶', font = LARGE_FONT, command = stepper_mode)
+        if stepper_flag == True:
+            self.checkbox_stepper.select()
+        self.checkbox_stepper.place(relx = 0.55, rely = 0.615)
+        CreateToolTip(self.checkbox_stepper, 'Stepper mode')
 
         self.save_back_and_forth_master_status()
         self.save_back_and_forth_slave_status()
@@ -2946,6 +3724,176 @@ class Sweeper3d(tk.Frame):
         
         for parameter in parameters_to_read:
             self.dict_lstbox[parameter] = parameter
+        
+        class ChangeName(object):
+            
+            def __init__(self, widget, parent):
+                self.name_toplevel = None
+                self.name_widget = widget
+                self.parent = parent
+            
+            def show_toplevel(self):
+                x = y = 0
+                x = x + self.name_widget.winfo_rootx()
+                y = y + self.name_widget.winfo_rooty()
+                self.name_toplevel = tw = tk.Toplevel(self.name_widget)
+                tw.wm_geometry("+%d+%d" % (x, y))
+                
+                label_names = tk.Label(tw, text = 'Change names:', font = LARGE_FONT)
+                label_names.grid(row = 0, column = 0, pady = 2)
+                    
+                def update_combo_set_parameters(event, interval = 100):
+                    global types_of_devices
+                    global list_of_devices
+                    ind = self.combo_devices.current()
+                    class_of_sweeper_device = types_of_devices[ind]
+                    device = list_of_devices[ind]
+                    
+                    if self.combo_devices.current() != -1:
+                        self.selected_device = ind
+                    if class_of_sweeper_device != 'Not a class':
+                        self.combo_set_parameters['values'] = getattr(device, 'set_options')
+                        self.combo_set_parameters.after(interval)
+                    else:
+                        self.combo_set_parameters['values'] = ['']
+                        self.combo_set_parameters.current(0)
+                        self.combo_set_parameters.after(interval)
+
+                def update_names_devices():
+                    new_device_name = self.combo_devices.get()
+                    new_device_values = list(self.combo_devices['values'])
+                    new_device_values[self.selected_device] = new_device_name
+                    self.combo_devices['values'] = new_device_values
+                    self.combo_devices.after(1)
+                    
+                    try:
+                        self.parent.combo_to_sweep1['values'] = new_device_values
+                        self.parent.combo_to_sweep1.current(self.selected_device)
+                    except:
+                        pass
+                    try:
+                        self.parent.combo_to_sweep2['values'] = new_device_values
+                        self.parent.combo_to_sweep2.current(self.selected_device)
+                    except:
+                        pass
+                    try:
+                        self.parent.combo_to_sweep3['values'] = new_device_values
+                        self.parent.combo_to_sweep3.current(self.selected_device)
+                    except:
+                        pass
+                    
+                    self.parent.after(1)
+                    
+                def update_names_set_parameters():
+                    new_set_parameter_name = self.combo_set_parameters.get()
+                    new_set_parameters_values = list(self.combo_set_parameters['values'])
+                    new_set_parameters_values[self.selected_set_option] = new_set_parameter_name
+                    self.combo_set_parameters['values'] = new_set_parameters_values
+                    try:
+                        self.parent.sweep_options1['values'] = new_set_parameters_values
+                        self.parent.sweep_options1.current(self.selected_set_options)
+                    except:
+                        pass
+                    try:
+                        self.parent.sweep_options2['values'] = new_set_parameters_values
+                        self.parent.sweep_options2.current(self.selected_set_options)
+                    except:
+                        pass
+                    try:
+                        self.parent.combo_to_sweep3['values'] = new_set_parameters_values
+                        self.parent.combo_to_sweep3.current(self.selected_device)
+                    except:
+                        pass
+
+                    self.parent.after(1)
+                    
+                def update_names_get_parameters(interval = 1000):
+                    new_get_parameter_name = self.combo_get_parameters.get()
+                    new_get_parameters_values = list(self.combo_get_parameters['values'])
+                    new_get_parameters_values[self.selected_get_option] = new_get_parameter_name
+                    
+                    self.parent.dict_lstbox[self.combo_get_parameters['values'][self.combo_get_parameters.current()]] = new_get_parameter_name
+                    
+                    self.combo_get_parameters['values'] = new_get_parameters_values
+                    
+                    self.parent.devices.set(value=new_get_parameters_values)
+                    self.parent.lstbox_to_read.after(interval)
+                    
+                def select_set_option(event):
+                    if self.combo_set_parameters.current() != -1:
+                        self.selected_set_option = self.combo_set_parameters.current()
+                        
+                def select_get_option(event):
+                    if self.combo_get_parameters.current() != -1:
+                        self.selected_get_option = self.combo_get_parameters.current()
+                
+                self.combo_devices = ttk.Combobox(tw, value = self.parent.combo_to_sweep1['values'])
+                self.combo_devices.current(0)
+                self.combo_devices.bind(
+                    "<<ComboboxSelected>>", update_combo_set_parameters)
+                self.combo_devices.grid(row = 1, column = 0, pady = 2)
+                
+                self.combo_set_parameters = ttk.Combobox(tw, value = [''])
+                device_class = types_of_devices[0]
+                if device_class != 'Not a class':
+                    try:
+                        self.combo_set_parameters['values'] = self.parent.sweep_options1['values']
+                    except: 
+                        self.combo_set_parameters['values'] = getattr(list_of_devices[0], 'set_options')
+                    self.combo_set_parameters.current(0)
+                    self.combo_set_parameters.bind(
+                        "<<ComboboxSelected>>", select_set_option)
+                else:
+                    self.combo_set_parameters['values'] = ['']
+                    self.combo_set_parameters.current(0)
+                self.combo_set_parameters.grid(row = 2, column = 0, pady = 2)
+                
+                parameters = parameters_to_read
+                
+                if len(parameters) == 0:
+                    parameters = ['']
+                
+                self.combo_get_parameters = ttk.Combobox(tw, value = parameters)
+                self.combo_get_parameters.current(0)
+                self.combo_get_parameters.bind(
+                    "<<ComboboxSelected>>", select_get_option)
+                self.combo_get_parameters.grid(row = 3, column = 0, pady = 2)
+                
+                button_change_name_device = tk.Button(tw, text = 'Change device name', command = update_names_devices)
+                button_change_name_device.grid(row = 1, column = 1, pady = 2)
+                
+                self.selected_device = 0
+                self.selected_set_option = 0
+                self.selected_get_option = 0
+                
+                button_change_name_set_parameters = tk.Button(tw, text = 'Change set name', command = update_names_set_parameters)
+                button_change_name_set_parameters.grid(row = 2, column = 1, pady = 2)
+                
+                button_change_name_get_parameters = tk.Button(tw, text = 'Change get name', command = update_names_get_parameters)
+                button_change_name_get_parameters.grid(row = 3, column = 1, pady = 2)
+                
+                def hide_toplevel():
+                    tw = self.name_toplevel
+                    self.name_toplevel = None
+                    tw.destroy()
+                
+                tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
+                
+        def CreateNameToplevel(widget, parent):
+            
+            toplevel = ChangeName(widget, parent)
+            
+            def show(event):
+                toplevel.show_toplevel()
+                
+            widget.bind('<Button-3>', show) 
+            
+        CreateNameToplevel(self.sweep_options1, self)
+        CreateNameToplevel(self.combo_to_sweep1, self)
+        CreateNameToplevel(self.sweep_options2, self)
+        CreateNameToplevel(self.combo_to_sweep2, self)
+        CreateNameToplevel(self.sweep_options3, self)
+        CreateNameToplevel(self.combo_to_sweep3, self)
         
         label_options = tk.Label(self, text = 'Options:', font=LARGE_FONT)
         label_options.place(relx = 0.05, rely = 0.25)
@@ -3128,10 +4076,113 @@ class Sweeper3d(tk.Frame):
         self.entry_filename.place(relx = 0.97 - width / 100, rely = 0.9)
 
         self.script = ''
+        
+        class Script(object):
+            
+            def __init__(self, widget, parent):
+                self.script_toplevel = None
+                self.script_widget = widget
+                self.parent = parent
+            
+            def show_toplevel(self):
+                x = y = 0
+                self.script_toplevel = tw = tk.Toplevel(self.script_widget)
+                tw.wm_geometry("+%d+%d" % (x, y))
+                
+                label_script = tk.Label(tw, text = 'Manual script', font = LARGE_FONT)
+                label_script.grid(row = 0, column = 0, pady = 2)
+                
+                def ctrlEvent(event):
+                    if event.state == 4 and event.keysym == 'c':
+                        content = self.text_script.selection_get()
+                        tw.clipboard_clear()
+                        tw.clipboard_append(content)
+                        return "break"
+                    elif event.state == 4 and event.keysym == 'v':
+                        self.text_script.insert('end', tw.selection_get(selection='CLIPBOARD'))
+                        return "break"
+                    elif event.state == 4 and event.keysym == 'a':
+                        self.text_script.tag_add("sel", "1.0","end")
+                        return "break"
+                    elif event.state == 4 and event.keysym == 'z':
+                        self.text_script.delete('sel.first','sel.last')
+                        return "break"
+                    
+                self.text_script = tk.Text(tw, width = 60, height = 10)
+                self.text_script.grid(row = 1, column = 0, pady = 2, rowspan = 3)
+                self.text_script.configure(font = LARGE_FONT)
+                self.text_script.bind("<Key>", ctrlEvent)
+                
+                def explore_script(interval = 1):
+                    script_filename = tk.filedialog.askopenfilename(initialdir=cur_dir,
+                                                                             title='Select a manual sweeper',
+                                                                             filetypes=('all files', '*.*'))
+                    with open(script_filename, 'r') as file:
+                        try:
+                            file.open()
+                            script = file.read()
+                        except:
+                            file.close()
+                        finally:
+                            file.close()
+                            
+                    self.text_script.delete(0, tk.END)
+                    self.text_script.insert(tk.END, script)
+                    self.text_script.after(interval)
+                    
+                def set_script():
+                    self.parent.script = self.text_script.get(1.0, tk.END)[:-1]
+                    
+                def save_script():
+                    self.script_filename = tk.filedialog.asksaveasfilename(title='Save the file',
+                                                                     initialfile=os.path.join(core_dir, 'config', f'script{datetime.today().strftime("%H_%M_%d_%m_%Y")}'),
+                                                                     defaultextension='.csv')
+                    
+                    set_script()
+                    
+                    with open(self.script_filename, 'w') as file:
+                        try:
+                            file.open()
+                            file.write(self.parent.script)
+                        except:
+                            file.close()
+                        finally:
+                            file.close()
+                
+                button_explore_script = tk.Button(
+                    tw, text='🔎', font = SUPER_LARGE, command = explore_script)
+                button_explore_script.grid(row = 1, column = 1, pady = 2)
+                CreateToolTip(button_explore_script, 'Explore existing script')
+                
+                button_save_script = tk.Button(
+                    tw, text='💾', font = SUPER_LARGE, command = save_script)
+                button_save_script.grid(row = 2, column = 1, pady = 2)
+                CreateToolTip(button_save_script, 'Save this script')
+                
+                self.script_filename = ''
+                
+                button_set_script = tk.Button(
+                    tw, text = 'Apply script', font = LARGE_FONT, command = set_script)
+                button_set_script.grid(row = 3, column = 1, pady = 2)
 
-        button_settings = tk.Button(self, text = '⚙️', font = SUPER_LARGE, command = lambda: self.open_settings())
-        button_settings.place(relx = 0.85, rely = 0.15)
-        CreateToolTip(button_settings, 'Settings')
+                def hide_toplevel():
+                    tw = self.script_toplevel
+                    self.script_toplevel = None
+        
+                    tw.destroy()
+                
+                tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
+            
+        def CreateScriptToplevel(widget, parent):
+            
+            toplevel = Script(widget, parent)
+            
+            def show(event):
+                toplevel.show_toplevel()
+                
+            widget.bind('<Button-3>', show) 
+            
+        CreateScriptToplevel(self.text_condition, self)
 
         button_filename = tk.Button(
             self, text = 'Browse...', command=lambda: self.set_filename_sweep())
@@ -3519,10 +4570,6 @@ class Sweeper3d(tk.Frame):
         self.preset.loc[0, f'manual_filename{i}'] = str(self.manual_filenames[i - 1])
         self.preset.to_csv(globals()['sweeper3d_path'], index = False)
         os.startfile(filename)
-        
-    def open_settings(self):        
-        self.window_settings = Universal_frontend((Settings,), Settings)
-        self.window_settings.mainloop()
 
     def explore_files(self, i):
         self.manual_filenames[i] = tk.filedialog.askopenfilename(initialdir=cur_dir,
@@ -3744,354 +4791,6 @@ class Sweeper3d(tk.Frame):
         stop_flag = False
         sweeper_write = Sweeper_write()
         self.open_graph()
-
-class Settings(tk.Frame):
-    
-    def __init__(self, parent, controller):
-
-        tk.Frame.__init__(self, parent)
-        
-        parent = globals()['Sweeper_object']
-        
-        label_adress = tk.Label(self, text = 'Set device type:', font = LARGE_FONT)
-        label_adress.place(relx = 0.05, rely = 0.05)
-        
-        self.combo_adresses = ttk.Combobox(self, value = list_of_devices_addresses)
-        self.combo_adresses.current(0)
-        self.combo_adresses.place(relx = 0.05, rely = 0.1)
-        
-        self.device_classes = []
-        for class_ in device_classes:
-            self.device_classes.append(var2str(class_))
-            
-        self.combo_types = ttk.Combobox(self, value = self.device_classes)    
-        self.combo_types.bind("<<ComboboxSelected>>", self.set_type_to_adress)
-        self.combo_types.place(relx = 0.2, rely = 0.1)
-        
-        label_names = tk.Label(self, text = 'Change names:', font = LARGE_FONT)
-        label_names.place(relx = 0.05, rely = 0.15)
-            
-        self.combo_devices = ttk.Combobox(self, value = parent.combo_to_sweep1['values'])
-        self.combo_devices.current(0)
-        self.combo_devices.bind(
-            "<<ComboboxSelected>>", self.update_combo_set_parameters)
-        self.combo_devices.place(relx=0.05, rely=0.2)
-        
-        self.combo_set_parameters = ttk.Combobox(self, value = [''])
-        device_class = types_of_devices[0]
-        if device_class != 'Not a class':
-            try:
-                self.combo_set_parameters['values'] = parent.sweep_options1['values']
-            except: 
-                self.combo_set_parameters['values'] = getattr(list_of_devices[0], 'set_options')
-            self.combo_set_parameters.current(0)
-            self.combo_set_parameters.bind(
-                "<<ComboboxSelected>>", self.select_set_option)
-        else:
-            self.combo_set_parameters['values'] = ['']
-            self.combo_set_parameters.current(0)
-        self.combo_set_parameters.place(relx=0.05, rely=0.25)
-        
-        parameters = list(parent.lstbox_to_read.get(0, tk.END))
-        
-        if len(parameters) == 0:
-            parameters = ['']
-        
-        self.combo_get_parameters = ttk.Combobox(self, value = parameters)
-        self.combo_get_parameters.current(0)
-        self.combo_get_parameters.bind(
-            "<<ComboboxSelected>>", self.select_get_option)
-        self.combo_get_parameters.place(relx=0.05, rely=0.3)
-        
-        button_change_name_device = tk.Button(self, text = 'Change device name', command = lambda: self.update_names_devices(parent))
-        button_change_name_device.place(relx = 0.2, rely = 0.19)
-        
-        self.selected_device = 0
-        self.selected_set_option = 0
-        self.selected_get_option = 0
-        
-        button_change_name_set_parameters = tk.Button(self, text = 'Change set name', command = lambda: self.update_names_set_parameters(parent))
-        button_change_name_set_parameters.place(relx = 0.2, rely = 0.24)
-        
-        button_change_name_get_parameters = tk.Button(self, text = 'Change get name', command = lambda: self.update_names_get_parameters(parent))
-        button_change_name_get_parameters.place(relx = 0.2, rely = 0.29)
-        
-        self.checkbox_stepper = tk.Checkbutton(self, text = 'Stepper mode', font = LARGE_FONT, command = self.stepper_mode)
-        if stepper_flag == True:
-            self.checkbox_stepper.select()
-        self.checkbox_stepper.place(relx = 0.55, rely = 0.05)
-        
-        if hasattr(parent, 'back_and_forth_slave_slave_count'): 
-            
-            label_back_and_forth_master = tk.Label(self, text = 'Set number of back and forth walks for master axis', font = LARGE_FONT)
-            label_back_and_forth_master.place(relx = 0.55, rely = 0.15)
-            
-            label_back_and_forth_slave = tk.Label(self, text = 'Set number of back and forth walks for slave axis', font = LARGE_FONT)
-            label_back_and_forth_slave.place(relx = 0.55, rely = 0.25)
-            
-            label_back_and_forth_slave_slave = tk.Label(self, text = 'Set number of back and forth walks for slave_slave axis', font = LARGE_FONT)
-            label_back_and_forth_slave_slave.place(relx = 0.55, rely = 0.35)
-            
-            self.combo_back_and_forth_master = ttk.Combobox(self, value = [2, 'custom', 'continious'])
-            self.combo_back_and_forth_master.place(relx = 0.55, rely = 0.2)
-            
-            button_set_back_and_forth_master = tk.Button(self, text = 'Set', command = lambda: self.update_back_and_forth_master_count(parent = parent))
-            button_set_back_and_forth_master.place(relx = 0.68, rely = 0.19)
-            
-            self.combo_back_and_forth_slave = ttk.Combobox(self, value = [2, 'custom', 'continious'])
-            self.combo_back_and_forth_slave.place(relx = 0.55, rely = 0.3)
-            
-            button_set_back_and_forth_slave = tk.Button(self, text = 'Set', command = lambda: self.update_back_and_forth_slave_count(parent = parent))
-            button_set_back_and_forth_slave.place(relx = 0.68, rely = 0.29)
-            
-            self.combo_back_and_forth_slave_slave = ttk.Combobox(self, value = [2, 'custom', 'continious'])
-            self.combo_back_and_forth_slave_slave.place(relx = 0.55, rely = 0.4)
-            
-            button_set_back_and_forth_slave_slave = tk.Button(self, text = 'Set', command = lambda: self.update_back_and_forth_slave_count(parent = parent))
-            button_set_back_and_forth_slave_slave.place(relx = 0.68, rely = 0.39)
-        
-        elif hasattr(parent, 'back_and_forth_slave_count') and not hasattr(parent, 'back_and_forth_slave_slave_count'):
-            
-            label_back_and_forth_master = tk.Label(self, text = 'Set number of back and forth walks for master axis', font = LARGE_FONT)
-            label_back_and_forth_master.place(relx = 0.55, rely = 0.15)
-            
-            label_back_and_forth_slave = tk.Label(self, text = 'Set number of back and forth walks for slave axis', font = LARGE_FONT)
-            label_back_and_forth_slave.place(relx = 0.55, rely = 0.25)
-            
-            self.combo_back_and_forth_master = ttk.Combobox(self, value = [2, 'custom', 'continious'])
-            self.combo_back_and_forth_master.place(relx = 0.55, rely = 0.2)
-            
-            button_set_back_and_forth_master = tk.Button(self, text = 'Set', command = lambda: self.update_back_and_forth_master_count(parent = parent))
-            button_set_back_and_forth_master.place(relx = 0.68, rely = 0.19)
-            
-            self.combo_back_and_forth_slave = ttk.Combobox(self, value = [2, 'custom', 'continious'])
-            self.combo_back_and_forth_slave.place(relx = 0.55, rely = 0.3)
-            
-            button_set_back_and_forth_slave = tk.Button(self, text = 'Set', command = lambda: self.update_back_and_forth_slave_count(parent = parent))
-            button_set_back_and_forth_slave.place(relx = 0.68, rely = 0.29)
-            
-        else:
-            
-            label_back_and_forth_master = tk.Label(self, text = 'Set number of back and forth walks for master axis', font = LARGE_FONT)
-            label_back_and_forth_master.place(relx = 0.55, rely = 0.15)
-            
-            self.combo_back_and_forth_master = ttk.Combobox(self, value = [2, 'custom', 'continious'])
-            self.combo_back_and_forth_master.place(relx = 0.55, rely = 0.2)
-            
-            button_set_back_and_forth_master = tk.Button(self, text = 'Set', command = lambda: self.update_back_and_forth_master_count(parent = parent))
-            button_set_back_and_forth_master.place(relx = 0.68, rely = 0.19)
-        
-        for_text_loops = ''
-        indent = '\t'
-        
-        for i in range(1, 4):
-            try:
-                if getattr(parent, 'checkbox_manual' + str(i)).state() == ():
-                    for_text_loops += indent * (i - 1) + 'while condition(axis = ' + str(i) + '):\n' + indent * i + 'step(axis = ' + str(i) + ')\n' + indent * i + 'sleep(time_delay' + str(i) + ')\n'
-                else:
-                    for_text_loops += indent * (i - 1) + 'for i' + str(i) + ', value' + str(i) + 'in enumerate(data' + str(i)+ '):\n' + indent * i + 'step(axis = ' + str(i) + ')\n' + indent * i + 'sleep(time_delay' + str(i) + ')\n'
-            except AttributeError:
-                pass
-        
-        label_script = tk.Label(self, text = 'Manual script', font = LARGE_FONT)
-        label_script.place(relx = 0.05, rely = 0.36)
-        
-        depth = for_text_loops.count('\n') // 3
-        
-        text_loops = tk.Text(self, width = 60, height = 3 * depth)
-        text_loops.place(relx = 0.05, rely = 0.4)
-        text_loops.insert(tk.END, for_text_loops)
-        text_loops.configure(font = LARGE_FONT, state = tk.DISABLED, bg = '#f0f0f0')
-        
-        self.text_script = tk.Text(self, width = 60, height = 10)
-        self.text_script.place(relx = 0.05, rely = 0.652 - (3 - depth) * 0.083)
-        self.text_script.configure(font = LARGE_FONT)
-        
-        button_explore_script = tk.Button(
-            self, text='🔎', font = SUPER_LARGE, command=lambda: self.explore_script())
-        button_explore_script.place(relx=0.525, rely=0.4)
-        CreateToolTip(button_explore_script, 'Explore existing script')
-        
-        button_save_script = tk.Button(
-            self, text='💾', font = SUPER_LARGE, command=lambda: self.save_script())
-        button_save_script.place(relx=0.525, rely=0.48)
-        CreateToolTip(button_save_script, 'Save this script')
-        
-        self.script_filename = ''
-        
-        button_set_script = tk.Button(
-            self, text = 'Apply script', font = LARGE_FONT, command = lambda: self.set_script(parent))
-        button_set_script.place(relx = 0.525, rely = 0.56)
-        
-        
-    def set_type_to_adress(self, interval = 100):
-        global adress_dict
-        global types_of_devices
-        global new_parameters_to_read
-        global parameters_to_read
-        global parameters_to_read_copy
-        
-        if list(self.combo_adresses['values'])[self.combo_adresses.current()] != '':
-        
-            types_of_devices[self.combo_adresses.current()] = list(self.combo_types['values'])[self.combo_types.current()]
-            
-            adress_dict[list(self.combo_adresses['values'])[self.combo_adresses.current()]] = list(self.combo_types['values'])[self.combo_types.current()]
-            
-            with open(os.path.join(core_dir, 'config', 'adress_dictionary.txt'), "w") as outfile:
-                json.dump(adress_dict, outfile)
-                
-            parameters_to_read = new_parameters_to_read()
-            parameters_to_read_copy = parameters_to_read.copy()
-        
-    
-    def update_combo_set_parameters(self, event, interval = 100):
-        global types_of_devices
-        global list_of_devices
-        ind = self.combo_devices.current()
-        class_of_sweeper_device = types_of_devices[ind]
-        device = list_of_devices[ind]
-        
-        if self.combo_devices.current() != -1:
-            self.selected_device = ind
-        if class_of_sweeper_device != 'Not a class':
-            self.combo_set_parameters['values'] = getattr(device, 'set_options')
-            self.combo_set_parameters.after(interval)
-        else:
-            self.combo_set_parameters['values'] = ['']
-            self.combo_set_parameters.current(0)
-            self.combo_set_parameters.after(interval)
-
-    def update_names_devices(self, parent):
-        new_device_name = self.combo_devices.get()
-        new_device_values = list(self.combo_devices['values'])
-        new_device_values[self.selected_device] = new_device_name
-        self.combo_devices['values'] = new_device_values
-        self.combo_devices.after(1)
-        
-        try:
-            parent.combo_to_sweep1['values'] = new_device_values
-            parent.combo_to_sweep1.current(self.selected_device)
-        except:
-            pass
-        try:
-            parent.combo_to_sweep2['values'] = new_device_values
-            parent.combo_to_sweep2.current(self.selected_device)
-        except:
-            pass
-        try:
-            parent.combo_to_sweep3['values'] = new_device_values
-            parent.combo_to_sweep3.current(self.selected_device)
-        except:
-            pass
-        
-        parent.after(1)
-        
-    def update_names_set_parameters(self, parent):
-        new_set_parameter_name = self.combo_set_parameters.get()
-        new_set_parameters_values = list(self.combo_set_parameters['values'])
-        new_set_parameters_values[self.selected_set_option] = new_set_parameter_name
-        self.combo_set_parameters['values'] = new_set_parameters_values
-        try:
-            parent.sweep_options1['values'] = new_set_parameters_values
-            parent.sweep_options1.current(self.selected_set_options)
-        except:
-            pass
-        try:
-            parent.sweep_options2['values'] = new_set_parameters_values
-            parent.sweep_options2.current(self.selected_set_options)
-        except:
-            pass
-        try:
-            parent.sweep_options3['values'] = new_set_parameters_values
-            parent.sweep_options3.current(self.selected_set_options)
-        except:
-            pass
-        parent.after(1)
-        
-    def update_names_get_parameters(self, parent, interval = 1000):
-        new_get_parameter_name = self.combo_get_parameters.get()
-        new_get_parameters_values = list(self.combo_get_parameters['values'])
-        new_get_parameters_values[self.selected_get_option] = new_get_parameter_name
-        
-        parent.dict_lstbox[self.combo_get_parameters['values'][self.combo_get_parameters.current()]] = new_get_parameter_name
-        
-        self.combo_get_parameters['values'] = new_get_parameters_values
-        
-        parent.devices.set(value=new_get_parameters_values)
-        parent.lstbox_to_read.after(interval)
-        
-    def select_set_option(self, event):
-        if self.combo_set_parameters.current() != -1:
-            self.selected_set_option = self.combo_set_parameters.current()
-            
-    def select_get_option(self, event):
-        if self.combo_get_parameters.current() != -1:
-            self.selected_get_option = self.combo_get_parameters.current()
-       
-    def update_back_and_forth_master_count(self, parent):
-        if self.combo_back_and_forth_master.current() == 0:
-            parent.back_and_forth_master_count = 2
-        elif self.combo_back_and_forth_master.current() == -1:
-            parent.back_and_forth_master_count = int(self.combo_back_and_forth_master.get())
-        elif self.combo_back_and_forth_master.current() == 2:
-            parent.back_and_forth_master_count = int(1e6)
-        else:
-            raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_master.get())}')
-            
-    def update_back_and_forth_slave_count(self, parent):
-        if self.combo_back_and_forth_slave.current() == 0:
-            parent.back_and_forth_slave_count = 2
-        elif self.combo_back_and_forth_slave.current() == -1:
-            parent.back_and_forth_slave_count = int(self.combo_back_and_forth_slave.get())
-        elif self.combo_back_and_forth_slave.current() == 2:
-            parent.back_and_forth_slave_count = int(1e6)
-        else:
-            raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_slave.get())}')
-            
-    def update_back_and_forth_slave_slave_count(self, parent):
-        if self.combo_back_and_forth_slave_slave.current() == 0:
-            parent.back_and_forth_slave_slave_count = 2
-        elif self.combo_back_and_forth_slave_slave.current() == -1:
-            parent.back_and_forth_slave_slave_count = int(self.combo_back_and_forth_slave_slave.get())
-        elif self.combo_back_and_forth_slave_slave.current() == 2:
-            parent.back_and_forth_slave_slave_count = int(1e6)
-        else:
-            raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_slave_slave.get())}')
-       
-    def stepper_mode(self):
-        global stepper_flag
-        
-        #stepper_flag = self.stepper_flag.get()
-        if stepper_flag == True:
-            stepper_flag = False
-        elif stepper_flag == False:
-            stepper_flag = True
-       
-    def explore_script(self, interval = 1):
-        script_filename = tk.filedialog.askopenfilename(initialdir=cur_dir,
-                                                                 title='Select a manual sweeper',
-                                                                 filetypes=(('CSV files', '*.csv*'),
-                                                                            ('all files', '*.*')))
-        with open(script_filename, 'r') as file:
-            try:
-                file.open()
-                script = file.read()
-            except:
-                file.close()
-            finally:
-                file.close()
-                
-        self.text_script.delete(0, tk.END)
-        self.text_script.insert(tk.END, script)
-        self.text_script.after(interval)
-        
-    def save_script(self):
-        self.script_filename = tk.filedialog.asksaveasfilename(title='Save the file',
-                                                         initialfile=os.path.join(core_dir, 'config', f'script{datetime.today().strftime("%H_%M_%d_%m_%Y")}'),
-                                                         defaultextension='.csv')
-        
-    def set_script(self, parent):
-        parent.script = self.text_script.get(1.0, tk.END)[:-1]
 
 class Sweeper_write(threading.Thread):
 
@@ -4914,8 +5613,10 @@ class Sweeper_write(threading.Thread):
             elif walks > 1:
                 for i in range(1, walks + 1):
                     inner_loop_single(direction = round(2 * (i % 2) - 1))
-                    if globals()['fastmode_flag'] == True:
-                        step(axis = max(1, len(manual_sweep_flags) - 1))
+                    if globals()['fastmode_slave_flag'] == True and len(manual_sweep_flags) == 3:
+                        step(axis = 2)
+                    elif globals()['fastmode_master_flag'] == True and len(manual_sweep_flags) == 2:
+                        step(axis = 1)
                     step(axis = len(manual_sweep_flags), back = True)
                     if not getattr(self, f'sweepable{len(manual_sweep_flags)}') == True:
                         step(axis = len(manual_sweep_flags), back = True)
@@ -4992,6 +5693,8 @@ class Sweeper_write(threading.Thread):
             elif walks > 1:
                 for i in range(1, walks + 1):
                     external_loop_single(round(2 * (i % 2) - 1))
+                    if globals()['fastmode_master_flag'] == True and len(manual_sweep_flags) == 3:
+                        step(axis = 1)
                     step(axis = len(manual_sweep_flags) - 1, back = True)
                     if not getattr(self, f'sweepable{len(manual_sweep_flags) - 1}') == True:
                         step(axis = len(manual_sweep_flags) - 1, back = True)

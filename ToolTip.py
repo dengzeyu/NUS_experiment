@@ -2,6 +2,11 @@ import tkinter as tk
 
 class ToolTip(object):
 
+    """
+    Tooltip recipe from
+    https://stackoverflow.com/questions/3221956/how-do-i-display-tooltips-in-tkinter
+    """    
+
     def __init__(self, widget):
         self.widget = widget
         self.tipwindow = None
