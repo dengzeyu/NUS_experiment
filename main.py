@@ -124,24 +124,24 @@ plot_flag = 'Plot'
 month_dictionary = {'01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr', '05': 'May', '06': 'Jun', 
                     '07': 'Jul', '08': 'Aug', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'}
 DAY = datetime.today().strftime('%d')
-MONTH = month_dictionary[datetime.today().strftime('%m')]
+MONTH = datetime.today().strftime('%m')
 YEAR = datetime.today().strftime('%Y')[-2:]
 
 cur_dir = os.getcwd()
 
-if not exists(os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}')):
-    os.mkdir(os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}'))
-    cur_dir = os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}')
+if not exists(os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}')):
+    os.mkdir(os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}'))
+    cur_dir = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}')
     os.mkdir(os.path.join(cur_dir, 'data_files'))
     cur_dir = os.path.join(cur_dir, 'data_files')
 else:
-    if not exists(os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}', 'data_files')):
-        os.mkdir(os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}', 'data_files'))
-        cur_dir = os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}', 'data_files')
+    if not exists(os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}', 'data_files')):
+        os.mkdir(os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}', 'data_files'))
+        cur_dir = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}', 'data_files')
     else:
-        cur_dir = os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}', 'data_files')
+        cur_dir = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}', 'data_files')
 
-filename_sweep = os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}.csv')
+filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}.csv')
 
 ind_setget = []
 flag_setget = False
@@ -5702,6 +5702,7 @@ class Sweeper_write(threading.Thread):
                     
                 if back_and_forth_master % 2 == 1:
                     back_and_forth_transposition(len(manual_sweep_flags) - 1)
+                  
                     
             else:
                 raise Exception(f'{flags_dict[len(manual_sweep_flags)]} is not correct, needs > 1, but got ', walks)
@@ -6327,7 +6328,7 @@ class FigureSettings(object):
         
         global plot_flag
         
-        if plot_flag == 'Plot':
+        if plot_flag == 'Plot' or int(self.position) % 3 != 1:
             self.preset.loc[0, f'title{self.position}'] = self.entry_title.get()
             self.preset.loc[0, f'x{self.position}_current'] = self.combo_x_device.current()
             self.preset.loc[0, f'y{self.position}_current'] = self.combo_y_device.current()
@@ -6345,7 +6346,7 @@ class FigureSettings(object):
             self.preset.loc[0, f'y{self.position}_transform'] = self.entry_y_transformation.get()
             self.preset.to_csv(globals()['graph_preset_path'], index = False)
             
-        elif plot_flag == 'Map':
+        elif plot_flag == 'Map'  and int(self.position) % 3 == 1:
             self.preset.loc[0, f'title_map{self.position}'] = self.entry_title_map.get()
             self.preset.loc[0, f'z{self.position}_current'] = self.combo_z_device_map.current()
             self.preset.loc[0, f'z{self.position}_label_map'] = self.entry_zlabel_map.get()
@@ -6366,7 +6367,7 @@ class FigureSettings(object):
         
         tw = self.settings_window
         
-        if plot_flag == 'Plot':
+        if plot_flag == 'Plot' or int(var2str(ax)[2:]) % 3 != 1:
             if self.status_xlim.get() == 0:
                 try:
                     ax.set_xlim((float(self.entry_x_from.get()), float(self.entry_x_to.get())))
@@ -6408,7 +6409,7 @@ class FigureSettings(object):
             if tw:
                 tw.destroy()
                 
-        elif plot_flag == 'Map':
+        elif plot_flag == 'Map' and int(var2str(ax)[2:]) % 3 == 1:
             
             try:
                 ax.set_zlabel(self.entry_zlabel_map.get(), fontsize = 8)
@@ -6693,6 +6694,13 @@ class Graph():
         
         self.button_tozero = tk.Button(self.tw, text = 'To zero', width = 11, command = lambda: globals()['Sweeper_object'].tozero())
         self.button_tozero.place(relx = 0.1, rely = 0.82, width = 48, height = 32)
+        
+        def close_graph():
+            if self.order == globals()['cur_animation_num'] - 3:
+                globals()['cur_animation_num'] -= 3
+            self.tw.destroy()
+        
+        self.tw.protocol("WM_DELETE_WINDOW", close_graph)
         
     def update_layout(self):
         
