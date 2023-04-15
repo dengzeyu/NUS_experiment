@@ -2,9 +2,13 @@ from libximc import *
 from ctypes import *
 import time
 
-class YStage():
-    def __init__(self, adress = 'COM11'):
-        print(f'YStage adress is {adress}')
+import sys
+import glob
+import serial
+
+class _8MTF_75LS05():
+    def __init__(self, adress = 'COM9'):
+        print(f'XStage adress is {adress}')
         num = [str(int(x)) for x in adress if x.isdigit()]
         ind = ''
         for i in num:
@@ -27,8 +31,8 @@ class YStage():
         self.commands = [None]
         
         self.set_options = ['position', 'shift']
-        self.sweepable = [True, False]
-        self.maxspeed = [20, None]
+        self.sweepable = [True, True]
+        self.maxspeed = [20, 20]
         self.get_options = ['position', 'I_pwr', 'U_pwr', 'T_proc']
         
         self.left_border = -14250
@@ -325,8 +329,6 @@ class YStage():
         value - Speed used for first motion.
         """
         
-        value = float(value)
-        
         self.fasthome = int(value / self.user_unit.A)
         self.settings(lib, self.device_id)
                 
@@ -334,8 +336,6 @@ class YStage():
         """
         value - Speed used for second motion.
         """
-        value = float(value)
-        
         self.slowhome = int(value / self.user_unit.A)
         self.settings(lib, self.device_id)
         
@@ -343,8 +343,6 @@ class YStage():
         """
         value - Distance from break point.
         """
-        value = float(value)
-        
         self.homedelta = int(value / self.user_unit.A)
         self.settings(lib, self.device_id)
         
@@ -364,7 +362,6 @@ class YStage():
         else:
             value = min(float(value), maxspeed)
         
-        value = float(value)
         self.speed = int(value / self.user_unit.A)
         self.settings(lib, self.device_id)
                 
@@ -372,7 +369,7 @@ class YStage():
         """
         Motor shaft acceleration, steps/s^2(stepper motor)
         """
-        value = float(value)
+        
         self.accel = int(value / self.user_unit.A)
         self.settings(lib, self.device_id)
                 
@@ -380,7 +377,7 @@ class YStage():
         """
         Motor shaft acceleration, steps/s^2(stepper motor)
         """
-        value = float(value)
+        
         self.decel = int(value / self.user_unit.A)
         self.settings(lib, self.device_id)
     
@@ -423,9 +420,9 @@ class YStage():
         lib.close_device(byref(cast(self.device_id, POINTER(c_int))))
 
 def main():
-    adress = 'COM11::INSTR'
-    stage = YStage(adress)  
-    stage.set_position(-37.5, 10)
+    adress = 'COM6'
+    stage = XStage(adress)  
+    stage.set_position(0, 10)
 
     try:
         print(f'Current position is {stage.position()}')

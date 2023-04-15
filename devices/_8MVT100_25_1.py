@@ -6,9 +6,9 @@ import sys
 import glob
 import serial
 
-class XStage():
+class _8MVT100_25_1():
     def __init__(self, adress = 'COM9'):
-        print(f'XStage adress is {adress}')
+        print(f'ZStage adress is {adress}')
         num = [str(int(x)) for x in adress if x.isdigit()]
         ind = ''
         for i in num:
@@ -26,7 +26,7 @@ class XStage():
         # Create user unit settings structure
         self.user_unit = calibration_t()
         self.user_unit.MicrostepMode = self.eng.MicrostepMode
-        self.user_unit.A = 1 / 380
+        self.user_unit.A = 1 / 197.6
         
         self.commands = [None]
         
@@ -39,10 +39,10 @@ class XStage():
         self.right_border = 14250
         self.fasthome = 500
         self.slowhome = 500
-        self.homedelta = 15000
-        self.speed = 2000
+        self.homedelta = 500
+        self.speed = 1000
         self.accel = 2000
-        self.decel = 5000
+        self.decel = 4000
         
     def settings(self, lib, id):
         worst_result = Result.Ok
@@ -56,7 +56,7 @@ class XStage():
             FEEDBACK_NONE = 5
             FEEDBACK_EMF = 4
             FEEDBACK_ENCODER = 1
-        feedback_settings.FeedbackType = FeedbackType_.FEEDBACK_EMF
+        feedback_settings.FeedbackType = FeedbackType_.FEEDBACK_NONE
         class FeedbackFlags_:
             FEEDBACK_ENC_TYPE_BITS = 192
             FEEDBACK_ENC_TYPE_DIFFERENTIAL = 128
@@ -106,7 +106,7 @@ class XStage():
         move_settings.uSpeed = 0
         move_settings.Accel = self.accel
         move_settings.Decel = self.decel
-        move_settings.AntiplaySpeed = 2000
+        move_settings.AntiplaySpeed = 1000
         move_settings.uAntiplaySpeed = 0
         class MoveFlags_:
             RPM_DIV_1000 = 1
@@ -119,8 +119,8 @@ class XStage():
 
         engine_settings = engine_settings_t()
 
-        engine_settings.NomVoltage = 360
-        engine_settings.NomCurrent = 670
+        engine_settings.NomVoltage = 1
+        engine_settings.NomCurrent = 1200
         engine_settings.NomSpeed = 4000
         engine_settings.uNomSpeed = 0
         class EngineFlags_:
@@ -133,7 +133,7 @@ class XStage():
             ENGINE_CURRENT_AS_RMS = 2
             ENGINE_REVERSE = 1
         engine_settings.EngineFlags = EngineFlags_.ENGINE_LIMIT_RPM | EngineFlags_.ENGINE_ACCEL_ON | EngineFlags_.ENGINE_REVERSE
-        engine_settings.Antiplay = 1800
+        engine_settings.Antiplay = 575
         class MicrostepMode_:
             MICROSTEP_MODE_FRAC_256 = 9
             MICROSTEP_MODE_FRAC_128 = 8
@@ -183,7 +183,7 @@ class XStage():
             POWER_SMOOTH_CURRENT = 4
             POWER_OFF_ENABLED = 2
             POWER_REDUCT_ENABLED = 1
-        power_settings.PowerFlags = PowerFlags_.POWER_SMOOTH_CURRENT | PowerFlags_.POWER_REDUCT_ENABLED
+        power_settings.PowerFlags = PowerFlags_.POWER_SMOOTH_CURRENT | PowerFlags_.POWER_OFF_ENABLED | PowerFlags_.POWER_REDUCT_ENABLED
         result = lib.set_power_settings(id, byref(power_settings))
 
         if result != Result.Ok:
@@ -227,10 +227,10 @@ class XStage():
             ENDER_SW2_ACTIVE_LOW = 4
             ENDER_SW1_ACTIVE_LOW = 2
             ENDER_SWAP = 1
-        edges_settings.EnderFlags = EnderFlags_.ENDER_SW2_ACTIVE_LOW | EnderFlags_.ENDER_SW1_ACTIVE_LOW | EnderFlags_.ENDER_SWAP
-        edges_settings.LeftBorder = self.left_border
+        edges_settings.EnderFlags = EnderFlags_.ENDER_SWAP
+        edges_settings.LeftBorder = -370
         edges_settings.uLeftBorder = 0
-        edges_settings.RightBorder = self.right_border
+        edges_settings.RightBorder = 4570
         edges_settings.uRightBorder = 0
         result = lib.set_edges_settings(id, byref(edges_settings))
 
@@ -420,9 +420,9 @@ class XStage():
         lib.close_device(byref(cast(self.device_id, POINTER(c_int))))
 
 def main():
-    adress = 'COM6'
-    stage = XStage(adress)  
-    stage.set_position(0, 10)
+    adress = 'COM10'
+    stage = _8MVT100_25_1(adress)  
+    stage.set_position(25, 5)
 
     try:
         print(f'Current position is {stage.position()}')
