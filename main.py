@@ -70,9 +70,12 @@ for i in device_classes:
 device_classes = _device_classes.copy()
     
 for ind, device in enumerate(device_classes):
-    exec(f'from {device[:-3]} import {device[:-3]}')
-    device_classes[ind] = str_to_class(device[:-3])
-
+    try:
+        exec(f'from {device[:-3]} import {device[:-3]}')
+        device_classes[ind] = str_to_class(device[:-3])
+    except Exception as e:
+        print(f'Device import faced problem: {e}')
+              
 print('Devices import succes')
 
 matplotlib.use("TkAgg")
@@ -121,8 +124,8 @@ fastmode_master_flag = False
 
 plot_flag = 'Plot'
 
-month_dictionary = {'01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr', '05': 'May', '06': 'Jun', 
-                    '07': 'Jul', '08': 'Aug', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'}
+#month_dictionary = {'01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr', '05': 'May', '06': 'Jun', 
+#                    '07': 'Jul', '08': 'Aug', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'}
 DAY = datetime.today().strftime('%d')
 MONTH = datetime.today().strftime('%m')
 YEAR = datetime.today().strftime('%Y')[-2:]
@@ -154,9 +157,9 @@ for file in os.listdir(cur_dir):
         ind_setget.append(int(file[file.find('-') + 1 : -4]))
         
 if flag_setget == False:
-    filename_setget = os.path.join(cur_dir, f'setget_{DAY}{MONTH}{YEAR}-1.csv')
+    filename_setget = os.path.join(cur_dir, f'setget_{YEAR}{MONTH}{DAY}-1.csv')
 else:
-    filename_setget = os.path.join(cur_dir, f'setget_{DAY}{MONTH}{YEAR}-{np.max(ind_setget) + 1}.csv')
+    filename_setget = os.path.join(cur_dir, f'setget_{YEAR}{MONTH}{DAY}-{np.max(ind_setget) + 1}.csv')
 
 sweeper_flag1 = False
 sweeper_flag2 = False
@@ -1404,8 +1407,8 @@ class Sweeper1d(tk.Frame):
         self.filename_sweep = self.preset['filename_sweep'][0]
 
         try:
-            if int(self.filename_sweep[-6:-4]) in np.arange(100) and len(self.filename_sweep[len(self.filename_sweep) - self.filename_sweep[::-1].find('\\'):-4]) == 7 and self.filename_sweep[-9:-6] in list(month_dictionary.values()) and self.filename_sweep != os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}.csv'): 
-                self.filename_sweep = os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}.csv')
+            if int(self.filename_sweep[:2]) in np.linspace(0, 99, 100, dtype = int) and int(self.filename_sweep[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(self.filename_sweep[4:6]) in np.linspace(1, 32, 32, dtype = int):
+                self.filename_sweep = os.path.join(cur_dir, f'{MONTH}{YEAR}{DAY}.csv')
         except:
             pass
         
@@ -2161,11 +2164,13 @@ class Sweeper2d(tk.Frame):
         self.status_manual2 = tk.IntVar(value = int(self.preset['status_manual2'].values[0]))
         self.condition = str(self.preset['condition'].values[0])
         self.filename_sweep = self.preset['filename_sweep'][0]
+        
         try:
-            if int(self.filename_sweep[-6:-4]) in np.arange(100) and len(self.filename_sweep[len(self.filename_sweep) - self.filename_sweep[::-1].find('\\'):-4]) == 7 and self.filename_sweep[-9:-6] in list(month_dictionary.values()) and self.filename_sweep != os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}.csv'): 
-                self.filename_sweep = os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}.csv')
+            if int(self.filename_sweep[:2]) in np.linspace(0, 99, 100, dtype = int) and int(self.filename_sweep[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(self.filename_sweep[4:6]) in np.linspace(1, 32, 32, dtype = int):
+                self.filename_sweep = os.path.join(cur_dir, f'{MONTH}{YEAR}{DAY}.csv')
         except:
             pass
+        
         globals()['setget_flag'] = False
         globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
 
@@ -3350,11 +3355,13 @@ class Sweeper3d(tk.Frame):
         self.status_manual3 = tk.IntVar(value = int(self.preset['status_manual3'].values[0]))
         self.filename_sweep = self.preset['filename_sweep'].values[0]
         self.condition = str(self.preset['condition'].values[0])
+        
         try:
-            if int(self.filename_sweep[-6:-4]) in np.arange(100) and len(self.filename_sweep[len(self.filename_sweep) - self.filename_sweep[::-1].find('\\'):-4]) == 7 and self.filename_sweep[-9:-6] in list(month_dictionary.values()) and self.filename_sweep != os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}.csv'): 
-                self.filename_sweep = os.path.join(cur_dir, f'{DAY}{MONTH}{YEAR}.csv')
+            if int(self.filename_sweep[:2]) in np.linspace(0, 99, 100, dtype = int) and int(self.filename_sweep[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(self.filename_sweep[4:6]) in np.linspace(1, 32, 32, dtype = int):
+                self.filename_sweep = os.path.join(cur_dir, f'{MONTH}{YEAR}{DAY}.csv')
         except:
             pass
+        
         globals()['setget_flag'] = False
         globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
         
@@ -4861,7 +4868,7 @@ class Sweeper_write(threading.Thread):
             globals()['value2'] = self.value2
             self.columns = columns
             self.time2 = (float(from_sweep2) - float(to_sweep2)) / float(ratio_sweep2)
-            self.mapper = mapper(self.parameters_to_read, float(from_sweep2), float(to_sweep2), 100)
+            self.mapper = mapper(self.parameter_to_sweep1, self.parameter_to_sweep2, self.parameters_to_read, float(from_sweep2), float(to_sweep2), cur_dir)
             
             try:
                 self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
@@ -5442,22 +5449,22 @@ class Sweeper_write(threading.Thread):
                     index_stop = file.find('.csv')
                     ind.append(int(file[index_start + 1 : index_stop]))
             previous_ind = np.max(ind)
-            print(f'Previous ndex is {previous_ind}')
+            print(f'Previous index is {previous_ind}')
             if sweeper_flag1 == True:
-                filename_sweep = f'{cur_dir}\{basic_name}-{previous_ind + 1}.csv'
+                filename_sweep = os.path.join(f'{cur_dir}', f'{basic_name}-{previous_ind + 1}.csv')
             elif sweeper_flag2 == True:
                 value1 = self.value1
-                integer1 = int(round(float(value1), 2))
-                fractional1 = int(10 * (value1 % 1))
-                filename_sweep = f'{cur_dir}\{basic_name}_{integer1}.{fractional1}-{previous_ind + 1}.csv'
+                integer1 = round(value1)
+                fractional1 = round(10 * (value1 % 1))
+                filename_sweep = os.path.join(f'{cur_dir}', f'{basic_name}_{integer1}.{fractional1}-{previous_ind + 1}.csv')
             elif sweeper_flag3 == True:
                 value1 = self.value1
                 value2 = self.value1
-                integer1 = int(round(float(value1), 2))
-                fractional1 = int(10 * (value1 % 1))
-                integer2 = int(round(float(value2), 2))
-                fractional2 = int(10 * (value2 % 1))
-                filename_sweep = f'{cur_dir}\{basic_name}_{integer1}.{fractional1}_{integer2}.{fractional2}-{previous_ind + 1}.csv'
+                integer1 = round(value1)
+                fractional1 = round(10 * (value1 % 1))
+                integer2 = round(value2)
+                fractional2 = round(10 * (value2 % 1))
+                filename_sweep = os.path.join(f'{cur_dir}', f'{basic_name}_{integer1}.{fractional1}_{integer2}.{fractional2}-{previous_ind + 1}.csv')
                 
             
             globals()['dataframe'] = pd.DataFrame(columns=self.columns)
@@ -5786,6 +5793,7 @@ class Sweeper_write(threading.Thread):
     
             if len(manual_sweep_flags) == 2:        
                 external_loop_back_and_forth()
+                self.mapper.create_files(globals()['filename_sweep'])
                 self.sweeper_flag2 == False
     
             self.sweeper_flag2 == False
@@ -6798,6 +6806,7 @@ class Graph():
         globals()[f'fig{i}'].subplots_adjust(left = 0.25, bottom = 0.25)
         globals()[f'x_transformation{i}'] = 'x'
         globals()[f'y_transformation{i}'] = 'y'
+        globals()[f'z_transformation{i}'] = 'z'
         globals()[f'x{i}_autoscale'] = True
         globals()[f'y{i}_autoscale'] = True
         ax = globals()[f'ax{i}']
@@ -6897,7 +6906,7 @@ def main():
                              start=StartPage)
     app.mainloop()
     while True:
-        pass
+        sys.exit()
 
 
 if __name__ == '__main__':

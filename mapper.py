@@ -1,14 +1,16 @@
 import numpy as np
+import os
 
 class mapper():
-    def __init__(self, parameters_to_read, from_slave: float, to_slave: float, num: int):
+    def __init__(self, parameter_to_sweep1: str, parameter_to_sweep2: str, parameters_to_read, from_slave: float, to_slave: float, cur_dir: str):
         self.slave = np.array([])
         self.master = np.array([])
         self.from_slave = from_slave
         self.to_slave = to_slave
-        self.num = num
-        self.scattered_slave = np.linspace(self.from_slave, self.to_slave, 100)
         self.parameters_to_read = parameters_to_read
+        self.parameter_to_sweep1 = parameter_to_sweep1
+        self.parameter_to_sweep2 = parameter_to_sweep2
+        self.cur_dir = cur_dir
         for parameter in self.parameters_to_read:
             self.__dict__[parameter] = np.array([])
 
@@ -84,3 +86,14 @@ class mapper():
     def clear_parameters(self):
         for parameter in self.parameters_to_read:
             self.__dict__[parameter] = np.array([])
+            
+    def create_files(self, filename):
+        if not os.path.exists(os.path.join(os.path.dirname(self.cur_dir), '2d_maps')):
+            os.mkdir(os.path.join(os.path.dirname(self.cur_dir), '2d_maps'))
+        for parameter in self.parameters_to_read:
+            content = np.hstack((np.array([self.map_master[:, 0]]).T, self.__dict__[f'map_{parameter}']))
+            slave = np.concatenate(([f'{self.parameter_to_sweep1} / {self.parameter_to_sweep2}'], self.map_slave[0, :]))
+            content = np.vstack((np.array([slave]), content))
+            np.savetxt(os.path.join(os.path.dirname(self.cur_dir), '2d_maps', f'{os.path.basename(filename)[:-4]}_{parameter}_map.csv'), content, fmt="%s", delimiter=',')
+            
+        print(f'2D maps are saved into {os.path.join(os.path.dirname(self.cur_dir), "2d_maps")} folder')
