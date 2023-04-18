@@ -474,6 +474,8 @@ def map_animation(i, n, filename):
           
         z = ma.masked_invalid(z)  
           
+        mapper = sweeper_write.mapper
+    
         try:
             x = eval(globals()[f'x_transformation{n}'], locals())
         except Exception as e:
@@ -6905,6 +6907,13 @@ def main():
     app = Universal_frontend(classes=(StartPage, Devices, SetGet, Sweeper1d, Sweeper2d, Sweeper3d),
                              start=StartPage)
     app.mainloop()
+    
+    for device in list_of_devices:
+        try:
+            device.close()
+        except:
+            pass
+    
     while True:
         sys.exit()
 

@@ -88,6 +88,10 @@ class mapper():
             self.__dict__[parameter] = np.array([])
             
     def create_files(self, filename):
+        
+        filename = os.path.basename(filename)[:-4]
+        filename = filename[:(len(filename) - filename[::-1].find('_') - 1)]
+        
         if not os.path.exists(os.path.join(os.path.dirname(self.cur_dir), '2d_maps')):
             os.mkdir(os.path.join(os.path.dirname(self.cur_dir), '2d_maps'))
         for parameter in self.parameters_to_read:
