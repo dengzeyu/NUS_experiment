@@ -8,7 +8,7 @@ import threading
 from tkinter import ttk
 import tkinter as tk
 from ToolTip import CreateToolTip
-from mapper import mapper
+from mapper import mapper2D, mapper3D
 import matplotlib.animation as animation
 #import blit_animation
 from matplotlib.figure import Figure
@@ -16,6 +16,7 @@ from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2Tk)
 import matplotlib.pyplot as plt
 from matplotlib import style
+from matplotlib.widgets import Slider
 import pyvisa as visa
 import time
 from datetime import datetime
@@ -457,24 +458,59 @@ def map_animation(i, n, filename):
     
     global sweeper_write
     global parameters_to_read
+    global manual_sweep_flags
     
     ax = globals()[f'ax{n}']
     
-    if hasattr(sweeper_write.mapper, 'map_slave'):
+    if len(manual_sweep_flags) == 2:
+        if hasattr(sweeper_write.mapper2D, 'map_slave'):
+            _pass = True
+        else:
+            _pass = False
+    elif len(manual_sweep_flags) == 3:
+        if hasattr(sweeper_write.mapper3D, 'map_slave_slave'):
+            _pass = True
+        else:
+            _pass = False
+    else:
+        _pass = False
         
-        x = sweeper_write.mapper.map_slave
-        y = sweeper_write.mapper.map_master
-        parameter = parameters_to_read[globals()[f'z{n}_status']]
-        z = getattr(sweeper_write.mapper, f'map_{parameter}')
+    if _pass:
         
-        if x.shape[0] == 1:
-            x = np.vstack([x, x])
-            y = np.vstack([y, [i + 1 for i in y]])
-            z = np.vstack([z, np.nan * np.ones(x.shape[1])])
-          
-        z = ma.masked_invalid(z)  
-          
-        mapper = sweeper_write.mapper
+        if len(manual_sweep_flags) == 2:
+            x = sweeper_write.mapper2D.map_slave
+            y = sweeper_write.mapper2D.map_master
+            parameter = parameters_to_read[globals()[f'z{n}_status']]
+            z = getattr(sweeper_write.mapper2D, f'map_{parameter}')
+            
+            if x.shape[0] == 1:
+                x = np.vstack([x, x])
+                y = np.vstack([y, [i + 1 for i in y]])
+                z = np.vstack([z, np.nan * np.ones(x.shape[1])])
+              
+            z = ma.masked_invalid(z)  
+              
+            mapper = sweeper_write.mapper2D
+        
+        elif len(manual_sweep_flags) == 3:
+            master = sweeper_write.mapper3D.master
+            
+            x = sweeper_write.mapper3D.map_slave_slave
+            y = sweeper_write.mapper3D.map_slave
+            parameter = parameters_to_read[globals()[f'z{n}_status']]
+            
+            #iterator = globals()[f'master_iterator{n}']
+            
+            z = getattr(sweeper_write.mapper3D, f'map_{parameter}')#{iterator}')
+            
+            if x.shape[0] == 1:
+                x = np.vstack([x, x])
+                y = np.vstack([y, [i + 1 for i in y]])
+                z = np.vstack([z, np.nan * np.ones(x.shape[1])])
+              
+            z = ma.masked_invalid(z)  
+              
+            mapper = sweeper_write.mapper3D
     
         try:
             x = eval(globals()[f'x_transformation{n}'], locals())
@@ -508,6 +544,7 @@ def map_animation(i, n, filename):
         colormap = ax.pcolor(z, cmap = globals()[f'cmap_{n}'], vmin=np.nanmin(z), vmax=np.nanmax(z), shading = 'flat')
         globals()[f'colorbar{n}'] = ax.get_figure().colorbar(colormap, ax = ax)
         globals()[f'colorbar{n}'].ax.tick_params(labelsize=5)
+        
         try:
             globals()[f'colorbar{n}'].set_label(globals()[f'colorbar{n}_label'])
         except:
@@ -4870,7 +4907,7 @@ class Sweeper_write(threading.Thread):
             globals()['value2'] = self.value2
             self.columns = columns
             self.time2 = (float(from_sweep2) - float(to_sweep2)) / float(ratio_sweep2)
-            self.mapper = mapper(self.parameter_to_sweep1, self.parameter_to_sweep2, self.parameters_to_read, float(from_sweep2), float(to_sweep2), cur_dir)
+            self.mapper2D = mapper2D(self.parameter_to_sweep1, self.parameter_to_sweep2, self.parameters_to_read, cur_dir)
             
             try:
                 self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
@@ -4931,6 +4968,8 @@ class Sweeper_write(threading.Thread):
             self.step3 = float(delay_factor3) * float(ratio_sweep3)
             self.time2 = (float(from_sweep2) - float(to_sweep2)) / float(ratio_sweep2)
             self.time3 = (float(from_sweep3) - float(to_sweep3)) / float(ratio_sweep3)
+            
+            self.mapper3D = mapper3D(self.parameter_to_sweep1, self.parameter_to_sweep2, self.parameter_to_sweep3, self.parameters_to_read, cur_dir)
             
             try:
                 self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
@@ -5226,7 +5265,9 @@ class Sweeper_write(threading.Thread):
                     parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
                                               option)()
                     if len(manual_sweep_flags) == 2:
-                        self.mapper.append_parameter(str(parameter), parameter_value)
+                        self.mapper2D.append_parameter(str(parameter), parameter_value)
+                    if len(manual_sweep_flags) == 3:
+                        self.mapper3D.append_parameter(str(parameter), parameter_value)
                     dataframe.append(parameter_value)
                 except:
                     dataframe.append(None)
@@ -5547,20 +5588,24 @@ class Sweeper_write(threading.Thread):
                 if self.isinarea(point = point, grid_area = self.grid_space, sweep_dimension = len(manual_sweep_flags)):
                     update_dataframe()
                     if self.sweepable2 == True:
-                        self.mapper.append_slave(value = self.current_value)
+                        self.mapper2D.append_slave(value = self.current_value)
                     else:
-                        self.mapper.append_slave(value = self.value2)
+                        self.mapper2D.append_slave(value = self.value2)
                     step(2, value2)
                     append_read_parameters()
                     tofile() 
                 else:
                     if manual_sweep_flags[1] == 0:
                         self.value2 += self.step2
-                    self.mapper.append_slave(value = np.nan)
+                    self.mapper2D.append_slave(value = np.nan)
             elif len(manual_sweep_flags) == 3:
                 point = current_point()
                 if self.isinarea(point = point, grid_area = self.grid_space, sweep_dimension = len(manual_sweep_flags)):
                     update_dataframe()
+                    if self.sweepable3 == True:
+                        self.mapper3D.append_slave_slave(value = self.current_value)
+                    else:
+                        self.mapper3D.append_slave_slave(value = self.value3)
                     step(3, value3)
                     append_read_parameters()
                     tofile() 
@@ -5638,9 +5683,14 @@ class Sweeper_write(threading.Thread):
                 raise Exception('back_and_forth_slave is not correct, needs >= 1, but got ', back_and_forth_slave)
            
             if len(manual_sweep_flags) == 2:
-                self.mapper.concatenate_all()
-                self.mapper.clear_slave()
-                self.mapper.clear_parameters()
+                self.mapper2D.concatenate_all()
+                self.mapper2D.clear_slave()
+                self.mapper2D.clear_parameters()
+            
+            if len(manual_sweep_flags) == 3:
+                self.mapper3D.concatenate_all()
+                self.mapper3D.clear_slave_slave()
+                self.mapper3D.clear_parameters()
                
             if not hasattr(self, 'time2'):
                 self.time2 = time.perf_counter()
@@ -5657,7 +5707,9 @@ class Sweeper_write(threading.Thread):
                     if len(manual_sweep_flags) == 3:
                         update_dataframe(True)
                     if len(manual_sweep_flags) == 2:
-                        self.mapper.append_master(value = self.value1)
+                        self.mapper2D.append_master(value = self.value1)
+                    if len(manual_sweep_flags) == 3:
+                        self.mapper3D.append_slave(value = self.value2)
                     step(cur_axis)
                     if len(manual_sweep_flags) == 2:
                         globals()['dataframe_after'] = [*globals()['dataframe']]
@@ -5674,6 +5726,10 @@ class Sweeper_write(threading.Thread):
                 for i, value in enumerate(data_middle[::direction]):
                     if manual_sweep_flags[-2] == 1:
                         determine_step(i, data_middle, cur_axis)
+                        if len(manual_sweep_flags) == 2:
+                            self.mapper2D.append_master(value = value)
+                        if len(manual_sweep_flags) == 3:
+                            self.mapper3D.append_slave(value = value)
                         step(cur_axis, value = value)
                         if len(manual_sweep_flags) == 2:
                             globals()['dataframe_after'] = [*globals()['dataframe']]
@@ -5716,6 +5772,12 @@ class Sweeper_write(threading.Thread):
             else:
                 raise Exception(f'{flags_dict[len(manual_sweep_flags)]} is not correct, needs > 1, but got ', walks)
     
+            if len(manual_sweep_flags) == 3:
+                self.mapper3D.clear_slave_slave()
+                self.mapper3D.clear_slave()
+                self.mapper3D.clear_parameters()
+                self.mapper3D.stack_iteration()
+    
             print('External loop was made back and forth')
     
         def master_loop_single(direction = 1):
@@ -5724,6 +5786,7 @@ class Sweeper_write(threading.Thread):
     
             if manual_sweep_flags[0] == 0:
                 while condition(1) and manual_sweep_flags[0] == 0:
+                    self.mapper3D.append_master(value = self.value1)
                     step(1)
                     globals()['dataframe_after'] = [*globals()['dataframe']]
                     external_loop_back_and_forth()
@@ -5733,6 +5796,7 @@ class Sweeper_write(threading.Thread):
                 for i, value in enumerate(data_external[::direction]):
                     if manual_sweep_flags[0] == 1:
                         determine_step(i, data_external, 1)
+                        self.mapper3D.append_master(value = value)
                         step(1, value = value)
                         globals()['dataframe_after'] = [*globals()['dataframe']]
                         external_loop_back_and_forth()
@@ -5795,7 +5859,7 @@ class Sweeper_write(threading.Thread):
     
             if len(manual_sweep_flags) == 2:        
                 external_loop_back_and_forth()
-                self.mapper.create_files(globals()['filename_sweep'])
+                self.mapper2D.create_files(globals()['filename_sweep'])
                 self.sweeper_flag2 == False
     
             self.sweeper_flag2 == False
@@ -5825,6 +5889,13 @@ class Sweeper_write(threading.Thread):
             if len(manual_sweep_flags) == 3:
                 master_loop_back_and_forth()
                 self.sweeper_flag3 == False
+                print(self.mapper3D.__dir__())
+                print(getattr(self.mapper3D, 'map_slave0'))
+                print(getattr(self.mapper3D, 'map_slave1'))
+                print(getattr(self.mapper3D, 'map_slave_slave0'))
+                print(getattr(self.mapper3D, 'map_slave_slave1'))
+                print(getattr(self.mapper3D, 'map_Time.Random0'))
+                print(getattr(self.mapper3D, 'map_Time.Random1'))
                 
         if self.setget_flag == True:
             setget_write()
@@ -6649,7 +6720,7 @@ class Graph():
         self.button_add = tk.Button(self.tw, text = 'Add graph', font = LARGE_FONT, command = lambda: self.add_graph())
         self.button_close = tk.Button(self.tw, text = r'🗙', font = LARGE_FONT, command = lambda: self.close_graph())
         
-        if len(manual_sweep_flags) == 2:
+        if len(manual_sweep_flags) == 2 or len(manual_sweep_flags) == 3:
             self.button_map = tk.Button(self.tw, text = '🗺', font = LARGE_FONT, command = self.switch)
             self.button_map.place(relx = 0.001, rely = 0.24)
             globals()[f'cmap_{self.order}'] = self.cmap
@@ -6694,7 +6765,7 @@ class Graph():
         
         self.update_item('Current dataframe')
         
-        self.button_pause = tk.Button(self.tw, text = '⏸️', font = LARGE_FONT, command = lambda: globals()['Sweeper_object'].pause())
+        self.button_pause = tk.Button(self.tw, text = '⏸️', font = LARGE_FONT, command = self.pause_clicked)
         self.button_pause.place(relx = 0.02, rely = 0.82)
         CreateToolTip(self.button_pause, 'Pause\Continue sweep')
         
@@ -6820,6 +6891,10 @@ class Graph():
         
     def update(self):
         self.tw.update()
+
+    def pause_clicked(self):
+        globals()['Sweeper_object'].pause()
+        self.button_pause.configure(text = r'▶')
 
     def ax_update(self, event):
         global columns
