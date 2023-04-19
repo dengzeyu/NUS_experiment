@@ -471,7 +471,10 @@ def map_animation(i, n, filename):
         if hasattr(sweeper_write.mapper3D, 'map_slave_slave'):
             _pass = True
         else:
-            _pass = False
+            if hasattr(sweeper_write.mapper3D, 'map_slave_slave0'):
+                _pass = True
+            else:
+                _pass = False
     else:
         _pass = False
         
@@ -495,13 +498,31 @@ def map_animation(i, n, filename):
         elif len(manual_sweep_flags) == 3:
             master = sweeper_write.mapper3D.master
             
-            x = sweeper_write.mapper3D.map_slave_slave
-            y = sweeper_write.mapper3D.map_slave
             parameter = parameters_to_read[globals()[f'z{n}_status']]
             
-            #iterator = globals()[f'master_iterator{n}']
-            
-            z = getattr(sweeper_write.mapper3D, f'map_{parameter}')#{iterator}')
+            cur_graph = globals()[f'graph_object{globals()["cur_animation_num"] - 3}']
+            if master.shape[0] > cur_graph.master_shape:
+                cur_graph.slider.config(to = master.shape[0])
+                cur_graph.master_shape = master.shape[0]
+                cur_graph.master = master
+                
+            if cur_graph.last:
+                try:
+                    x = sweeper_write.mapper3D.map_slave_slave
+                    y = sweeper_write.mapper3D.map_slave
+                    z = getattr(sweeper_write.mapper3D, f'map_{parameter}')
+                    cur_graph.slider.set(master.shape[0])
+                    cur_graph.change_label(event = None)
+                except:
+                    iterator = round(cur_graph.slider.get()) - 1
+                    x = getattr(sweeper_write.mapper3D, f'map_slave_slave{iterator}')
+                    y = getattr(sweeper_write.mapper3D, f'map_slave{iterator}')
+                    z = getattr(sweeper_write.mapper3D, f'map_{parameter}{iterator}')
+            else:
+                iterator = round(cur_graph.slider.get()) - 1
+                x = getattr(sweeper_write.mapper3D, f'map_slave_slave{iterator}')
+                y = getattr(sweeper_write.mapper3D, f'map_slave{iterator}')
+                z = getattr(sweeper_write.mapper3D, f'map_{parameter}{iterator}')
             
             if x.shape[0] == 1:
                 x = np.vstack([x, x])
@@ -5326,7 +5347,7 @@ class Sweeper_write(threading.Thread):
                 print(f'Sweep value is {value}')
                 print(f'Current value is {self.current_value}') 
                     
-                if (speed > 0 and self.current_value >= value) or ((speed < 0 and self.current_value <= value)): #if current value out of border
+                if (speed > 0 and self.current_value >= value - eps) or ((speed < 0 and self.current_value <= value + eps)): #if current value out of border
                     if not self.started:
                         result = True
                     else:
@@ -5889,13 +5910,6 @@ class Sweeper_write(threading.Thread):
             if len(manual_sweep_flags) == 3:
                 master_loop_back_and_forth()
                 self.sweeper_flag3 == False
-                print(self.mapper3D.__dir__())
-                print(getattr(self.mapper3D, 'map_slave0'))
-                print(getattr(self.mapper3D, 'map_slave1'))
-                print(getattr(self.mapper3D, 'map_slave_slave0'))
-                print(getattr(self.mapper3D, 'map_slave_slave1'))
-                print(getattr(self.mapper3D, 'map_Time.Random0'))
-                print(getattr(self.mapper3D, 'map_Time.Random1'))
                 
         if self.setget_flag == True:
             setget_write()
@@ -6894,7 +6908,10 @@ class Graph():
 
     def pause_clicked(self):
         globals()['Sweeper_object'].pause()
-        self.button_pause.configure(text = r'▶')
+        if self.button_pause.text == '⏸️':
+            self.button_pause.configure(text = r'▶')
+        elif self.button_pause.text == r'▶':
+            self.button_pause.configure(text = '⏸️')
 
     def ax_update(self, event):
         global columns
@@ -6921,6 +6938,7 @@ class Graph():
     def switch(self):
         global plot_flag
         global columns
+        global manual_sweep_flags
         
         if plot_flag == 'Plot':
             plot_flag = 'Map'
@@ -6937,6 +6955,17 @@ class Graph():
             ax = globals()[f'ax{self.order}']
             globals()[f'settingsFigure{self.order}'].showsettings(ax)
             globals()[f'settingsFigure{self.order}'].hidesettings(ax)
+            if len(manual_sweep_flags) == 3:
+                self.master = globals()['sweeper_write'].mapper3D.master
+                self.master_shape = self.master.shape[0]
+                self.slider = tk.Scale(self.tw, from_ = 1, to = self.master_shape, variable = self.master_shape, orient = 'vertical')
+                self.slider.place(relx = 0.55, rely = 0.075, height = 300)
+                self.label_master = tk.Label(self.tw, text = f'{self.master[round(self.slider.get() - 1)]}', font = LARGE_FONT)
+                self.label_master.place(relx = 0.55, rely = 0.5)
+                
+                self.last = True
+                self.slider.configure(command = self.change_label)
+                
         elif plot_flag == 'Map':
             plot_flag = 'Plot'
             self.combo_y1.place(relx=0.165, rely=0.76)
@@ -6950,8 +6979,19 @@ class Graph():
             ax = globals()[f'ax{self.order}']
             globals()[f'settingsFigure{self.order}'].showsettings(ax)
             globals()[f'settingsFigure{self.order}'].hidesettings(ax)
+            if len(manual_sweep_flags) == 3:
+                
+                self.slider.place_forget()
         else:
             raise Exception(f'plot_flag could only obtain values "Plot" or "Map", got {plot_flag}')
+        
+    def change_label(self, event):
+        self.label_master.configure(text = f'{self.master[round(self.slider.get() - 1)]}')
+        if round(self.slider.get()) == self.master.shape[0]:
+            self.last = True
+        else:
+            self.last = False
+        
         
     def update_item(self, item):
         name = self.filename
