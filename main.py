@@ -122,6 +122,8 @@ delay_factor3 = float
 stepper_flag = False
 fastmode_slave_flag = False
 fastmode_master_flag = False
+interpolated2D = True
+interpolated3D = True
 
 plot_flag = 'Plot'
 
@@ -236,6 +238,7 @@ def create_preset(dimension):
              dic['manual_filename' + str(i+1)] = ''
         dic['condition'] = ''
         dic['filename_sweep'] = filename_sweep
+        dic['interpolated'] = [1]
         dataframe = pd.DataFrame(dic)
         dataframe.to_csv(globals()[f'sweeper{dimension}d_path'], index = False)
 
@@ -2223,7 +2226,8 @@ class Sweeper2d(tk.Frame):
         self.status_back_and_forth_slave = tk.IntVar(value = int(self.preset['status_back_and_forth2'].values[0]))
         self.status_manual2 = tk.IntVar(value = int(self.preset['status_manual2'].values[0]))
         self.condition = str(self.preset['condition'].values[0])
-        self.filename_sweep = self.preset['filename_sweep'][0]
+        self.filename_sweep = self.preset['filename_sweep'].values[0]
+        self.interpolated = int(self.preset['interpolated'].values[0])
         
         try:
             if int(self.filename_sweep[:2]) in np.linspace(0, 99, 100, dtype = int) and int(self.filename_sweep[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(self.filename_sweep[4:6]) in np.linspace(1, 32, 32, dtype = int):
@@ -2900,10 +2904,53 @@ class Sweeper2d(tk.Frame):
             self, text = 'Browse...', command=lambda: self.set_filename_sweep())
         button_filename.place(relx=0.85, rely=0.9)
 
+        class Interpolated(object):
+            
+            def __init__(self, widget, parent):
+                self.script_toplevel = None
+                self.script_widget = widget
+                self.parent = parent
+            
+            def show_toplevel(self):
+                x = y = 0
+                self.script_toplevel = tw = tk.Toplevel(self.script_widget)
+                tw.wm_geometry("+%d+%d" % (x, y))
+                
+                label_interpolation = tk.Label(tw, text = 'Interpolate\n2D map?', font = LARGE_FONT)
+                label_interpolation.grid(row = 0, column = 0, pady = 2)
+                
+                self.status = tk.IntVar()
+                self.status.set(self.parent.interpolated)
+                
+                self.checkbox_interpolation = tk.Checkbutton(tw, variable = self.status, 
+                                                             onvalue = 1, offvalue = 0, 
+                                                             command = self.change_status) 
+            
+                def hide_toplevel():
+                    tw = self.script_toplevel
+                    self.script_toplevel = None
+        
+                    tw.destroy()
+                
+                tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
+            
+            def change_status(self):
+                self.parent.interpolated = self.status.get()
+                
+        def CreateInterpolatedToplevel(widget, parent):
+            
+            toplevel = Interpolated(widget, parent)
+            
+            def show(event):
+                toplevel.show_toplevel()
+                
+            widget.bind('<Button-3>', show)
+
         graph_button = tk.Button(
             self, text='📊', font = SUPER_LARGE, command=lambda: self.open_graph())
         graph_button.place(relx=0.7, rely=0.8)
         CreateToolTip(graph_button, 'Graph')
+        CreateInterpolatedToplevel(graph_button, self)
 
     def update_sweep_parameters1(self, event, interval=100):
         global types_of_devices
@@ -3023,7 +3070,10 @@ class Sweeper2d(tk.Frame):
         if self.entry_filename.get() != self.filename_sweep:
             self.preset.loc[0, 'filename_sweep'] = self.entry_filename.get()
             self.preset.to_csv(globals()['sweeper2d_path'], index = False)
+        
         self.preset.loc[0, 'condition'] = self.text_condition.get(1.0, tk.END)[:-1]
+        self.preset.to_csv(globals()['sweeper2d_path'], index = False)
+        self.preset.loc[0, 'interpolated'] = self.interpolated
         self.preset.to_csv(globals()['sweeper2d_path'], index = False)
 
     def update_sweep_configuration(self):
@@ -3290,6 +3340,7 @@ class Sweeper2d(tk.Frame):
         global stop_flag
         global condition
         global script
+        global interpolated2D
         global columns
         global manual_sweep_flags
         global manual_filenames
@@ -3362,6 +3413,7 @@ class Sweeper2d(tk.Frame):
         sweeper_flag1 = False
         sweeper_flag2 = True
         sweeper_flag3 = False
+        interpolated2D = self.interpolated
         #self.save_manual_status()
         self.save_back_and_forth_master_status()
         self.save_back_and_forth_slave_status()
@@ -3415,6 +3467,7 @@ class Sweeper3d(tk.Frame):
         self.status_manual3 = tk.IntVar(value = int(self.preset['status_manual3'].values[0]))
         self.filename_sweep = self.preset['filename_sweep'].values[0]
         self.condition = str(self.preset['condition'].values[0])
+        self.interpolated = int(self.preset['interpolated'].values[0])
         
         try:
             if int(self.filename_sweep[:2]) in np.linspace(0, 99, 100, dtype = int) and int(self.filename_sweep[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(self.filename_sweep[4:6]) in np.linspace(1, 32, 32, dtype = int):
@@ -4255,10 +4308,53 @@ class Sweeper3d(tk.Frame):
             self, text = 'Browse...', command=lambda: self.set_filename_sweep())
         button_filename.place(relx=0.85, rely=0.9)
 
+        class Interpolated(object):
+            
+            def __init__(self, widget, parent):
+                self.script_toplevel = None
+                self.script_widget = widget
+                self.parent = parent
+            
+            def show_toplevel(self):
+                x = y = 0
+                self.script_toplevel = tw = tk.Toplevel(self.script_widget)
+                tw.wm_geometry("+%d+%d" % (x, y))
+                
+                label_interpolation = tk.Label(tw, text = 'Interpolate\n2D map?', font = LARGE_FONT)
+                label_interpolation.grid(row = 0, column = 0, pady = 2)
+                
+                self.status = tk.IntVar()
+                self.status.set(self.parent.interpolated)
+                
+                self.checkbox_interpolation = tk.Checkbutton(tw, variable = self.status, 
+                                                             onvalue = 1, offvalue = 0, 
+                                                             command = self.change_status) 
+            
+                def hide_toplevel():
+                    tw = self.script_toplevel
+                    self.script_toplevel = None
+        
+                    tw.destroy()
+                
+                tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
+            
+            def change_status(self):
+                self.parent.interpolated = self.status.get()
+                
+        def CreateInterpolatedToplevel(widget, parent):
+            
+            toplevel = Interpolated(widget, parent)
+            
+            def show(event):
+                toplevel.show_toplevel()
+                
+            widget.bind('<Button-3>', show)
+
         graph_button = tk.Button(
             self, text='📊', font = SUPER_LARGE, command=lambda: self.open_graph())
         graph_button.place(relx=0.75, rely=0.8)
         CreateToolTip(graph_button, 'Graph')
+        CreateInterpolatedToplevel(graph_button, self)
 
     def update_sweep_parameters1(self, event, interval=100):
         global types_of_devices
@@ -4425,6 +4521,7 @@ class Sweeper3d(tk.Frame):
             self.preset.loc[0, 'filename_sweep'] = self.entry_filename.get()
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
         self.preset.loc[0, 'condition'] = self.text_condition.get(1.0, tk.END)[:-1]
+        self.preset.loc[0, 'interpolated'] = self.interpolated
         self.preset.to_csv(globals()['sweeper3d_path'], index = False)
             
     def update_sweep_configuration(self):
@@ -4746,6 +4843,7 @@ class Sweeper3d(tk.Frame):
         global stop_flag
         global condition
         global script
+        global interpolated3D
         global columns
         global manual_filenames
         global manual_sweep_flags
@@ -4842,6 +4940,9 @@ class Sweeper3d(tk.Frame):
         sweeper_flag1 = False
         sweeper_flag2 = False
         sweeper_flag3 = True
+        
+        interpolated3D = self.interpolated
+        
         #self.save_manual_status()
         self.save_back_and_forth_master_status()
         self.save_back_and_forth_slave_status()
@@ -4929,7 +5030,7 @@ class Sweeper_write(threading.Thread):
             self.columns = columns
             self.time2 = (float(from_sweep2) - float(to_sweep2)) / float(ratio_sweep2)
             self.mapper2D = mapper2D(self.parameter_to_sweep1, self.parameter_to_sweep2, 
-                                     self.parameters_to_read, cur_dir, interpolated = True)
+                                     self.parameters_to_read, cur_dir, interpolated = interpolated2D)
             
             try:
                 self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
@@ -4992,7 +5093,7 @@ class Sweeper_write(threading.Thread):
             self.time3 = (float(from_sweep3) - float(to_sweep3)) / float(ratio_sweep3)
             
             self.mapper3D = mapper3D(self.parameter_to_sweep1, self.parameter_to_sweep2, self.parameter_to_sweep3, 
-                                     self.parameters_to_read, cur_dir, interpolated = True)
+                                     self.parameters_to_read, cur_dir, interpolated = interpolated3D)
             
             try:
                 self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
@@ -7019,8 +7120,7 @@ interval = 100
 
 
 def main():
-    #write_config_parameters()
-    #write_config_channels()
+    
     app = Universal_frontend(classes=(StartPage, Devices, SetGet, Sweeper1d, Sweeper2d, Sweeper3d),
                              start=StartPage)
     app.mainloop()
