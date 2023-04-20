@@ -4928,7 +4928,8 @@ class Sweeper_write(threading.Thread):
             globals()['value2'] = self.value2
             self.columns = columns
             self.time2 = (float(from_sweep2) - float(to_sweep2)) / float(ratio_sweep2)
-            self.mapper2D = mapper2D(self.parameter_to_sweep1, self.parameter_to_sweep2, self.parameters_to_read, cur_dir)
+            self.mapper2D = mapper2D(self.parameter_to_sweep1, self.parameter_to_sweep2, 
+                                     self.parameters_to_read, cur_dir, interpolated = True)
             
             try:
                 self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
@@ -4990,7 +4991,8 @@ class Sweeper_write(threading.Thread):
             self.time2 = (float(from_sweep2) - float(to_sweep2)) / float(ratio_sweep2)
             self.time3 = (float(from_sweep3) - float(to_sweep3)) / float(ratio_sweep3)
             
-            self.mapper3D = mapper3D(self.parameter_to_sweep1, self.parameter_to_sweep2, self.parameter_to_sweep3, self.parameters_to_read, cur_dir)
+            self.mapper3D = mapper3D(self.parameter_to_sweep1, self.parameter_to_sweep2, self.parameter_to_sweep3, 
+                                     self.parameters_to_read, cur_dir, interpolated = True)
             
             try:
                 self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
@@ -6908,9 +6910,9 @@ class Graph():
 
     def pause_clicked(self):
         globals()['Sweeper_object'].pause()
-        if self.button_pause.text == '⏸️':
+        if self.button_pause['text'] == '⏸️':
             self.button_pause.configure(text = r'▶')
-        elif self.button_pause.text == r'▶':
+        elif self.button_pause['text'] == r'▶':
             self.button_pause.configure(text = '⏸️')
 
     def ax_update(self, event):

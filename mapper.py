@@ -1,5 +1,7 @@
 import numpy as np
 import os
+import itertools
+from scipy import interpolate
 
 """
 A classes that helps to collect data from 2D and 3D sweeps
@@ -7,13 +9,14 @@ A classes that helps to collect data from 2D and 3D sweeps
 
 class mapper2D():
     def __init__(self, parameter_to_sweep1: str, parameter_to_sweep2: str, 
-                 parameters_to_read, cur_dir: str):
+                 parameters_to_read, cur_dir: str, interpolated = False):
         self.slave = np.array([])
         self.master = np.array([])
         self.parameters_to_read = parameters_to_read
         self.parameter_to_sweep1 = parameter_to_sweep1
         self.parameter_to_sweep2 = parameter_to_sweep2
         self.cur_dir = cur_dir
+        self.interpolated = interpolated
         for parameter in self.parameters_to_read:
             self.__dict__[parameter] = np.array([])
 
@@ -29,40 +32,108 @@ class mapper2D():
     
     def concatenate_all(self):
         
-        if not hasattr(self, 'map_slave') and not hasattr(self, 'map_master'):  #first time
-            print('Mapper concatenated at first time')
-            self.map_slave = np.array([self.slave])
-            self.map_master = np.array([np.ones_like(self.slave) * self.master[-1]])
-        
-        elif hasattr(self, 'map_slave') and hasattr(self, 'map_master'):
-            print('Mapper concatenated')
-            self.check_sizes()
-            self.map_slave = np.vstack([self.map_slave, self.slave])
-            self.map_master = np.vstack([self.map_master, np.ones_like(self.slave) * self.master[-1]])
+        if not self.interpolated: #raw data
             
-        else:
-            raise Exception(f'Map_slave status {hasattr(self, "map_slave")}, Map_master status {hasattr(self, "map_master")}')
+            if not hasattr(self, 'map_slave') and not hasattr(self, 'map_master'):  #first time
+                print('Mapper concatenated at first time')
+                self.map_slave = np.array([self.slave])
+                self.map_master = np.array([np.ones_like(self.slave) * self.master[-1]])
+            
+            elif hasattr(self, 'map_slave') and hasattr(self, 'map_master'):
+                print('Mapper concatenated')
+                self.check_sizes()
+                self.map_slave = np.vstack([self.map_slave, self.slave])
+                self.map_master = np.vstack([self.map_master, np.ones_like(self.slave) * self.master[-1]])
+                
+            else:
+                raise Exception(f'Map_slave status {hasattr(self, "map_slave")}, Map_master status {hasattr(self, "map_master")}')
+        
+            self.concatenate_parameters()
+            
+        else: #interpolated
+            
+            if not hasattr(self, 'map_slave') and not hasattr(self, 'map_master'):  #first time
+                print('Mapper concatenated at first time')
+                self.reference_slave = self.split_monotonous(self.slave)
+                self.map_slave = np.array([self.slave])
+                self.map_master = np.array([np.ones_like(self.slave) * self.master[-1]]) 
+                
+            elif hasattr(self, 'map_slave') and hasattr(self, 'map_master'):
+                print('Mapper concatenated')
+                slave = np.concatenate(self.reference_slave)
+                self.map_slave = np.vstack([self.map_slave, slave])
+                self.map_master = np.vstack([self.map_master, np.ones_like(slave) * self.master[-1]])
     
-        self.concatenate_parameters()
+            else:
+                raise Exception(f'Map_slave status {hasattr(self, "map_slave")}, Map_master status {hasattr(self, "map_master")}')
+        
+            self.concatenate_parameters()
+    
+    def split_monotonous(self, arr):
+        
+        def process(lst):
+            # Guard clause against empty lists
+            if len(lst) < 1:
+                return lst
+        
+            # use a dictionary here to work around closure limitations
+            state = { 'prev': lst[0], 'n': 0 }
+        
+            def grouper(x):
+                if x < state['prev']:
+                    state['n'] += 1
+        
+                state['prev'] = x
+                return state['n']
+        
+            return [ list(g) for k, g in itertools.groupby(lst, grouper) ]
+        
+        return process(arr)
     
     def concatenate_parameters(self):
         
         def concat(parameter):
-            if not hasattr(self, f'map_{parameter}'):
-                if hasattr(self, parameter):
-                    self.__dict__[f'map_{parameter}'] = np.array([self.__dict__[parameter]])
-                else:
-                    self.__dict__[f'map_{parameter}'] = np.array([[]])
+            if not self.interpolated: #raw
                 
-            elif hasattr(self, f'map_{parameter}'):
-                if hasattr(self, parameter):
-                    self.__dict__[f'map_{parameter}'] = np.vstack([self.__dict__[f'map_{parameter}'], self.__dict__[parameter]])
-                else:
-                    self.__dict__[f'map_{parameter}'] = np.array([[]])
+                if not hasattr(self, f'map_{parameter}'):
+                    if hasattr(self, parameter):
+                        self.__dict__[f'map_{parameter}'] = np.array([self.__dict__[parameter]])
+                    else:
+                        self.__dict__[f'map_{parameter}'] = np.array([[]])
+                    
+                elif hasattr(self, f'map_{parameter}'):
+                    if hasattr(self, parameter):
+                        self.__dict__[f'map_{parameter}'] = np.vstack([self.__dict__[f'map_{parameter}'], self.__dict__[parameter]])
+                    else:
+                        self.__dict__[f'map_{parameter}'] = np.array([[]])
+            
+            else: #interpolated
+                
+                if not hasattr(self, f'map_{parameter}'):
+                    if hasattr(self, parameter):
+                        self.__dict__[f'map_{parameter}'] = np.array([self.interpolate(self.__dict__[parameter])])
+                    else:
+                        self.__dict__[f'map_{parameter}'] = np.array([[]])
+                        
+                elif hasattr(self, f'map_{parameter}'):
+                    if hasattr(self, parameter):
+                        self.__dict__[f'map_{parameter}'] = np.vstack([self.__dict__[f'map_{parameter}'], self.interpolate(self.__dict__[parameter])])
+                    else:
+                        self.__dict__[f'map_{parameter}'] = np.array([[]])
+                        
         
         for parameter in self.parameters_to_read:
             concat(parameter)
-            
+          
+    def interpolate(self, parameter):
+        x = self.slave
+        y = parameter
+        func = interpolate.interp1d(x, y)
+        res = []
+        for sub in self.reference_slave:
+            res.append(func(sub))
+        return np.concatenate(res)
+          
     def check_sizes(self):
         
         def stack(parameter):
@@ -107,7 +178,7 @@ class mapper2D():
 
 class mapper3D():
     def __init__(self, parameter_to_sweep1: str, parameter_to_sweep2: str, parameter_to_sweep3: str, 
-                 parameters_to_read, cur_dir: str):
+                 parameters_to_read, cur_dir: str, interpolated = False):
         self.slave_slave = np.array([])
         self.slave = np.array([])
         self.master = np.array([])
@@ -117,6 +188,7 @@ class mapper3D():
         self.parameter_to_sweep3 = parameter_to_sweep3
         self.cur_dir = cur_dir
         self.iteration = 0
+        self.interpolated = interpolated
         for parameter in self.parameters_to_read:
             self.__dict__[parameter] = np.array([])
 
@@ -135,39 +207,107 @@ class mapper3D():
     
     def concatenate_all(self):
         
-        if not hasattr(self, 'map_slave_slave') and not hasattr(self, 'map_slave'):  #first time
-            print('Mapper concatenated at first time')
-            self.map_slave_slave = np.array([self.slave_slave])
-            self.map_slave = np.array([np.ones_like(self.slave_slave) * self.slave[-1]])
+        if not self.interpolated: #raw
         
-        elif hasattr(self, 'map_slave_slave') and hasattr(self, 'map_slave'):
-            print('Mapper concatenated')
-            self.check_sizes()
-            self.map_slave_slave = np.vstack([self.map_slave_slave, self.slave_slave])
-            self.map_slave = np.vstack([self.map_slave, np.ones_like(self.slave_slave) * self.slave[-1]])
+            if not hasattr(self, 'map_slave_slave') and not hasattr(self, 'map_slave'):  #first time
+                print('Mapper concatenated at first time')
+                self.map_slave_slave = np.array([self.slave_slave])
+                self.map_slave = np.array([np.ones_like(self.slave_slave) * self.slave[-1]])
             
-        else:
-            raise Exception(f'Map_slave_slave status {hasattr(self, "map_slave_slave")}, Map_slave status {hasattr(self, "map_slave")}')
+            elif hasattr(self, 'map_slave_slave') and hasattr(self, 'map_slave'):
+                print('Mapper concatenated')
+                self.check_sizes()
+                self.map_slave_slave = np.vstack([self.map_slave_slave, self.slave_slave])
+                self.map_slave = np.vstack([self.map_slave, np.ones_like(self.slave_slave) * self.slave[-1]])
+                
+            else:
+                raise Exception(f'Map_slave_slave status {hasattr(self, "map_slave_slave")}, Map_slave status {hasattr(self, "map_slave")}')
+        
+            self.concatenate_parameters()
+            
+        else: #interpolated
+            
+            if not hasattr(self, 'map_slave_slave') and not hasattr(self, 'map_slave'):  #first time
+                print('Mapper concatenated at first time')
+                self.reference_slave_slave = self.split_monotonous(self.slave_slave)
+                self.map_slave_slave = np.array([self.slave_slave])
+                self.map_slave = np.array([np.ones_like(self.slave_slave) * self.slave[-1]]) 
+                
+            elif hasattr(self, 'map_slave_slave') and hasattr(self, 'map_slave'):
+                print('Mapper concatenated')
+                slave_slave = np.concatenate(self.reference_slave_slave)
+                self.map_slave_slave = np.vstack([self.map_slave_slave, slave_slave])
+                self.map_slave = np.vstack([self.map_slave, np.ones_like(slave_slave) * self.slave[-1]])
     
-        self.concatenate_parameters()
+            else:
+                raise Exception(f'Map_slave_slave status {hasattr(self, "map_slave_slave")}, Map_slave status {hasattr(self, "map_slave")}')
+        
+            self.concatenate_parameters()
+    
+    def split_monotonous(self, arr):
+        
+        def process(lst):
+            # Guard clause against empty lists
+            if len(lst) < 1:
+                return lst
+        
+            # use a dictionary here to work around closure limitations
+            state = { 'prev': lst[0], 'n': 0 }
+        
+            def grouper(x):
+                if x < state['prev']:
+                    state['n'] += 1
+        
+                state['prev'] = x
+                return state['n']
+        
+            return [ list(g) for k, g in itertools.groupby(lst, grouper) ]
+        
+        return process(arr)
     
     def concatenate_parameters(self):
         
         def concat(parameter):
-            if not hasattr(self, f'map_{parameter}'):
-                if hasattr(self, parameter):
-                    self.__dict__[f'map_{parameter}'] = np.array([self.__dict__[parameter]])
-                else:
-                    self.__dict__[f'map_{parameter}'] = np.array([[]])
+            
+            if not self.interpolated: #raw
+            
+                if not hasattr(self, f'map_{parameter}'):
+                    if hasattr(self, parameter):
+                        self.__dict__[f'map_{parameter}'] = np.array([self.__dict__[parameter]])
+                    else:
+                        self.__dict__[f'map_{parameter}'] = np.array([[]])
+                    
+                elif hasattr(self, f'map_{parameter}'):
+                    if hasattr(self, parameter):
+                        self.__dict__[f'map_{parameter}'] = np.vstack([self.__dict__[f'map_{parameter}'], self.__dict__[parameter]])
+                    else:
+                        self.__dict__[f'map_{parameter}'] = np.array([[]])
+                    
+            else: #interpolated
                 
-            elif hasattr(self, f'map_{parameter}'):
-                if hasattr(self, parameter):
-                    self.__dict__[f'map_{parameter}'] = np.vstack([self.__dict__[f'map_{parameter}'], self.__dict__[parameter]])
-                else:
-                    self.__dict__[f'map_{parameter}'] = np.array([[]])
+                if not hasattr(self, f'map_{parameter}'):
+                    if hasattr(self, parameter):
+                        self.__dict__[f'map_{parameter}'] = np.array([self.interpolate(self.__dict__[parameter])])
+                    else:
+                        self.__dict__[f'map_{parameter}'] = np.array([[]])
+                        
+                elif hasattr(self, f'map_{parameter}'):
+                    if hasattr(self, parameter):
+                        self.__dict__[f'map_{parameter}'] = np.vstack([self.__dict__[f'map_{parameter}'], self.interpolate(self.__dict__[parameter])])
+                    else:
+                        self.__dict__[f'map_{parameter}'] = np.array([[]])
         
         for parameter in self.parameters_to_read:
             concat(parameter)
+            
+    def interpolate(self, parameter):
+        x = self.slave_slave
+        y = parameter
+        func = interpolate.interp1d(x, y)
+        res = []
+        for sub in self.reference_slave_slave:
+            res.append(func(sub))
+        return np.concatenate(res)
             
     def check_sizes(self):
         
@@ -209,5 +349,7 @@ class mapper3D():
         
         self.__dict__[f'map_slave{self.iteration}'] = self.map_slave #copying a map of slave into iterated instance
         del self.map_slave #delete the map_slave instance
+        
+        del self.reference_slave_slave
         
         self.iteration += 1
