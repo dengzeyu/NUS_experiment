@@ -124,6 +124,8 @@ fastmode_slave_flag = False
 fastmode_master_flag = False
 interpolated2D = True
 interpolated3D = True
+uniform2D = True
+uniform3D = True
 
 plot_flag = 'Plot'
 
@@ -239,6 +241,7 @@ def create_preset(dimension):
         dic['condition'] = ''
         dic['filename_sweep'] = filename_sweep
         dic['interpolated'] = [1]
+        dic['uniform'] = [1]
         dataframe = pd.DataFrame(dic)
         dataframe.to_csv(globals()[f'sweeper{dimension}d_path'], index = False)
 
@@ -501,7 +504,10 @@ def map_animation(i, n, filename):
         elif len(manual_sweep_flags) == 3:
             master = sweeper_write.mapper3D.master
             
-            parameter = parameters_to_read[globals()[f'z{n}_status']]
+            try:
+                parameter = parameters_to_read[globals()[f'z{n}_status']]
+            except IndexError:
+                parameter = parameters_to_read[0]
             
             cur_graph = globals()[f'graph_object{globals()["cur_animation_num"] - 3}']
             if master.shape[0] > cur_graph.master_shape:
@@ -528,9 +534,11 @@ def map_animation(i, n, filename):
                 z = getattr(sweeper_write.mapper3D, f'map_{parameter}{iterator}')
             
             if x.shape[0] == 1:
+                print(x)
+                print(y)
                 x = np.vstack([x, x])
                 y = np.vstack([y, [i + 1 for i in y]])
-                z = np.vstack([z, np.nan * np.ones(x.shape[1])])
+                z = np.vstack([z, np.nan * np.ones(x.shape[1])]) 
               
             z = ma.masked_invalid(z)  
               
@@ -2228,6 +2236,7 @@ class Sweeper2d(tk.Frame):
         self.condition = str(self.preset['condition'].values[0])
         self.filename_sweep = self.preset['filename_sweep'].values[0]
         self.interpolated = int(self.preset['interpolated'].values[0])
+        self.uniform = int(self.preset['interpolated'].values[0])
         
         try:
             if int(self.filename_sweep[:2]) in np.linspace(0, 99, 100, dtype = int) and int(self.filename_sweep[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(self.filename_sweep[4:6]) in np.linspace(1, 32, 32, dtype = int):
@@ -2907,35 +2916,69 @@ class Sweeper2d(tk.Frame):
         class Interpolated(object):
             
             def __init__(self, widget, parent):
-                self.script_toplevel = None
-                self.script_widget = widget
+                self.interpolated_toplevel = None
+                self.interpolated_widget = widget
                 self.parent = parent
             
             def show_toplevel(self):
-                x = y = 0
-                self.script_toplevel = tw = tk.Toplevel(self.script_widget)
+                x, y, _, _ = self.interpolated_widget.bbox('all')
+                x = x + self.interpolated_widget.winfo_rootx()
+                y = y + self.interpolated_widget.winfo_rooty()
+                self.interpolated_toplevel = tw = tk.Toplevel(self.interpolated_widget)
                 tw.wm_geometry("+%d+%d" % (x, y))
                 
                 label_interpolation = tk.Label(tw, text = 'Interpolate\n2D map?', font = LARGE_FONT)
                 label_interpolation.grid(row = 0, column = 0, pady = 2)
                 
-                self.status = tk.IntVar()
-                self.status.set(self.parent.interpolated)
+                self.status_interpolated = tk.IntVar()
+                self.status_interpolated.set(self.parent.interpolated)
                 
-                self.checkbox_interpolation = tk.Checkbutton(tw, variable = self.status, 
+                self.checkbox_interpolation = tk.Checkbutton(tw, variable = self.status_interpolated, 
                                                              onvalue = 1, offvalue = 0, 
-                                                             command = self.change_status) 
+                                                             command = self.change_status_uniform) 
+                self.checkbox_interpolation.grid(row = 0, column = 1, pady = 2)
+                
+                if self.parent.interpolated == 1:
+                    self.label_uniform = tk.Label(tw, text = 'Uniform grid', font = LARGE_FONT)
+                    self.label_uniform.grid(row = 1, column = 0, pady = 2)
+                    
+                    self.status_uniform = tk.IntVar()
+                    self.status_uniform.set(self.parent.uniform)
+                    
+                    self.checkbox_uniform = tk.Checkbutton(tw, variable = self.status_uniform,
+                                                           onvalue = 1, offvalue = 0,
+                                                           command = self.change_status_uniform)
+                    self.checkbox_uniform.grid(row = 1, column = 1, pady = 2)
+                    
             
                 def hide_toplevel():
-                    tw = self.script_toplevel
-                    self.script_toplevel = None
+                    tw = self.interpolated_toplevel
+                    self.interpolated_toplevel = None
         
                     tw.destroy()
                 
                 tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
             
-            def change_status(self):
-                self.parent.interpolated = self.status.get()
+            def change_status_interpolated(self):
+                self.parent.interpolated = self.status_interpolated.get()
+                
+                if self.status_interpolated.get() == 0:
+                    self.checkbox_uniform.grid_forget()
+                    self.label_uniform.grid_forget()
+                else:
+                    self.label_uniform = tk.Label(self.interpolated_toplevel, text = 'Uniform grid', font = LARGE_FONT)
+                    self.label_uniform.grid(row = 1, column = 1, pady = 2)
+                    
+                    self.status_uniform = tk.IntVar()
+                    self.status_uniform.set(self.parent.uniform)
+                    
+                    self.checkbox_uniform = tk.Checkbutton(self.interpolated_toplevel, variable = self.status_uniform,
+                                                           onvalue = 1, offvalue = 0,
+                                                           command = self.change_status_uniform)
+                    self.checkbox_uniform.grid(row = 1, column = 1, pady = 2)
+                
+            def change_status_uniform(self):
+                self.parent.uniform= self.status_uniform.get()
                 
         def CreateInterpolatedToplevel(widget, parent):
             
@@ -3074,6 +3117,7 @@ class Sweeper2d(tk.Frame):
         self.preset.loc[0, 'condition'] = self.text_condition.get(1.0, tk.END)[:-1]
         self.preset.to_csv(globals()['sweeper2d_path'], index = False)
         self.preset.loc[0, 'interpolated'] = self.interpolated
+        self.preset.loc[0, 'uniform'] = self.uniform
         self.preset.to_csv(globals()['sweeper2d_path'], index = False)
 
     def update_sweep_configuration(self):
@@ -3341,6 +3385,7 @@ class Sweeper2d(tk.Frame):
         global condition
         global script
         global interpolated2D
+        global uniform2D
         global columns
         global manual_sweep_flags
         global manual_filenames
@@ -3414,6 +3459,8 @@ class Sweeper2d(tk.Frame):
         sweeper_flag2 = True
         sweeper_flag3 = False
         interpolated2D = self.interpolated
+        uniform2D = self.uniform
+        
         #self.save_manual_status()
         self.save_back_and_forth_master_status()
         self.save_back_and_forth_slave_status()
@@ -3468,6 +3515,7 @@ class Sweeper3d(tk.Frame):
         self.filename_sweep = self.preset['filename_sweep'].values[0]
         self.condition = str(self.preset['condition'].values[0])
         self.interpolated = int(self.preset['interpolated'].values[0])
+        self.uniform = int(self.preset['uniform'].values[0])
         
         try:
             if int(self.filename_sweep[:2]) in np.linspace(0, 99, 100, dtype = int) and int(self.filename_sweep[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(self.filename_sweep[4:6]) in np.linspace(1, 32, 32, dtype = int):
@@ -4311,35 +4359,69 @@ class Sweeper3d(tk.Frame):
         class Interpolated(object):
             
             def __init__(self, widget, parent):
-                self.script_toplevel = None
-                self.script_widget = widget
+                self.interpolated_toplevel = None
+                self.interpolated_widget = widget
                 self.parent = parent
             
             def show_toplevel(self):
-                x = y = 0
-                self.script_toplevel = tw = tk.Toplevel(self.script_widget)
+                x, y, _, _ = self.interpolated_widget.bbox('all')
+                x = x + self.interpolated_widget.winfo_rootx()
+                y = y + self.interpolated_widget.winfo_rooty()
+                self.interpolated_toplevel = tw = tk.Toplevel(self.interpolated_widget)
                 tw.wm_geometry("+%d+%d" % (x, y))
                 
                 label_interpolation = tk.Label(tw, text = 'Interpolate\n2D map?', font = LARGE_FONT)
                 label_interpolation.grid(row = 0, column = 0, pady = 2)
                 
-                self.status = tk.IntVar()
-                self.status.set(self.parent.interpolated)
+                self.status_interpolated = tk.IntVar()
+                self.status_interpolated.set(self.parent.interpolated)
                 
-                self.checkbox_interpolation = tk.Checkbutton(tw, variable = self.status, 
+                self.checkbox_interpolation = tk.Checkbutton(tw, variable = self.status_interpolated, 
                                                              onvalue = 1, offvalue = 0, 
-                                                             command = self.change_status) 
+                                                             command = self.change_status_uniform) 
+                self.checkbox_interpolation.grid(row = 0, column = 1, pady = 2)
+                
+                if self.parent.interpolated == 1:
+                    self.label_uniform = tk.Label(tw, text = 'Uniform grid', font = LARGE_FONT)
+                    self.label_uniform.grid(row = 1, column = 0, pady = 2)
+                    
+                    self.status_uniform = tk.IntVar()
+                    self.status_uniform.set(self.parent.uniform)
+                    
+                    self.checkbox_uniform = tk.Checkbutton(tw, variable = self.status_uniform,
+                                                           onvalue = 1, offvalue = 0,
+                                                           command = self.change_status_uniform)
+                    self.checkbox_uniform.grid(row = 1, column = 1, pady = 2)
+                    
             
                 def hide_toplevel():
-                    tw = self.script_toplevel
-                    self.script_toplevel = None
+                    tw = self.interpolated_toplevel
+                    self.interpolated_toplevel = None
         
                     tw.destroy()
                 
                 tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
             
-            def change_status(self):
-                self.parent.interpolated = self.status.get()
+            def change_status_interpolated(self):
+                self.parent.interpolated = self.status_interpolated.get()
+                
+                if self.status_interpolated.get() == 0:
+                    self.checkbox_uniform.grid_forget()
+                    self.label_uniform.grid_forget()
+                else:
+                    self.label_uniform = tk.Label(self.interpolated_toplevel, text = 'Uniform grid', font = LARGE_FONT)
+                    self.label_uniform.grid(row = 1, column = 0, pady = 2)
+                    
+                    self.status_uniform = tk.IntVar()
+                    self.status_uniform.set(self.parent.uniform)
+                    
+                    self.checkbox_uniform = tk.Checkbutton(self.interpolated_toplevel, variable = self.status_uniform,
+                                                           onvalue = 1, offvalue = 0,
+                                                           command = self.change_status_uniform)
+                    self.checkbox_uniform.grid(row = 1, column = 1, pady = 2)
+                
+            def change_status_uniform(self):
+                self.parent.uniform= self.status_uniform.get()
                 
         def CreateInterpolatedToplevel(widget, parent):
             
@@ -4522,6 +4604,7 @@ class Sweeper3d(tk.Frame):
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
         self.preset.loc[0, 'condition'] = self.text_condition.get(1.0, tk.END)[:-1]
         self.preset.loc[0, 'interpolated'] = self.interpolated
+        self.preset.loc[0, 'uniform'] = self.uniform
         self.preset.to_csv(globals()['sweeper3d_path'], index = False)
             
     def update_sweep_configuration(self):
@@ -4844,6 +4927,7 @@ class Sweeper3d(tk.Frame):
         global condition
         global script
         global interpolated3D
+        global uniform3D
         global columns
         global manual_filenames
         global manual_sweep_flags
@@ -4942,6 +5026,7 @@ class Sweeper3d(tk.Frame):
         sweeper_flag3 = True
         
         interpolated3D = self.interpolated
+        uniform3D = self.uniform
         
         #self.save_manual_status()
         self.save_back_and_forth_master_status()
@@ -5029,12 +5114,16 @@ class Sweeper_write(threading.Thread):
             globals()['value2'] = self.value2
             self.columns = columns
             self.time2 = (float(from_sweep2) - float(to_sweep2)) / float(ratio_sweep2)
-            self.mapper2D = mapper2D(self.parameter_to_sweep1, self.parameter_to_sweep2, 
-                                     self.parameters_to_read, cur_dir, interpolated = interpolated2D)
             
             try:
                 self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
                 self.nstep2 = int(abs(self.nstep2))
+                
+                self.mapper2D = mapper2D(self.parameter_to_sweep1, self.parameter_to_sweep2, 
+                                         self.parameters_to_read, cur_dir, interpolated = interpolated2D,
+                                         uniform = uniform2D, _from = self.from_sweep2, _to = self.to_sweep2,
+                                         nsteps = self.nstep2, walks = globals()['back_and_forth_slave'])
+                
             except ValueError:
                 self.nstep2 = 1
                 
@@ -5092,8 +5181,6 @@ class Sweeper_write(threading.Thread):
             self.time2 = (float(from_sweep2) - float(to_sweep2)) / float(ratio_sweep2)
             self.time3 = (float(from_sweep3) - float(to_sweep3)) / float(ratio_sweep3)
             
-            self.mapper3D = mapper3D(self.parameter_to_sweep1, self.parameter_to_sweep2, self.parameter_to_sweep3, 
-                                     self.parameters_to_read, cur_dir, interpolated = interpolated3D)
             
             try:
                 self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
@@ -5104,6 +5191,12 @@ class Sweeper_write(threading.Thread):
             try:
                 self.nstep3 = (float(to_sweep3) - float(from_sweep3)) / self.ratio_sweep3 / self.delay_factor3
                 self.nstep3 = int(abs(self.nstep3))
+                
+                self.mapper3D = mapper3D(self.parameter_to_sweep1, self.parameter_to_sweep2, self.parameter_to_sweep3, 
+                                         self.parameters_to_read, cur_dir, interpolated = interpolated3D,
+                                         uniform = uniform3D, _from = self.from_sweep3, _to = self.to_sweep3,
+                                         nsteps = self.nstep3, walks = globals()['back_and_forth_slave_slave'])
+                
             except ValueError:
                 self.nstep3 = 1
                 
@@ -5773,6 +5866,11 @@ class Sweeper_write(threading.Thread):
             else:
                 raise Exception('manual_sweep_flag is not correct, needs 0 or 1, but got ', manual_sweep_flags[len(manual_sweep_flags) - 1])
             
+            if len(manual_sweep_flags) == 2:
+                self.mapper2D.add_sub_slave()
+            elif len(manual_sweep_flags) == 3:
+                self.mapper3D.add_sub_slave_slave()
+            
             print('Single inner loop was made')
             
         def inner_loop_back_and_forth():
@@ -5807,13 +5905,17 @@ class Sweeper_write(threading.Thread):
                 raise Exception('back_and_forth_slave is not correct, needs >= 1, but got ', back_and_forth_slave)
            
             if len(manual_sweep_flags) == 2:
+                self.mapper2D.slave_done_walking()
                 self.mapper2D.concatenate_all()
                 self.mapper2D.clear_slave()
+                self.mapper2D.clear_sub_slaves()
                 self.mapper2D.clear_parameters()
             
             if len(manual_sweep_flags) == 3:
+                self.mapper3D.slave_slave_done_walking()
                 self.mapper3D.concatenate_all()
                 self.mapper3D.clear_slave_slave()
+                self.mapper3D.clear_sub_slave_slaves()
                 self.mapper3D.clear_parameters()
                
             if not hasattr(self, 'time2'):
@@ -5889,7 +5991,7 @@ class Sweeper_write(threading.Thread):
                         step(axis = len(manual_sweep_flags) - 1, back = True)
                     back_and_forth_transposition(len(manual_sweep_flags) - 1)
                     
-                if back_and_forth_master % 2 == 1:
+                if walks % 2 == 1:
                     back_and_forth_transposition(len(manual_sweep_flags) - 1)
                   
                     
@@ -6372,7 +6474,11 @@ class FigureSettings(object):
             label_z_device = tk.Label(tw, text = 'z')
             label_z_device.grid(row = 1, column = 0, pady = 2, sticky = tk.W)
             
-            self.combo_z_device_map = ttk.Combobox(tw, values=globals()['columns'][3:])
+            if len(manual_sweep_flags) == 2:
+                values = globals()['columns'][3:]
+            elif len(manual_sweep_flags) == 3:
+                values = globals()['columns'][4:]
+            self.combo_z_device_map = ttk.Combobox(tw, values=values)
             try:
                 self.combo_z_device_map.current(self.z_current)
                 self.ax_update_map(ax = ax, event = None)
@@ -7059,6 +7165,7 @@ class Graph():
             globals()[f'settingsFigure{self.order}'].showsettings(ax)
             globals()[f'settingsFigure{self.order}'].hidesettings(ax)
             if len(manual_sweep_flags) == 3:
+                self.combo_x1.config(value = columns[4:])
                 self.master = globals()['sweeper_write'].mapper3D.master
                 self.master_shape = self.master.shape[0]
                 self.slider = tk.Scale(self.tw, from_ = 1, to = self.master_shape, variable = self.master_shape, orient = 'vertical')
@@ -7126,6 +7233,12 @@ def main():
     app.mainloop()
     
     for device in list_of_devices:
+        
+        try:
+            device.stop()
+        except:
+            pass
+        
         try:
             device.close()
         except:
