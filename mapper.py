@@ -431,6 +431,15 @@ class mapper3D():
            
     def stack_iteration(self):
         for parameter in self.parameters_to_read:
+            if not hasattr(self, f'max_{parameter}'):
+                self.__dict__[f'max_{parameter}'] = np.nanmax(self.__dict__[f'map_{parameter}'])
+                self.__dict__[f'min_{parameter}'] = np.nanmin(self.__dict__[f'map_{parameter}'])
+            else:
+                if np.nanmax(self.__dict__[f'map_{parameter}']) > self.__dict__[f'max_{parameter}']:
+                    self.__dict__[f'max_{parameter}'] = np.nanmax(self.__dict__[f'map_{parameter}'])
+                if np.nanmin(self.__dict__[f'map_{parameter}']) < self.__dict__[f'min_{parameter}']:
+                    self.__dict__[f'min_{parameter}'] = np.nanmin(self.__dict__[f'map_{parameter}'])
+                
             self.__dict__[f'map_{parameter}{self.iteration}'] = self.__dict__[f'map_{parameter}'] #copying a map of parameter into iterated instance
             del self.__dict__[f'map_{parameter}'] #delete the map_paremeter instance
             

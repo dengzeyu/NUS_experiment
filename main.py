@@ -451,7 +451,7 @@ def plot_animation(i, n , filename):
     ax.autoscale(enable = autoscale_x, axis = 'x')
     ax.autoscale(enable = autoscale_y, axis = 'y')
     
-    plt.rcParams['axes.grid'] = True
+    plt.rcParams['axes.grid'] = False
     ax.plot(x, y, '-', lw=1, color=color)
     
     #globals()[f'graph_object{globals()["cur_animation_num"] - 3}'].update()
@@ -516,17 +516,22 @@ def map_animation(i, n, filename):
                 cur_graph.master = master
                 
             if cur_graph.last:
-                try:
+                if hasattr(sweeper_write.mapper3D, 'map_slave_slave'):
                     x = sweeper_write.mapper3D.map_slave_slave
                     y = sweeper_write.mapper3D.map_slave
                     z = getattr(sweeper_write.mapper3D, f'map_{parameter}')
                     cur_graph.slider.set(master.shape[0])
                     cur_graph.change_label(event = None)
-                except:
+                else:
                     iterator = round(cur_graph.slider.get()) - 1
-                    x = getattr(sweeper_write.mapper3D, f'map_slave_slave{iterator}')
-                    y = getattr(sweeper_write.mapper3D, f'map_slave{iterator}')
-                    z = getattr(sweeper_write.mapper3D, f'map_{parameter}{iterator}')
+                    try:
+                        x = getattr(sweeper_write.mapper3D, f'map_slave_slave{iterator}')
+                        y = getattr(sweeper_write.mapper3D, f'map_slave{iterator}')
+                        z = getattr(sweeper_write.mapper3D, f'map_{parameter}{iterator}')
+                    except AttributeError:
+                        x = getattr(sweeper_write.mapper3D, 'map_slave_slave0')
+                        y = getattr(sweeper_write.mapper3D, 'map_slave0')
+                        z = getattr(sweeper_write.mapper3D, f'map_{parameter}0')
             else:
                 iterator = round(cur_graph.slider.get()) - 1
                 x = getattr(sweeper_write.mapper3D, f'map_slave_slave{iterator}')
@@ -534,8 +539,6 @@ def map_animation(i, n, filename):
                 z = getattr(sweeper_write.mapper3D, f'map_{parameter}{iterator}')
             
             if x.shape[0] == 1:
-                print(x)
-                print(y)
                 x = np.vstack([x, x])
                 y = np.vstack([y, [i + 1 for i in y]])
                 z = np.vstack([z, np.nan * np.ones(x.shape[1])]) 
@@ -573,7 +576,21 @@ def map_animation(i, n, filename):
         ax.set_ylabel(ylabel)
         
         plt.rcParams['axes.grid'] = False
-        colormap = ax.pcolor(z, cmap = globals()[f'cmap_{n}'], vmin=np.nanmin(z), vmax=np.nanmax(z), shading = 'flat')
+        if len(manual_sweep_flags) == 3:
+            try:
+                parameter = parameters_to_read[globals()[f'z{n}_status']]
+            except IndexError:
+                parameter = parameters_to_read[0]
+            if hasattr(sweeper_write.mapper3D, f'max_{parameter}'):
+                max_z = getattr(sweeper_write.mapper3D, f'max_{parameter}')
+                min_z = getattr(sweeper_write.mapper3D, f'min_{parameter}')
+            else:
+                max_z = np.nanmax(z)
+                min_z = np.nanmin(z)
+        else:
+            max_z = np.nanmax(z)
+            min_z = np.nanmin(z)
+        colormap = ax.pcolor(z, cmap = globals()[f'cmap_{n}'], vmin=min_z, vmax=max_z, shading = 'flat')
         globals()[f'colorbar{n}'] = ax.get_figure().colorbar(colormap, ax = ax)
         globals()[f'colorbar{n}'].ax.tick_params(labelsize=5)
         
