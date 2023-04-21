@@ -2952,7 +2952,7 @@ class Sweeper2d(tk.Frame):
                 
                 self.checkbox_interpolation = tk.Checkbutton(tw, variable = self.status_interpolated, 
                                                              onvalue = 1, offvalue = 0, 
-                                                             command = self.change_status_uniform) 
+                                                             command = self.change_status_interpolated) 
                 self.checkbox_interpolation.grid(row = 0, column = 1, pady = 2)
                 
                 if self.parent.interpolated == 1:
@@ -2984,7 +2984,7 @@ class Sweeper2d(tk.Frame):
                     self.label_uniform.grid_forget()
                 else:
                     self.label_uniform = tk.Label(self.interpolated_toplevel, text = 'Uniform grid', font = LARGE_FONT)
-                    self.label_uniform.grid(row = 1, column = 1, pady = 2)
+                    self.label_uniform.grid(row = 1, column = 0, pady = 2)
                     
                     self.status_uniform = tk.IntVar()
                     self.status_uniform.set(self.parent.uniform)
@@ -4395,7 +4395,7 @@ class Sweeper3d(tk.Frame):
                 
                 self.checkbox_interpolation = tk.Checkbutton(tw, variable = self.status_interpolated, 
                                                              onvalue = 1, offvalue = 0, 
-                                                             command = self.change_status_uniform) 
+                                                             command = self.change_status_interpolated) 
                 self.checkbox_interpolation.grid(row = 0, column = 1, pady = 2)
                 
                 if self.parent.interpolated == 1:
@@ -5136,10 +5136,12 @@ class Sweeper_write(threading.Thread):
                 self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
                 self.nstep2 = int(abs(self.nstep2))
                 
+                index = self.update_filename()
                 self.mapper2D = mapper2D(self.parameter_to_sweep1, self.parameter_to_sweep2, 
                                          self.parameters_to_read, cur_dir, interpolated = interpolated2D,
                                          uniform = uniform2D, _from = self.from_sweep2, _to = self.to_sweep2,
-                                         nsteps = self.nstep2, walks = globals()['back_and_forth_slave'])
+                                         nsteps = self.nstep2, walks = globals()['back_and_forth_slave'], 
+                                         index_filename = index)
                 
             except ValueError:
                 self.nstep2 = 1
@@ -5209,10 +5211,12 @@ class Sweeper_write(threading.Thread):
                 self.nstep3 = (float(to_sweep3) - float(from_sweep3)) / self.ratio_sweep3 / self.delay_factor3
                 self.nstep3 = int(abs(self.nstep3))
                 
+                index = self.update_filename()
                 self.mapper3D = mapper3D(self.parameter_to_sweep1, self.parameter_to_sweep2, self.parameter_to_sweep3, 
                                          self.parameters_to_read, cur_dir, interpolated = interpolated3D,
                                          uniform = uniform3D, _from = self.from_sweep3, _to = self.to_sweep3,
-                                         nsteps = self.nstep3, walks = globals()['back_and_forth_slave_slave'])
+                                         nsteps = self.nstep3, walks = globals()['back_and_forth_slave_slave'],
+                                         index_filename = index)
                 
             except ValueError:
                 self.nstep3 = 1
@@ -5375,6 +5379,29 @@ class Sweeper_write(threading.Thread):
                 return 1
             
         return result
+
+    def update_filename(self):
+        global filename_sweep
+        global cur_dir
+        
+        files = os.listdir(cur_dir)
+        ind = [0]
+        basic_name = filename_sweep[len(cur_dir)+ 1:-4]
+        if '-' in basic_name:
+            basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('-') - 1)] #all before last -
+        if '_' in basic_name:
+            basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('_') - 1)] #all before last _
+        if '_' in basic_name:
+            basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('_') - 1)] #all before last _
+        print(f'Basic name is {basic_name}')
+        for file in files:
+            if basic_name in file and 'manual' not in file:
+                index_start = len(file) - file[::-1].find('-') - 1
+                index_stop = file.find('.csv')
+                ind.append(int(file[index_start + 1 : index_stop]))
+        previous_ind = np.max(ind)
+        print(f'Previous index is {previous_ind}')
+        return previous_ind + 1
 
     def transposition(self, a, b):
         
@@ -6102,7 +6129,6 @@ class Sweeper_write(threading.Thread):
     
             if len(manual_sweep_flags) == 2:        
                 external_loop_back_and_forth()
-                self.mapper2D.create_files(globals()['filename_sweep'])
                 self.sweeper_flag2 == False
     
             self.sweeper_flag2 == False

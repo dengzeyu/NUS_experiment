@@ -1,6 +1,5 @@
 import numpy as np
 import os
-import itertools
 from scipy import interpolate
 
 """
@@ -10,7 +9,8 @@ A classes that helps to collect data from 2D and 3D sweeps
 class mapper2D():
     def __init__(self, parameter_to_sweep1: str, parameter_to_sweep2: str, 
                  parameters_to_read, cur_dir: str, _from: float, _to: float, 
-                 nsteps: int, walks: int, interpolated = False, uniform = True):
+                 nsteps: int, walks: int, index_filename: int,
+                 interpolated = True, uniform = True):
         self.slave = np.array([])
         self.master = np.array([])
         self.parameters_to_read = parameters_to_read
@@ -25,6 +25,7 @@ class mapper2D():
         self.uniform = uniform
         self.grid = np.linspace(_from, _to, nsteps)
         self.cur_walk = 0
+        self.index_filename = index_filename
         for parameter in self.parameters_to_read:
             self.__dict__[parameter] = np.array([])
 
@@ -64,13 +65,13 @@ class mapper2D():
                 print('Mapper concatenated at first time')
                 self.map_slave = np.array([self.slave])
                 self.map_master = np.array([np.ones_like(self.slave) * self.master[-1]])
+                self.create_files()
             
             elif hasattr(self, 'map_slave') and hasattr(self, 'map_master'):
                 print('Mapper concatenated')
                 self.check_sizes()
                 self.map_slave = np.vstack([self.map_slave, self.slave])
                 self.map_master = np.vstack([self.map_master, np.ones_like(self.slave) * self.master[-1]])
-                
             else:
                 raise Exception(f'Map_slave status {hasattr(self, "map_slave")}, Map_master status {hasattr(self, "map_master")}')
         
@@ -92,6 +93,7 @@ class mapper2D():
                         self.reference_slave.append(self.__dict__[f'slave{i}'])
                     self.map_slave = np.array([self.slave])
                     self.map_master = np.array([np.ones_like(self.slave) * self.master[-1]]) 
+                self.create_files()
                 
             elif hasattr(self, 'map_slave') and hasattr(self, 'map_master'):
                 print('Mapper concatenated')
@@ -145,6 +147,7 @@ class mapper2D():
         
         for parameter in self.parameters_to_read:
             concat(parameter)
+            self.append_line_to_file(parameter)
           
     def interpolate(self, parameter):
         res = []
@@ -206,26 +209,49 @@ class mapper2D():
         for parameter in self.parameters_to_read:
             self.__dict__[parameter] = np.array([])
             
-    def create_files(self, filename):
+    def append_line_to_file(self, parameter):
         
-        filename = os.path.basename(filename)[:-4]
-        filename = filename[(len(filename) - filename[::-1].find('-')):]
+        def parameter_to_filename(parameter):
+            
+            parameter = parameter.replace(':', '')
+            filename = f'{self.index_filename}_{parameter}_map.csv'
+            filename = os.path.join(os.path.dirname(self.cur_dir), '2d_maps', f'{filename}')
+            
+            return filename
+        
+        filename = parameter_to_filename(parameter)
+        line = np.concatenate(([self.master[-1]], self.__dict__[parameter]))
+        line = ','.join(map(str, line))
+        with open(filename, 'a') as file:
+            try:
+                file.write(f'\n{line}')
+            except:
+                file.close()
+            finally:
+                file.close()
+            
+    def create_files(self):
         
         if not os.path.exists(os.path.join(os.path.dirname(self.cur_dir), '2d_maps')):
             os.mkdir(os.path.join(os.path.dirname(self.cur_dir), '2d_maps'))
         for parameter in self.parameters_to_read:
-            content = np.hstack((np.array([self.map_master[:, 0]]).T, self.__dict__[f'map_{parameter}']))
             slave = np.concatenate(([f'{self.parameter_to_sweep1} / {self.parameter_to_sweep2}'], self.map_slave[0, :]))
-            content = np.vstack((np.array([slave]), content))
+            slave = ','.join(map(str, slave))
             parameter = parameter.replace(':', '')
-            np.savetxt(os.path.join(os.path.dirname(self.cur_dir), '2d_maps', f'{os.path.basename(filename)}_{parameter}_map.csv'), content, fmt="%s", delimiter=',')
+            filename = os.path.join(os.path.dirname(self.cur_dir), '2d_maps', f'{self.index_filename}_{parameter}_map.csv')
             
-        print(f'2D maps are saved into {os.path.join(os.path.dirname(self.cur_dir), "2d_maps")} folder')
-
+            with open(filename, 'w') as file:
+                try:
+                    file.write(f'{slave}')
+                except:
+                    file.close()
+                finally:
+                    file.close()
+        
 class mapper3D():
     def __init__(self, parameter_to_sweep1: str, parameter_to_sweep2: str, parameter_to_sweep3: str, 
                  parameters_to_read, cur_dir: str, _from: float, _to: float, 
-                 nsteps: int, walks: int, interpolated = False, uniform = True):
+                 nsteps: int, walks: int, interpolated = True, uniform = True):
         self.slave_slave = np.array([])
         self.slave = np.array([])
         self.master = np.array([])
@@ -284,6 +310,7 @@ class mapper3D():
                 print('Mapper concatenated at first time')
                 self.map_slave_slave = np.array([self.slave_slave])
                 self.map_slave = np.array([np.ones_like(self.slave_slave) * self.slave[-1]])
+                self.create_files()
             
             elif hasattr(self, 'map_slave_slave') and hasattr(self, 'map_slave'):
                 print('Mapper concatenated')
@@ -312,6 +339,7 @@ class mapper3D():
                         self.reference_slave_slave.append(self.__dict__[f'slave_slave{i}'])
                     self.map_slave_slave = np.array([self.slave_slave])
                     self.map_slave = np.array([np.ones_like(self.slave_slave) * self.slave[-1]]) 
+                self.create_files()
                 
             elif hasattr(self, 'map_slave_slave') and hasattr(self, 'map_slave'):
                 print('Mapper concatenated')
@@ -365,6 +393,7 @@ class mapper3D():
         
         for parameter in self.parameters_to_read:
             concat(parameter)
+            self.append_line_to_file(parameter)
           
     def interpolate(self, parameter):
         res = []
@@ -428,6 +457,45 @@ class mapper3D():
     def clear_parameters(self):
         for parameter in self.parameters_to_read:
             self.__dict__[parameter] = np.array([])
+            
+    def append_line_to_file(self, parameter):
+        
+        def parameter_to_filename(parameter):
+            
+            parameter = parameter.replace(':', '')
+            filename = f'{self.index_filename}_{parameter}_map_{self.iteration}.csv'
+            filename = os.path.join(os.path.dirname(self.cur_dir), '2d_maps', f'{filename}')
+            
+            return filename
+        
+        filename = parameter_to_filename(parameter)
+        line = np.concatenate(([self.slave[-1]], self.__dict__[parameter]))
+        line = ','.join(map(str, line))
+        with open(filename, 'a') as file:
+            try:
+                file.write(f'\n{line}')
+            except:
+                file.close()
+            finally:
+                file.close()
+            
+    def create_files(self):
+        
+        if not os.path.exists(os.path.join(os.path.dirname(self.cur_dir), '2d_maps')):
+            os.mkdir(os.path.join(os.path.dirname(self.cur_dir), '2d_maps'))
+        for parameter in self.parameters_to_read:
+            slave_slave = np.concatenate(([f'{self.parameter_to_sweep1} / {self.parameter_to_sweep2}'], self.map_slave_slave[0, :]))
+            slave_slave = ','.join(map(str, slave_slave))
+            parameter = parameter.replace(':', '')
+            filename = os.path.join(os.path.dirname(self.cur_dir), '2d_maps', f'{self.index_filename}_{parameter}_map_{self.iteration}.csv')
+            
+            with open(filename, 'w') as file:
+                try:
+                    file.write(f'{slave_slave}')
+                except:
+                    file.close()
+                finally:
+                    file.close()
            
     def stack_iteration(self):
         for parameter in self.parameters_to_read:
