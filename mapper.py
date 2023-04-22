@@ -121,12 +121,14 @@ class mapper2D():
                 if not hasattr(self, f'map_{parameter}'):
                     if hasattr(self, parameter):
                         self.__dict__[f'map_{parameter}'] = np.array([self.__dict__[parameter]])
+                        self.append_line_to_file(parameter, self.__dict__[parameter])
                     else:
                         self.__dict__[f'map_{parameter}'] = np.array([[]])
                     
                 elif hasattr(self, f'map_{parameter}'):
                     if hasattr(self, parameter):
                         self.__dict__[f'map_{parameter}'] = np.vstack([self.__dict__[f'map_{parameter}'], self.__dict__[parameter]])
+                        self.append_line_to_file(parameter, self.__dict__[parameter])
                     else:
                         self.__dict__[f'map_{parameter}'] = np.array([[]])
             
@@ -134,20 +136,23 @@ class mapper2D():
                 
                 if not hasattr(self, f'map_{parameter}'):
                     if hasattr(self, parameter):
-                        self.__dict__[f'map_{parameter}'] = np.array([self.interpolate(self.__dict__[parameter])])
+                        interpolated_parameter = self.interpolate(self.__dict__[parameter])
+                        self.__dict__[f'map_{parameter}'] = np.array([interpolated_parameter])
+                        self.append_line_to_file(parameter, interpolated_parameter)
                     else:
                         self.__dict__[f'map_{parameter}'] = np.array([[]])
                         
                 elif hasattr(self, f'map_{parameter}'):
                     if hasattr(self, parameter):
-                        self.__dict__[f'map_{parameter}'] = np.vstack([self.__dict__[f'map_{parameter}'], self.interpolate(self.__dict__[parameter])])
+                        interpolated_parameter = self.interpolate(self.__dict__[parameter])
+                        self.__dict__[f'map_{parameter}'] = np.vstack([self.__dict__[f'map_{parameter}'], interpolated_parameter])
+                        self.append_line_to_file(parameter, interpolated_parameter)
                     else:
                         self.__dict__[f'map_{parameter}'] = np.array([[]])
                         
         
         for parameter in self.parameters_to_read:
             concat(parameter)
-            self.append_line_to_file(parameter)
           
     def interpolate(self, parameter):
         res = []
@@ -209,7 +214,7 @@ class mapper2D():
         for parameter in self.parameters_to_read:
             self.__dict__[parameter] = np.array([])
             
-    def append_line_to_file(self, parameter):
+    def append_line_to_file(self, parameter: str, value):
         
         def parameter_to_filename(parameter):
             
@@ -220,7 +225,7 @@ class mapper2D():
             return filename
         
         filename = parameter_to_filename(parameter)
-        line = np.concatenate(([self.master[-1]], self.__dict__[parameter]))
+        line = np.concatenate(([self.master[-1]], value))
         line = ','.join(map(str, line))
         with open(filename, 'a') as file:
             try:
@@ -251,7 +256,8 @@ class mapper2D():
 class mapper3D():
     def __init__(self, parameter_to_sweep1: str, parameter_to_sweep2: str, parameter_to_sweep3: str, 
                  parameters_to_read, cur_dir: str, _from: float, _to: float, 
-                 nsteps: int, walks: int, interpolated = True, uniform = True):
+                 nsteps: int, walks: int, index_filename: str, 
+                 interpolated = True, uniform = True):
         self.slave_slave = np.array([])
         self.slave = np.array([])
         self.master = np.array([])
@@ -268,6 +274,7 @@ class mapper3D():
         self.uniform = uniform
         self.iteration = 0
         self.cur_walk = 0
+        self.index_filename = index_filename
         self.grid = np.linspace(_from, _to, nsteps)
         for parameter in self.parameters_to_read:
             self.__dict__[parameter] = np.array([])
@@ -367,12 +374,14 @@ class mapper3D():
                 if not hasattr(self, f'map_{parameter}'):
                     if hasattr(self, parameter):
                         self.__dict__[f'map_{parameter}'] = np.array([self.__dict__[parameter]])
+                        self.append_line_to_file(parameter, self.__dict__[parameter])
                     else:
                         self.__dict__[f'map_{parameter}'] = np.array([[]])
                     
                 elif hasattr(self, f'map_{parameter}'):
                     if hasattr(self, parameter):
                         self.__dict__[f'map_{parameter}'] = np.vstack([self.__dict__[f'map_{parameter}'], self.__dict__[parameter]])
+                        self.append_line_to_file(parameter, self.__dict__[parameter])
                     else:
                         self.__dict__[f'map_{parameter}'] = np.array([[]])
             
@@ -380,20 +389,23 @@ class mapper3D():
                 
                 if not hasattr(self, f'map_{parameter}'):
                     if hasattr(self, parameter):
-                        self.__dict__[f'map_{parameter}'] = np.array([self.interpolate(self.__dict__[parameter])])
+                        interpolated_parameter = self.interpolate(self.__dict__[parameter])
+                        self.__dict__[f'map_{parameter}'] = np.array([interpolated_parameter])
+                        self.append_line_to_file(parameter, interpolated_parameter)
                     else:
                         self.__dict__[f'map_{parameter}'] = np.array([[]])
                         
                 elif hasattr(self, f'map_{parameter}'):
                     if hasattr(self, parameter):
-                        self.__dict__[f'map_{parameter}'] = np.vstack([self.__dict__[f'map_{parameter}'], self.interpolate(self.__dict__[parameter])])
+                        interpolated_parameter = self.interpolate(self.__dict__[parameter])
+                        self.__dict__[f'map_{parameter}'] = np.vstack([self.__dict__[f'map_{parameter}'], interpolated_parameter])
+                        self.append_line_to_file(parameter, interpolated_parameter)
                     else:
                         self.__dict__[f'map_{parameter}'] = np.array([[]])
                         
         
         for parameter in self.parameters_to_read:
             concat(parameter)
-            self.append_line_to_file(parameter)
           
     def interpolate(self, parameter):
         res = []
@@ -458,7 +470,7 @@ class mapper3D():
         for parameter in self.parameters_to_read:
             self.__dict__[parameter] = np.array([])
             
-    def append_line_to_file(self, parameter):
+    def append_line_to_file(self, parameter: str, value):
         
         def parameter_to_filename(parameter):
             
@@ -469,7 +481,7 @@ class mapper3D():
             return filename
         
         filename = parameter_to_filename(parameter)
-        line = np.concatenate(([self.slave[-1]], self.__dict__[parameter]))
+        line = np.concatenate(([self.slave[-1]], value))
         line = ','.join(map(str, line))
         with open(filename, 'a') as file:
             try:

@@ -516,7 +516,7 @@ def map_animation(i, n, filename):
                 cur_graph.master = master
                 
             if cur_graph.last:
-                if hasattr(sweeper_write.mapper3D, 'map_slave_slave'):
+                if hasattr(sweeper_write.mapper3D, f'map_{parameter}'):
                     x = sweeper_write.mapper3D.map_slave_slave
                     y = sweeper_write.mapper3D.map_slave
                     z = getattr(sweeper_write.mapper3D, f'map_{parameter}')
@@ -529,9 +529,13 @@ def map_animation(i, n, filename):
                         y = getattr(sweeper_write.mapper3D, f'map_slave{iterator}')
                         z = getattr(sweeper_write.mapper3D, f'map_{parameter}{iterator}')
                     except AttributeError:
-                        x = getattr(sweeper_write.mapper3D, 'map_slave_slave0')
-                        y = getattr(sweeper_write.mapper3D, 'map_slave0')
-                        z = getattr(sweeper_write.mapper3D, f'map_{parameter}0')
+                        try:
+                            x = getattr(sweeper_write.mapper3D, 'map_slave_slave0')
+                            y = getattr(sweeper_write.mapper3D, 'map_slave0')
+                            z = getattr(sweeper_write.mapper3D, f'map_{parameter}0')
+                        except:
+                            return
+                            
             else:
                 iterator = round(cur_graph.slider.get()) - 1
                 x = getattr(sweeper_write.mapper3D, f'map_slave_slave{iterator}')
@@ -584,6 +588,19 @@ def map_animation(i, n, filename):
             if hasattr(sweeper_write.mapper3D, f'max_{parameter}'):
                 max_z = getattr(sweeper_write.mapper3D, f'max_{parameter}')
                 min_z = getattr(sweeper_write.mapper3D, f'min_{parameter}')
+                z_transformation = globals()[f'z_transformation{n}']
+                if '[' in z_transformation and ']' in z_transformation:
+                    ind1 = z_transformation.index('[')
+                    ind2 = len(z_transformation) - z_transformation[::-1].index(']')
+                    z_transformation = z_transformation[:ind1] + z_transformation[ind2:]
+                try:
+                    max_z = eval(z_transformation.replace('z', 'max_z'), locals())
+                    min_z = eval(z_transformation.replace('z', 'min_z'), locals())
+                except Exception as e:
+                    print(f'Exception in max_z min_z z_transformation - {e}')
+                    max_z = np.nanmax(z)
+                    min_z = np.nanmin(z)
+
             else:
                 max_z = np.nanmax(z)
                 min_z = np.nanmin(z)
@@ -592,7 +609,7 @@ def map_animation(i, n, filename):
             min_z = np.nanmin(z)
         colormap = ax.pcolor(z, cmap = globals()[f'cmap_{n}'], vmin=min_z, vmax=max_z, shading = 'flat')
         globals()[f'colorbar{n}'] = ax.get_figure().colorbar(colormap, ax = ax)
-        globals()[f'colorbar{n}'].ax.tick_params(labelsize=5)
+        globals()[f'colorbar{n}'].ax.tick_params(labelsize=5, which = 'both')
         
         try:
             globals()[f'colorbar{n}'].set_label(globals()[f'colorbar{n}_label'])
@@ -879,7 +896,8 @@ class SetGet(tk.Frame):
         else:
             height = 10
         self.lstbox_to_read = tk.Listbox(self, listvariable = self.devices,
-                                         selectmode='multiple', width=50,
+                                         selectmode='multiple', exportselection=False,
+                                         width=50,
                                          height=height)
         self.lstbox_to_read.place(relx=0.6, rely=0.45)
         
@@ -1609,8 +1627,8 @@ class Sweeper1d(tk.Frame):
         self.devices = tk.StringVar()
         self.devices.set(value=parameters_to_read)
         self.lstbox_to_read = tk.Listbox(self, listvariable = self.devices,
-                                         selectmode='multiple', width=40,
-                                         height=len(parameters_to_read) * 1)
+                                         selectmode='multiple', exportselection=False,
+                                         width=40, height=len(parameters_to_read) * 1)
         
         self.dict_lstbox = {}
         
@@ -2485,8 +2503,8 @@ class Sweeper2d(tk.Frame):
         devices = tk.StringVar()
         devices.set(value=parameters_to_read)
         self.lstbox_to_read = tk.Listbox(self, listvariable=devices,
-                                         selectmode='multiple', width=40,
-                                         height=len(parameters_to_read) * 1)
+                                         selectmode='multiple', exportselection=False,
+                                         width=40, height=len(parameters_to_read) * 1)
         self.lstbox_to_read.place(relx=0.45, rely=0.17)
         
         self.dict_lstbox = {}
@@ -3888,8 +3906,8 @@ class Sweeper3d(tk.Frame):
         self.devices = tk.StringVar()
         self.devices.set(value=parameters_to_read)
         self.lstbox_to_read = tk.Listbox(self, listvariable=self.devices,
-                                         selectmode='multiple', width=40,
-                                         height=len(parameters_to_read) * 1)
+                                         selectmode='multiple', exportselection=False,
+                                         width=40, height=len(parameters_to_read) * 1)
         self.lstbox_to_read.place(relx=0.6, rely=0.17)
         
         if len(parameters_to_read) < 10:
