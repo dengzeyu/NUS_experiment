@@ -1515,6 +1515,9 @@ class Sweeper1d(tk.Frame):
         try:
             if int(self.filename_sweep[:2]) in np.linspace(0, 99, 100, dtype = int) and int(self.filename_sweep[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(self.filename_sweep[4:6]) in np.linspace(1, 32, 32, dtype = int):
                 self.filename_sweep = os.path.join(cur_dir, f'{MONTH}{YEAR}{DAY}.csv')
+            else:
+                name = os.path.basename(self.filename_sweep)
+                self.filename_sweep = os.path.join(cur_dir, name)
         except:
             pass
         
@@ -2276,6 +2279,9 @@ class Sweeper2d(tk.Frame):
         try:
             if int(self.filename_sweep[:2]) in np.linspace(0, 99, 100, dtype = int) and int(self.filename_sweep[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(self.filename_sweep[4:6]) in np.linspace(1, 32, 32, dtype = int):
                 self.filename_sweep = os.path.join(cur_dir, f'{MONTH}{YEAR}{DAY}.csv')
+            else:
+                name = os.path.basename(self.filename_sweep)
+                self.filename_sweep = os.path.join(cur_dir, name)
         except:
             pass
         
@@ -3555,6 +3561,9 @@ class Sweeper3d(tk.Frame):
         try:
             if int(self.filename_sweep[:2]) in np.linspace(0, 99, 100, dtype = int) and int(self.filename_sweep[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(self.filename_sweep[4:6]) in np.linspace(1, 32, 32, dtype = int):
                 self.filename_sweep = os.path.join(cur_dir, f'{MONTH}{YEAR}{DAY}.csv')
+            else:
+                name = os.path.basename(self.filename_sweep)
+                self.filename_sweep = os.path.join(cur_dir, name)
         except:
             pass
         
