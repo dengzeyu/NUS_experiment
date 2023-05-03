@@ -11,7 +11,7 @@ def get(device, command):
 
 class keithley2400():
     
-    def __init__(self, adress = 'GPIB0::7::INSTR'):
+    def __init__(self, adress = 'GPIB0::11::INSTR'):
         self.sm = rm.open_resource(
             adress)
         
@@ -21,9 +21,9 @@ class keithley2400():
         
         self.get_options = ['Volt', 'Curr', 'Res', 'compl_curr', 'V_NPLC', 'I_NPLC', 'R_NPLC', 'line_freq', 'Sdelay', 'TDelay']
         
-        self.sweepable = [True, True, False, False, False, False]
+        self.sweepable = [False, False, False, False, False, False]
         
-        self.maxspeed = [0.5, 0.1, None, None, None, None]
+        self.maxspeed = [None, None, None, None, None, None]
         
     def IDN(self):
         return get(self.sm, '*IDN?')
@@ -35,7 +35,7 @@ class keithley2400():
         except ValueError:
             answer = get(self.sm, ':MEAS:VOLT?').split(',')[0]
             
-        self.cur_volt = answer
+        self.cur_volt = float(answer)
             
         return float(answer)
         
@@ -45,7 +45,7 @@ class keithley2400():
         except ValueError:
             answer = get(self.sm, ':MEAS:CURR?').split(',')[1]
             
-        self.cur_curr = answer
+        self.cur_curr = float(answer)
             
         return float(answer)
         
@@ -74,11 +74,11 @@ class keithley2400():
     def off_R_auto_range(self):
         self.sm.write(':SENS:RES:RANGE:AUTO 0')
     
-    def set_I(self, value = 0):
+    def set_Curr(self, value = 0):
         self.sm.write(':SOUR:CURR:MODE FIXED')
         self.sm.write(':SOUR:CURR ' + str(round(float(value), 5))) 
         
-    def set_V(self, value = 0, speed = None):
+    def set_Volt(self, value = 0, speed = None):
         self.sm.write(':SOUR:VOLT:MODE FIXED')
         self.sm.write(':SOUR:VOLT ' + str(round(float(value), 5))) 
         
@@ -126,6 +126,7 @@ class keithley2400():
         self.tdelay = float(get(self.sm, ':TRIG:DEL?'))
         return answer
     
+    '''
     def set_Volt(self, value, speed = None):
         """ Ramps to a target voltage from the set voltage value over
         a certain number of linear steps, each separated by a pause duration.
@@ -154,7 +155,7 @@ class keithley2400():
             
         dv = abs(float(value) - self.cur_volt)
         nsteps = dv / (speed * (self.sdelay + self.vnplc / self.freq + self.tdelay))
-        nsteps = int(round(nsteps))
+        nsteps = max(1, int(abs(round(nsteps))))
         
         dt = dv / speed
         dt = dt / nsteps
@@ -166,7 +167,7 @@ class keithley2400():
         )
         for voltage in voltages:
             self.set_V(voltage)
-            time.sleep(dt)
+            time.sleep(abs(dt))
             
     def set_Curr(self, value, speed):
         """ Ramps to a target current from the set current value over
@@ -196,7 +197,7 @@ class keithley2400():
             
         di = abs(float(value) - self.cur_curr)
         nsteps = di / (speed * (self.sdelay + self.vnplc / self.freq + self.tdelay))
-        nsteps = int(round(nsteps))
+        nsteps = max(int(abs(round(nsteps))))
         
         dt = di / speed
         dt = dt / nsteps
@@ -208,12 +209,12 @@ class keithley2400():
         )
         for current in currents:
             self.set_I(current)
-            time.sleep(dt)
+            time.sleep(abs(dt))
+    '''
     
 def main():
     device = keithley2400()
-    device.set_compl_curr(1e-5)
-    print(device.IDN())
+    device.set_Volt(11)
     
 if __name__ == '__main__':
     main()

@@ -417,6 +417,17 @@ def plot_animation(i, n , filename):
     x = globals()[f'x{n}']
     y = globals()[f'y{n}']
     
+    if not y.shape[0] == 0 and not x.shape[0] == 0:
+        if type(y[0]) == str and ',' in y[0] and type(x[0]) == str and ',' in x[0]:
+            try:
+                y = np.array([float(i) for i in y[-1].split(',')])
+                x = np.array([float(i) for i in x[-1].split(',')])
+            except:
+                pass
+        elif type(y[0]) == str and ',' in y[0]:
+            return
+        elif type(x[0]) == str and ',' in x[0]:
+            return
     try:
         x = eval(globals()[f'x_transformation{n}'], locals())
     except:
@@ -1513,13 +1524,11 @@ class Sweeper1d(tk.Frame):
         self.filename_sweep = self.preset['filename_sweep'][0]
 
         try:
-            if int(self.filename_sweep[:2]) in np.linspace(0, 99, 100, dtype = int) and int(self.filename_sweep[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(self.filename_sweep[4:6]) in np.linspace(1, 32, 32, dtype = int):
+            name = os.path.basename(self.filename_sweep).split('.')[0]
+            if int(name[:2]) in np.linspace(0, 99, 100, dtype = int) and int(name[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(name[4:6]) in np.linspace(1, 32, 32, dtype = int):
                 self.filename_sweep = os.path.join(cur_dir, f'{MONTH}{YEAR}{DAY}.csv')
-            else:
-                name = os.path.basename(self.filename_sweep)
-                self.filename_sweep = os.path.join(cur_dir, name)
         except:
-            pass
+            self.filename_sweep = os.path.join(cur_dir, name + '.csv')
         
         globals()['setget_flag'] = False
         globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
@@ -2277,13 +2286,11 @@ class Sweeper2d(tk.Frame):
         self.uniform = int(self.preset['interpolated'].values[0])
         
         try:
-            if int(self.filename_sweep[:2]) in np.linspace(0, 99, 100, dtype = int) and int(self.filename_sweep[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(self.filename_sweep[4:6]) in np.linspace(1, 32, 32, dtype = int):
+            name = os.path.basename(self.filename_sweep).split('.')[0]
+            if int(name[:2]) in np.linspace(0, 99, 100, dtype = int) and int(name[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(name[4:6]) in np.linspace(1, 32, 32, dtype = int):
                 self.filename_sweep = os.path.join(cur_dir, f'{MONTH}{YEAR}{DAY}.csv')
-            else:
-                name = os.path.basename(self.filename_sweep)
-                self.filename_sweep = os.path.join(cur_dir, name)
         except:
-            pass
+            self.filename_sweep = os.path.join(cur_dir, name + '.csv')
         
         globals()['setget_flag'] = False
         globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
@@ -3559,13 +3566,11 @@ class Sweeper3d(tk.Frame):
         self.uniform = int(self.preset['uniform'].values[0])
         
         try:
-            if int(self.filename_sweep[:2]) in np.linspace(0, 99, 100, dtype = int) and int(self.filename_sweep[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(self.filename_sweep[4:6]) in np.linspace(1, 32, 32, dtype = int):
+            name = os.path.basename(self.filename_sweep).split('.')[0]
+            if int(name[:2]) in np.linspace(0, 99, 100, dtype = int) and int(name[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(name[4:6]) in np.linspace(1, 32, 32, dtype = int):
                 self.filename_sweep = os.path.join(cur_dir, f'{MONTH}{YEAR}{DAY}.csv')
-            else:
-                name = os.path.basename(self.filename_sweep)
-                self.filename_sweep = os.path.join(cur_dir, name)
         except:
-            pass
+            self.filename_sweep = os.path.join(cur_dir, name + '.csv')
         
         globals()['setget_flag'] = False
         globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
@@ -5507,8 +5512,9 @@ class Sweeper_write(threading.Thread):
         def setget_write():
             global setget_flag
             global filename_setget
+            global pause_flag
             
-            while setget_flag:
+            while setget_flag and not pause_flag:
                 dataframe = []
                 dataframe.append(round(time.perf_counter() - zero_time, 2))
                 

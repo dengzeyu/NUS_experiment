@@ -22,11 +22,21 @@ class ImageFormat(Enum):
         return self.value
 
 class Vna(GenericInstrument):
-    def __init__(self):
+    def __init__(self, adress):
         super(Vna, self).__init__()
         self.properties = Properties(self)
         self.settings = Settings(self)
         self.file = FileSystem(self)
+        ip_address, socket = adress.split(':')
+        socket = int(socket)
+        self._open(ip_address, socket)
+        #self.display_screen()
+        
+        self.get_options = ['start_freq', 'stop_freq', 'cent_freq', 'span_freq', 'num_points', 'bandwidth', 'power', 'freqs', 'trace_real', 'trace_im', 'real_peak_freq', 'real_dip_freq', 'im_peak_freq', 'im_dip_freq']
+        self.set_options = ['start_freq', 'stop_freq', 'cent_freq', 'span_freq', 'num_points', 'bandwidth', 'power']
+
+    def _open(self, ip_address: str, socket:int):
+        self.open_tcp(ip_address, socket)
 
     def __del__(self):
         if self.connected():
@@ -610,14 +620,22 @@ class Vna(GenericInstrument):
         scpi = 'CALC1:FORM REAL'
         self.write(scpi)
         scpi = 'CALC1:DATA? FDAT'
-        return self.query(scpi)
+        answer = self.query(scpi)
+        answer = answer.replace('\r', '')
+        answer = answer.replace('\n', '')
+        answer = answer.replace(' ', '')
+        return answer
     
     def trace_im(self):
         self.autoscale()
         scpi = 'CALC1:FORM IMAG'
         self.write(scpi)
         scpi = 'CALC1:DATA? FDAT'
-        return self.query(scpi)
+        answer = self.query(scpi)
+        answer = answer.replace('\r', '')
+        answer = answer.replace('\n', '')
+        answer = answer.replace(' ', '')
+        return answer
     
     def num_points(self):
         scpi = 'SWE:POIN?'
@@ -635,6 +653,20 @@ class Vna(GenericInstrument):
         scpi = f'BAND {value}'
         self.write(scpi)
         
+    def freqs(self):
+        start = self.start_freq()
+        stop = self.stop_freq()
+        num = self.num_points()
+        
+        f = np.linspace(float(start), float(stop), int(num))
+        f = np.array2string(f, separator = ',')[1:-1]
+        f = f.replace('\r', '')
+        f = f.replace('\n', '')
+        f = f.replace(' ', '')
+        
+        return f
+        
+    '''
     def reverse_sweep(self, start, stop, num_points):
         "returns tuple ([freq], [real], [imag])"
         points = np.linspace(start, stop, num_points)
@@ -652,34 +684,55 @@ class Vna(GenericInstrument):
             trace_im.append(self.trace_im())
         
         return freq, trace_real, trace_im
+    '''
     
     def fit(self, x, y):
         
-        import numpy as np
-        from scipy import optimize
-        import matplotlib.pyplot as plt
+        from scipy.signal import find_peaks
         
-        x = [float(i) for i in x]
+        y = [float(i) for i in y.split(',')]
         
-        y = [float(i) for i in y]
+        peaks_pos = find_peaks(y)[0]
         
-        def f(x,A, x0, sigma): #simple linear approximation
-            return A / (sigma * np.sqrt(2 * np.pi)) * np.exp(- ((x - x0) / sigma) ** 2 / 2)
-        
-        p0 = [y[len(y) // 2], np.median(x), (np.nanmax(x) - np.nanmin(x)) / 10]
-        
-        beta_opt, beta_cov = optimize.curve_fit(f, x, y, p0, method = 'lm')#, p0, bounds = ((np.min(x), -np.inf), (np.max(x), np.inf)))
-        
-        plt.plot(x, y, 'o', color = 'blue', label = 'data')
-        t = np.linspace(np.min(x), np.max(x), 1000)
-        plt.plot(t, f(t, *beta_opt), '-', color = 'red', label = f'$x_0 = $ {round(beta_opt[1], 2)}, $\sigma = ${round(beta_opt[2], 2)}')
-        plt.legend()
-        plt.title(r'LSQ')
-        plt.xlabel('x data')
-        plt.ylabel(r'y data')
-        plt.savefig(r'C:\NUS\Makar_and_Timofey\rohdeschwarz\examples\fit.png', dpi = 300)
-        
-        return beta_opt[0], beta_opt[1], beta_opt[2] #x0, sigma
-    
+        max_peak_pos = peaks_pos[0]
 
+        for pos in peaks_pos:
+            if y[pos] > y[max_peak_pos]:
+                max_peak_pos = pos
             
+        dips_pos = find_peaks([-i for i in y])[0]
+        
+        min_dip_pos = dips_pos[0]
+        
+        for pos in dips_pos:
+            if y[pos] < y[min_dip_pos]:
+                min_dip_pos = pos
+        
+        return x[max_peak_pos], x[min_dip_pos]
+    
+    def real_peak_freq(self):
+        f = self.freqs().split(',')
+        f = np.array([float(i) for i in f])
+        return self.fit(f, self.trace_real())[0]
+    
+    def im_peak_freq(self):
+        f = self.freqs().split(',')
+        f = np.array([float(i) for i in f])
+        return self.fit(f, self.trace_im())[0]
+    
+    def real_dip_freq(self):
+        f = self.freqs().split(',')
+        f = np.array([float(i) for i in f])
+        return self.fit(f, self.trace_real())[1]
+    
+    def im_dip_freq(self):
+        f = self.freqs().split(',')
+        f = np.array([float(i) for i in f])
+        return self.fit(f, self.trace_im())[1]
+     
+def main():
+    device = Vna('169.254.82.39:5025')
+    print(device.real_dip_freq())
+
+if __name__ == '__main__':       
+    main()
