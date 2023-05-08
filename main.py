@@ -1525,7 +1525,7 @@ class Sweeper1d(tk.Frame):
         try:
             name = os.path.basename(self.filename_sweep).split('.')[0]
             if int(name[:2]) in np.linspace(0, 99, 100, dtype = int) and int(name[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(name[4:6]) in np.linspace(1, 32, 32, dtype = int):
-                self.filename_sweep = os.path.join(cur_dir, f'{MONTH}{YEAR}{DAY}.csv')
+                self.filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}.csv')
         except:
             self.filename_sweep = os.path.join(cur_dir, name + '.csv')
         
@@ -2287,7 +2287,7 @@ class Sweeper2d(tk.Frame):
         try:
             name = os.path.basename(self.filename_sweep).split('.')[0]
             if int(name[:2]) in np.linspace(0, 99, 100, dtype = int) and int(name[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(name[4:6]) in np.linspace(1, 32, 32, dtype = int):
-                self.filename_sweep = os.path.join(cur_dir, f'{MONTH}{YEAR}{DAY}.csv')
+                self.filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}.csv')
         except:
             self.filename_sweep = os.path.join(cur_dir, name + '.csv')
         
@@ -3567,7 +3567,7 @@ class Sweeper3d(tk.Frame):
         try:
             name = os.path.basename(self.filename_sweep).split('.')[0]
             if int(name[:2]) in np.linspace(0, 99, 100, dtype = int) and int(name[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(name[4:6]) in np.linspace(1, 32, 32, dtype = int):
-                self.filename_sweep = os.path.join(cur_dir, f'{MONTH}{YEAR}{DAY}.csv')
+                self.filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}.csv')
         except:
             self.filename_sweep = os.path.join(cur_dir, name + '.csv')
         
@@ -5420,18 +5420,22 @@ class Sweeper_write(threading.Thread):
         basic_name = filename_sweep[len(cur_dir)+ 1:-4]
         if '-' in basic_name:
             basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('-') - 1)] #all before last -
-        if '_' in basic_name:
+        if '_' in basic_name and len(manual_sweep_flags) != 1:
             basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('_') - 1)] #all before last _
-        if '_' in basic_name:
+        if '_' in basic_name and len(manual_sweep_flags) == 3:
             basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('_') - 1)] #all before last _
         print(f'Basic name is {basic_name}')
         for file in files:
-            if basic_name in file and 'manual' not in file:
+            if basic_name in file and 'manual' not in file and 'setget' not in file:
                 index_start = len(file) - file[::-1].find('-') - 1
                 index_stop = file.find('.csv')
-                ind.append(int(file[index_start + 1 : index_stop]))
-        previous_ind = np.max(ind)
-        print(f'Previous index is {previous_ind}')
+                try:
+                    ind.append(int(file[index_start + 1 : index_stop]))
+                except:
+                    ind.append(np.nan)
+        previous_ind = int(np.nanmax(ind))
+        if np.isnan(previous_ind):
+            previous_ind = 0
         return previous_ind + 1
 
     def transposition(self, a, b):
@@ -5774,32 +5778,40 @@ class Sweeper_write(threading.Thread):
             basic_name = filename_sweep[len(cur_dir)+ 1:-4]
             if '-' in basic_name:
                 basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('-') - 1)] #all before last -
-            if '_' in basic_name:
+            if '_' in basic_name and len(manual_sweep_flags) != 1:
                 basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('_') - 1)] #all before last _
-            if '_' in basic_name:
+            if '_' in basic_name and len(manual_sweep_flags) == 3:
                 basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('_') - 1)] #all before last _
             print(f'Basic name is {basic_name}')
             for file in files:
-                if basic_name in file and 'manual' not in file:
+                if basic_name in file and 'manual' not in file and 'setget' not in file:
                     index_start = len(file) - file[::-1].find('-') - 1
                     index_stop = file.find('.csv')
-                    ind.append(int(file[index_start + 1 : index_stop]))
-            previous_ind = np.max(ind)
+                    try:
+                        ind.append(int(file[index_start + 1 : index_stop]))
+                    except:
+                        ind.append(np.nan)
+            previous_ind = int(np.nanmax(ind))
+            if np.isnan(previous_ind):
+                previous_ind = 0
             print(f'Previous index is {previous_ind}')
             if sweeper_flag1 == True:
                 filename_sweep = os.path.join(f'{cur_dir}', f'{basic_name}-{previous_ind + 1}.csv')
             elif sweeper_flag2 == True:
                 value1 = self.value1
-                integer1 = round(value1)
-                fractional1 = round(10 * (value1 % 1))
+                integer1, fractional1 = divmod(value1, 1)
+                integer1 = round(integer1)
+                fractional1 = round(10 * fractional1)
                 filename_sweep = os.path.join(f'{cur_dir}', f'{basic_name}_{integer1}.{fractional1}-{previous_ind + 1}.csv')
             elif sweeper_flag3 == True:
                 value1 = self.value1
-                value2 = self.value1
-                integer1 = round(value1)
-                fractional1 = round(10 * (value1 % 1))
-                integer2 = round(value2)
-                fractional2 = round(10 * (value2 % 1))
+                value2 = self.value2
+                integer1, fractional1 = divmod(value1, 1)
+                integer1 = round(integer1)
+                fractional1 = round(10 * fractional1)
+                integer2, fractional2 = divmod(value2, 1)
+                integer2 = round(integer2)
+                fractional2 = round(10 * fractional2)
                 filename_sweep = os.path.join(f'{cur_dir}', f'{basic_name}_{integer1}.{fractional1}_{integer2}.{fractional2}-{previous_ind + 1}.csv')
                 
             
