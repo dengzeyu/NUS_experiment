@@ -10,13 +10,11 @@ import tkinter as tk
 from ToolTip import CreateToolTip
 from mapper import mapper2D, mapper3D
 import matplotlib.animation as animation
-#import blit_animation
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, 
                                                NavigationToolbar2Tk)
 import matplotlib.pyplot as plt
 from matplotlib import style
-from matplotlib.widgets import Slider
 import pyvisa as visa
 import time
 from datetime import datetime
@@ -151,20 +149,13 @@ else:
 
 filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}.csv')
 
-ind_setget = []
-flag_setget = False
+ind_setget = [0]
 
 for file in os.listdir(cur_dir):
-    if f'setget_{DAY}{MONTH}{YEAR}' not in file:
-        flag_setget = False or flag_setget
-    else:
-        flag_setget = True or flag_setget
+    if f'setget_{YEAR}{MONTH}{DAY}' in file: 
         ind_setget.append(int(file[file.find('-') + 1 : -4]))
         
-if flag_setget == False:
-    filename_setget = os.path.join(cur_dir, f'setget_{YEAR}{MONTH}{DAY}-1.csv')
-else:
-    filename_setget = os.path.join(cur_dir, f'setget_{YEAR}{MONTH}{DAY}-{np.max(ind_setget) + 1}.csv')
+filename_setget = os.path.join(cur_dir, f'setget_{YEAR}{MONTH}{DAY}-{np.max(ind_setget) + 1}.csv')
 
 sweeper_flag1 = False
 sweeper_flag2 = False
@@ -924,11 +915,13 @@ class SetGet(tk.Frame):
         self.lstbox_to_read.config(yscrollcommand=self.scrollbar.set)
         
         button_open_graph = tk.Button(
-            self, text='📊', font = SUPER_LARGE, command=lambda: self.open_graph())
+            self, text='📊', font = SUPER_LARGE, command = self.open_graph)
         button_open_graph.place(relx = 0.85, rely = 0.6)
         
-        button_get = tk.Button(self, text = 'Get!', command = lambda: self.get_read_parameters())
+        button_get = tk.Button(self, text = 'Get!', command = self.get_read_parameters)
         button_get.place(relx = 0.9, rely = 0.45)
+        
+        self.ind_setget = int(filename_setget[filename_setget.find('-') + 1:-4])
         
     def go_home(self, controller):
         global setget_flag
@@ -1271,8 +1264,8 @@ class SetGet(tk.Frame):
         for i in range(1, self.num_widgets):
             try:
                 self.__dict__[f'set_device{i}']()
-            except:
-                pass
+            except Exception as e:
+                print(e)
             
     def add_block(self, i):
         
@@ -1417,8 +1410,14 @@ class SetGet(tk.Frame):
     def get_read_parameters(self):
         global setget_flag
         global filename_setget
+        global ind_setget
         global columns
         
+        if self.ind_setget not in ind_setget:
+            ind_setget.append(self.ind_setget)
+            filename_setget = os.path.join(cur_dir, f'setget_{YEAR}{MONTH}{DAY}-{self.ind_setget}.csv')
+            self.ind_setget += 1
+
         def get_key(val, my_dict):
             for key, value in my_dict.items():
                 if val == value:
@@ -1433,7 +1432,7 @@ class SetGet(tk.Frame):
         globals()['parameters_to_read'] = self.list_to_read
         
         columns = ['Time']
-        for parameter in globals()['parameters_to_read']:
+        for parameter in self.list_to_read:
             columns.append(parameter)
         setget_data = pd.DataFrame(columns=columns)
         setget_data.to_csv(filename_setget, index=False)
