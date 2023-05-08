@@ -1679,6 +1679,12 @@ class Sweeper1d(tk.Frame):
             self.button_update_sweep.place(relx = 0.3, rely = 0.21 + self.lstbox_height)
             
         self.lstbox_to_read.bind('<Button-3>', self.update_listbox)
+        
+        scrollbar= ttk.Scrollbar(self, orient = 'vertical')
+        scrollbar.place(relx = 0.5, rely = 0.16, height = 75)
+        
+        self.lstbox_to_read.config(yscrollcommand= scrollbar.set)
+        scrollbar.config(command= self.lstbox_to_read.yview)
 
         label_options = tk.Label(self, text = 'Options:', font = LARGE_FONT)
         label_options.place(relx = 0.05, rely = 0.2)
@@ -2714,6 +2720,12 @@ class Sweeper2d(tk.Frame):
             self.button_tozero.place(relx = 0.45, rely = 0.3 + self.lstbox_height)
             self.button_update_sweep.place(relx = 0.45, rely = 0.21 + self.lstbox_height)
         self.lstbox_to_read.bind('<Button-3>', self.update_listbox)
+        
+        scrollbar= ttk.Scrollbar(self, orient = 'vertical')
+        scrollbar.place(relx = 0.65, rely = 0.16, height = 75)
+        
+        self.lstbox_to_read.config(yscrollcommand= scrollbar.set)
+        scrollbar.config(command= self.lstbox_to_read.yview)
 
         label_options = tk.Label(self, text = 'Options:', font=LARGE_FONT)
         label_options.place(relx = 0.05, rely = 0.25)
@@ -3935,6 +3947,12 @@ class Sweeper3d(tk.Frame):
             self.button_update_sweep.place(relx = 0.6, rely = 0.21 + self.lstbox_height)
             
         self.lstbox_to_read.bind('<Button-3>', self.update_listbox)
+        
+        scrollbar= ttk.Scrollbar(self, orient = 'vertical')
+        scrollbar.place(relx = 0.8, rely = 0.16, height = 75)
+        
+        self.lstbox_to_read.config(yscrollcommand= scrollbar.set)
+        scrollbar.config(command= self.lstbox_to_read.yview)
         
         self.dict_lstbox = {}
         
