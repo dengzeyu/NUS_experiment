@@ -16,8 +16,11 @@ class mercuryITC_VTI():
         self.set_options = ['T_VTI', 'T_sample', 'T_VTI_rate', 'T_sample_rate']
         self.sweepable = [True, True, False, False]
         self.maxspeed = [20, 20, None, None]
+        self.eps = [0.01, 0.01, None, None]
+        '''
         self.speed_VTI 
         self.speed_sample
+        '''
         
     def T_VTI(self):
         answer = get(self.device, 'READ:DEV:MB1.T1 :TEMP:SIG:TEMP')

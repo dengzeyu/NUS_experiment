@@ -10,7 +10,7 @@ class opticool():
         self.device.open()
         self.T_states = self.device.temperature.state_code_dict()
         self._T_approach = self.device.temperature.approach_mode(1)
-        self._Field_approach = self.device.field.approach_mode(0)
+        self._Field_approach = self.device.field.approach_mode(2)
         self._Field_driven = self.device.field.driven_mode(1)
         self._chamber_state = self.device.chamber.mode(1)
         self._T_rate = self.device.temperature.set_rate_per_min
@@ -19,6 +19,7 @@ class opticool():
         self.get_options = ['T', 'Field', 'T_rate', 'Field_rate', 'T_approach', 'Field_approach', 'Field_driven', 'chamber_state']
         self.sweepable = [True, True, False, False, False, False, False, False]
         self.maxspeed = [5, self.max_Field_speed(), None, None, None, None, None, None]
+        self.eps = [0.01, 50, None, None, None, None, None, None]
     
     def max_Field_speed(self):
         if not hasattr(self, 'cur_field'):
@@ -228,8 +229,7 @@ class opticool():
 def main():
     device = opticool()
     print(device.T())
-    device.set_Field_approach(0)
-    #device.set_Field(0)
+    import time
     device.stop()
     
 if __name__ == '__main__':

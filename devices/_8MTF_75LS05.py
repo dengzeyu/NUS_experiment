@@ -33,6 +33,7 @@ class _8MTF_75LS05():
         self.set_options = ['position', 'shift']
         self.sweepable = [True, True]
         self.maxspeed = [20, 20]
+        self.eps = [0.01, 0.01]
         self.get_options = ['position', 'I_pwr', 'U_pwr', 'T_proc']
         
         self.left_border = -14250

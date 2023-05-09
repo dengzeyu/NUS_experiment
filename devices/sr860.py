@@ -13,7 +13,7 @@ def get(device, command):
 
 class sr860():
 
-    def __init__(self, adress='GPIB0::1::INSTR'):
+    def __init__(self, adress='GPIB0::3::INSTR'):
 
         self.sr860 = SR860(adress)
         
@@ -21,7 +21,7 @@ class sr860():
                             'time_constant', 'input_range', 'low_pass_filter_slope', 'synchronous_filter_status',
                             'AUX1_output', 'AUX2_output', 'AUX3_output', 'AUX4_output', 'Write']
 
-        self.get_options = ['x', 'y', 'r', 'Θ', 'xnoize', 'ynoize', 'sensitivity', 
+        self.get_options = ['x', 'y', 'r', 'Θ', 'xnoize', 'ynoize', 'ch1', 'ch2', 'FFT', 'sensitivity', 
                             'time_constant', 'input_range', 'low_pass_filter_slope', 'synchronous_filter_status',
                             'AUX1_input', 'AUX2_input', 'AUX3_input', 'AUX4_input', 
                             'amplitude', 'frequency', 'phase', 'Read']
@@ -55,6 +55,9 @@ class sr860():
     def Θ(self):
         return self.sr860.theta
     
+    def FFT(self):
+        return self.sr860.FFT
+    
     def xnoize(self):
         return self.sr860.xnoize
     
@@ -84,6 +87,12 @@ class sr860():
 
     def synchronous_filter_status(self):
         return self.sr860.filter_synchronous
+
+    def ch1(self):
+        return self.sr860.channel1
+
+    def ch2(self):
+        return self.sr860.channel2
 
     def AUX1_input(self):
         return self.sr860.aux_in_1
@@ -141,7 +150,7 @@ class sr860():
         
 def main():
     device = sr860()
-    print(device.x())
+    device.set_time_constant(2.49)
     
 if __name__ == '__main__':
     main()

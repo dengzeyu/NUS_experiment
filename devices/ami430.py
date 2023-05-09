@@ -25,6 +25,7 @@ class ami430():
         self.set_options = ['field', 'current', 'ramp_field_speed', 'ramp_current_speed', 'voltage_lim', 'to_zero']
         self.sweepable = [True, True, False, False, False]
         self.maxspeed = [0.0357, 0.05, None, None, None]
+        self.eps = [0.01, 0.01, None, None, None]
         
         self.get_options = ['field', 'current', 'ramp_field_speed', 'ramp_current_speed', 'voltage_lim', 'coil_const', 'supply_current', 'state']
         

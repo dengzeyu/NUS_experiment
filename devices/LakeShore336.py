@@ -49,10 +49,6 @@ class LakeShore336():
         self.set_options = ['T1', 'T2', 'T3', 'T4', 'speed1', 'speed2', 'led',
                             'heater_range1', 'heater_range2', 'heater_range3',
                             'heater_range4']
-        # self.sweepable = [True, True, True, True, False, False, False, False, False,
-        #                 False, False]
-
-        #self.maxspeed = [20, 20, 20, 20, None, None, None, None, None, None, None]
 
         self.get_options = ['T1', 'T2', 'T3', 'T4', 'speed1', 'speed2', 'led',
                             'heater_range1', 'heater_range2', 'heater_range3',

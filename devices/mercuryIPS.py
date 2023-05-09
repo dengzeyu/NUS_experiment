@@ -16,6 +16,7 @@ class mercuryIPS():
         self.set_options = ['field', 'current', 'field_rate', 'current_rate']
         self.sweepable = [True, True, False, False]
         self.maxspeed = [0.0357, 0.01, None, None]
+        self.eps = [0.01, 0.01, None, None]
         
     def field(self):
         answer = get(self.device, 'READ:DEV:GRPZ :PSU:SIG:FLD')
