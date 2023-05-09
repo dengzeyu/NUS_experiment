@@ -2203,6 +2203,7 @@ class Sweeper1d(tk.Frame):
         global ratio_sweep1
         global delay_factor1
         global parameters_to_read
+        global parameters_to_read_dict
         global filename_sweep
         global sweeper_flag1
         global sweeper_flag2
@@ -2253,6 +2254,7 @@ class Sweeper1d(tk.Frame):
             entrada = self.lstbox_to_read.get(i)
             self.list_to_read.append(get_key(entrada, self.dict_lstbox))
         parameters_to_read = self.list_to_read
+        parameters_to_read_dict = self.dict_lstbox
 
         # creating columns
         device_to_sweep1 = list_of_devices[self.combo_to_sweep1.current()]
@@ -2261,7 +2263,7 @@ class Sweeper1d(tk.Frame):
         columns_device = self.combo_to_sweep1['values'][self.combo_to_sweep1.current()]
         columns_parameters = self.sweep_options1['values'][self.sweep_options1.current()]
         columns = ['time', columns_device + '.' + columns_parameters + '_sweep']
-        for option in parameters_to_read:
+        for option in list(parameters_to_read_dict.values()):
             columns.append(option)
 
         # fixing sweeper parmeters
@@ -3511,6 +3513,7 @@ class Sweeper2d(tk.Frame):
         global ratio_sweep2
         global delay_factor2
         global parameters_to_read
+        global parameter_to_read_dict
         global filename_sweep
         global sweeper_flag1
         global sweeper_flag2
@@ -3590,6 +3593,7 @@ class Sweeper2d(tk.Frame):
             entrada = self.lstbox_to_read.get(i)
             self.list_to_read.append(get_key(entrada, self.dict_lstbox))
         parameters_to_read = self.list_to_read
+        parameters_to_read_dict = self.dict_lstbox
 
         # creating columns
         device_to_sweep1 = list_of_devices[self.combo_to_sweep1.current()]
@@ -3609,7 +3613,7 @@ class Sweeper2d(tk.Frame):
         columns = ['time', columns_device1 + '.' + columns_parameters1 + '_sweep',
                    columns_device2 + '.' + columns_parameters2 + '_sweep']
             
-        for option in parameters_to_read:
+        for option in list(parameters_to_read_dict.values()):
             columns.append(option)
 
         # fixing sweeper parmeters
@@ -5144,6 +5148,7 @@ class Sweeper3d(tk.Frame):
         global to_sweep3
         global ratio_sweep3
         global delay_factor3
+        global parameters_to_read_dict
         global parameters_to_read
         global filename_sweep
         global sweeper_flag1
@@ -5249,6 +5254,7 @@ class Sweeper3d(tk.Frame):
             entrada = self.lstbox_to_read.get(i)
             self.list_to_read.append(get_key(entrada, self.dict_lstbox))
         parameters_to_read = self.list_to_read
+        parameters_to_read_dict = self.dict_lstbox
 
         # creating columns
         device_to_sweep1 = list_of_devices[self.combo_to_sweep1.current()]
@@ -5279,7 +5285,7 @@ class Sweeper3d(tk.Frame):
                    columns_device2 + '.' + columns_parameters2 + '_sweep',
                    columns_device3 + '.' + columns_parameters3 + '_sweep']
         
-        for option in parameters_to_read:
+        for option in list(parameters_to_read_dict.values()):
             columns.append(option)
 
         # fixing sweeper parmeters
@@ -5358,6 +5364,7 @@ class Sweeper_write(threading.Thread):
         self.device_to_sweep1 = device_to_sweep1
         self.parameter_to_sweep1 = parameter_to_sweep1
         self.parameters_to_read = parameters_to_read
+        self.parameters_to_read_dict = globals()['parameters_to_read_dict']
         print(f'Parameters to read are {self.parameters_to_read}')
         self.from_sweep1 = float(from_sweep1)
         self.to_sweep1 = float(to_sweep1)
@@ -5805,7 +5812,7 @@ class Sweeper_write(threading.Thread):
             global data
             global manual_sweep_flag
             
-            for parameter in self.parameters_to_read:
+            for parameter in list(self.parameters_to_read_dict.keys()):
                 index_dot = len(parameter) - parameter[::-1].find('.') - 1
                 adress = parameter[:index_dot]
                 option = parameter[index_dot + 1:]
@@ -7455,11 +7462,11 @@ class Graph():
         self.tw.update()
 
     def pause_clicked(self):
-        globals()['Sweeper_object'].pause()
         if self.button_pause['text'] == '⏸️':
-            self.button_pause.configure(text = r'▶')
+            self.button_pause.config(text = r'▶')
         elif self.button_pause['text'] == r'▶':
-            self.button_pause.configure(text = '⏸️')
+            self.button_pause.config(text = '⏸️')
+        globals()['Sweeper_object'].pause()
 
     def ax_update(self, event):
         global columns
