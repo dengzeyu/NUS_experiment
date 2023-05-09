@@ -7,6 +7,7 @@ from csv import writer
 import threading
 from tkinter import ttk
 import tkinter as tk
+from tkinter import messagebox
 from ToolTip import CreateToolTip
 from mapper import mapper2D, mapper3D
 import matplotlib.animation as animation
@@ -1991,44 +1992,60 @@ class Sweeper1d(tk.Frame):
         global ratio_sweep1
         global delay_factor1
         
-        delta = float(self.entry_to.get()) - float(self.entry_from.get())
-        step1 = globals()['sweeper_write'].step1
-        
-        try:
-            if step1 < 0 and delta > 0 or step1 > 0 and delta < 0:
-                from_sweep1 = float(self.entry_to.get())
-            elif step1 >= 0 and delta >= 0 or step1 <= 0 and delta <= 0:
+        if self.start_sweep_flag:
+            
+            try:
                 from_sweep1 = float(self.entry_from.get())
-        except ValueError:
-            pass
-        
-        try:
-            if step1 < 0 and delta > 0 or step1 > 0 and delta < 0:
-                to_sweep1 = float(self.entry_from.get())
-            elif step1 >= 0 and delta >= 0 or step1 <= 0 and delta <= 0:
+            except:
+                messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from.get()} to float')
+                return
+                
+            try:
                 to_sweep1 = float(self.entry_to.get())
-        except ValueError:
-            pass
-        
-        try:
-            if step1 < 0 and delta > 0 or step1 > 0 and delta < 0:
-                ratio_sweep1 = - float(self.entry_ratio.get())
-            elif step1 >= 0 and delta > 0 or step1 <= 0 and delta < 0:
+            except:
+                messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to.get()} to float')
+                return
+            
+            try:
                 ratio_sweep1 = float(self.entry_ratio.get())
-        except ValueError:
-            pass
-        
-        try:
-            delay_factor1 = float(self.entry_delay_factor.get())
-        except ValueError:
-            pass
-        
-        if self.count_option1 == 'step':
-            step1 = ratio_sweep1 
-            ratio_sweep1 = ratio_sweep1 / delay_factor1
-            if globals()['sweeper_write'].sweepable1 != True:
-                globals()['sweeper_write'].step1 = step1
-        
+            except:
+                messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio.get()} to float')
+                return
+
+            try:
+                delay_factor1 = float(self.entry_delay_factor.get())
+            except:
+                messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delaty_factor.get()} to float')
+                return
+                    
+            delta = to_sweep1 - from_sweep1
+            step1 = globals()['sweeper_write'].step1
+            
+            if np.sign(delta * step1) < 0:
+                to_sweep1 = float(self.entry_from.get())
+                from_sweep1 = float(self.entry_to.get())
+                ratio_sweep1 = - ratio_sweep1
+            
+            if self.count_option1 == 'step':
+                step1 = ratio_sweep1
+                ratio_sweep1 = ratio_sweep1 / delay_factor1
+                if globals()['sweeper_write'].sweepable1 != True:
+                    globals()['sweeper_write'].step1 = step1
+                else:
+                    globals()['sweeper_write'].step1 = np.sign(step1) * delta
+            else:
+                ratio_sweep1 = ratio_sweep1 
+                step1 = ratio_sweep1 * delay_factor1
+                if globals()['sweeper_write'].sweepable1 != True:
+                    globals()['sweeper_write'].step1 = step1
+                else:
+                    globals()['sweeper_write'].step1 = np.sign(step1) * delta
+            
+            self.from_sweep1 = from_sweep1
+            self.to_sweep1 = to_sweep1
+            self.ratio_sweep1 = ratio_sweep1
+            self.delay_fector1 = delay_factor1
+            
         self.rewrite_preset()
         
     def update_listbox(self, interval = 10000):
@@ -2198,6 +2215,32 @@ class Sweeper1d(tk.Frame):
         global zero_time
         global sweeper_write
 
+        self.start_sweep_flag = True
+ 
+        try:
+            self.from_sweep1 = float(self.entry_from.get())
+        except:
+            messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from.get()} to float')
+            self.start_sweep_flag = False
+            
+        try:
+            self.to_sweep1 = float(self.entry_to.get())
+        except:
+            messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to.get()} to float')
+            self.start_sweep_flag = False
+        
+        try:
+            self.ratio_sweep1 = float(self.entry_ratio.get())
+        except:
+            messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio.get()} to float')
+            self.start_sweep_flag = False
+        
+        try:
+            self.delay_factor1 = float(self.entry_delay_factor.get())
+        except:
+            messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delaty_factor.get()} to float')
+            self.start_sweep_flag = False
+        
         def get_key(val, my_dict):
             for key, value in my_dict.items():
                 if val == value:
@@ -2252,10 +2295,11 @@ class Sweeper1d(tk.Frame):
         
         self.rewrite_preset()
 
-        zero_time = time.perf_counter()
-        stop_flag = False
-        sweeper_write = Sweeper_write()
-        self.open_graph()
+        if self.start_sweep_flag:
+            zero_time = time.perf_counter()
+            stop_flag = False
+            sweeper_write = Sweeper_write()
+            self.open_graph()
 
 
 class Sweeper2d(tk.Frame):
@@ -3189,79 +3233,110 @@ class Sweeper2d(tk.Frame):
         global ratio_sweep2
         global delay_factor2
         
-        delta1 = float(self.entry_to1.get()) - float(self.entry_from1.get())
-        step1 = globals()['sweeper_write'].step1
-        delta2 = float(self.entry_to2.get()) - float(self.entry_from2.get())
-        step2 = globals()['sweeper_write'].step2
-        
-        try:
-            if step1 < 0 and delta1 > 0 or step1 > 0 and delta1 < 0:
-                from_sweep1 = float(self.entry_to1.get())
-            elif step1 >= 0 and delta1 >= 0 or step1 <= 0 and delta1 <= 0:
-                from_sweep1 = float(self.entry_from1.get())
-        except ValueError:
-            pass
-        
-        try:
-            if step1 < 0 and delta1 > 0 or step1 > 0 and delta1 < 0:
-                to_sweep1 = float(self.entry_from1.get())
-            elif step1 >= 0 and delta1 >= 0 or step1 <= 0 and delta1 <= 0:
-                to_sweep1 = float(self.entry_to1.get())
-        except ValueError:
-            pass
-        
-        try:
-            if step1 < 0 and delta1 > 0 or step1 > 0 and delta1 < 0:
-                ratio_sweep1 = -float(self.entry_ratio1.get())
-            elif step1 >= 0 and delta1 >= 0 or step1 <= 0 and delta1 <= 0:
-                ratio_sweep1 = float(self.entry_ratio1.get())
-        except ValueError:
-            pass
-        
-        try:
-            delay_factor1 = float(self.entry_delay_factor1.get())
-        except ValueError:
-            pass
-        
-        try:
-            if step2 < 0 and delta2 > 0 or step2 > 0 and delta2 < 0:
-                from_sweep2 = float(self.entry_to2.get())
-            elif step2 >= 0 and delta2 >= 0 or step2 <= 0 and delta2 <= 0:
-                from_sweep2 = float(self.entry_from2.get())
-        except ValueError:
-            pass
-        
-        try:
-            if step2 < 0 and delta2 > 0 or step2 > 0 and delta2 < 0:
-                to_sweep2 = float(self.entry_from2.get())
-            elif step2 >= 0 and delta2 >= 0 or step2 <= 0 and delta2 <= 0:
-                to_sweep2 = float(self.entry_to2.get())
-        except ValueError:
-            pass
-        
-        try:
-            if step2 < 0 and delta2 > 0 or step2 > 0 and delta2 < 0:
-                ratio_sweep2 = - float(self.entry_ratio2.get())
-            elif step2 >= 0 and delta2 >= 0 or step2 <= 0 and delta2 <= 0:
-                ratio_sweep2 = float(self.entry_ratio2.get())
-        except ValueError:
-            pass
-        
-        try:
-            delay_factor2 = float(self.entry_delay_factor2.get())
-        except ValueError:
-            pass
-        
-        if self.count_option1 == 'step':
-            step1 = ratio_sweep1 
-            ratio_sweep1 = ratio_sweep1 / delay_factor1
-            globals()['sweeper_write'].step1 = step1
+        if self.start_sweep_flag:
             
-        if self.count_option2 == 'step':
-            step2 = ratio_sweep2 
-            ratio_sweep2 = ratio_sweep2 / delay_factor2
-            if globals()['sweeper_write'].sweepable2 != True:
-                globals()['sweeper_write'].step2 = step2
+            try:
+                from_sweep1 = float(self.entry_from1.get())
+            except:
+                messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from1.get()} to float')
+                return
+                
+            try:
+                to_sweep1 = float(self.entry_to1.get())
+            except:
+                messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to1.get()} to float')
+                return
+            
+            try:
+                ratio_sweep1 = float(self.entry_ratio1.get())
+            except:
+                messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio1.get()} to float')
+                return
+
+            try:
+                delay_factor1 = float(self.entry_delay_factor1.get())
+            except:
+                messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delay_factor1.get()} to float')
+                return
+            
+            try:
+                from_sweep2 = float(self.entry_from2.get())
+            except:
+                messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from2.get()} to float')
+                return
+                
+            try:
+                to_sweep2 = float(self.entry_to2.get())
+            except:
+                messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to2.get()} to float')
+                return
+            
+            try:
+                ratio_sweep2 = float(self.entry_ratio2.get())
+            except:
+                messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio2.get()} to float')
+                return
+
+            try:
+                delay_factor2 = float(self.entry_delay_factor2.get())
+            except:
+                messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delay_factor2.get()} to float')
+                return
+                    
+            delta1 = to_sweep1 - from_sweep1
+            step1 = globals()['sweeper_write'].step1
+            
+            delta2 = to_sweep2 - from_sweep2
+            step2 = globals()['sweeper_write'].step2
+            
+            if np.sign(delta1 * step1) < 0:
+                to_sweep1 = float(self.entry_from1.get())
+                from_sweep1 = float(self.entry_to1.get())
+                ratio_sweep1 = - ratio_sweep1
+                
+            if np.sign(delta2 * step2) < 0:
+                to_sweep2 = float(self.entry_from2.get())
+                from_sweep2 = float(self.entry_to2.get())
+                ratio_sweep2 = - ratio_sweep2
+            
+            if self.count_option1 == 'step':
+                step1 = ratio_sweep1
+                ratio_sweep1 = ratio_sweep1 / delay_factor1
+                if globals()['sweeper_write'].sweepable1 != True:
+                    globals()['sweeper_write'].step1 = step1
+                else:
+                    globals()['sweeper_write'].step1 = np.sign(step1) * delta1
+            else:
+                ratio_sweep1 = ratio_sweep1 
+                step1 = ratio_sweep1 * delay_factor1
+                if globals()['sweeper_write'].sweepable1 != True:
+                    globals()['sweeper_write'].step1 = step1
+                else:
+                    globals()['sweeper_write'].step1 = np.sign(step1) * delta1
+                    
+            if self.count_option2 == 'step':
+                step2 = ratio_sweep2
+                ratio_sweep2 = ratio_sweep2 / delay_factor2
+                if globals()['sweeper_write'].sweepable2 != True:
+                    globals()['sweeper_write'].step2 = step2
+                else:
+                    globals()['sweeper_write'].step2 = np.sign(step2) * delta2
+            else:
+                ratio_sweep2 = ratio_sweep2 
+                step2 = ratio_sweep2 * delay_factor2
+                if globals()['sweeper_write'].sweepable2 != True:
+                    globals()['sweeper_write'].step2 = step2
+                else:
+                    globals()['sweeper_write'].step2 = np.sign(step2) * delta2
+            
+            self.from_sweep1 = from_sweep1
+            self.to_sweep1 = to_sweep1
+            self.ratio_sweep1 = ratio_sweep1
+            self.delay_fector1 = delay_factor1
+            self.from_sweep2 = from_sweep2
+            self.to_sweep2 = to_sweep2
+            self.ratio_sweep2 = ratio_sweep2
+            self.delay_fector2 = delay_factor2
             
         self.rewrite_preset()
         
@@ -3453,6 +3528,56 @@ class Sweeper2d(tk.Frame):
         global back_and_forth_slave
         global sweeper_write
 
+        self.start_sweep_flag = True
+ 
+        try:
+            self.from_sweep1 = float(self.entry_from1.get())
+        except:
+            messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from1.get()} to float')
+            self.start_sweep_flag = False
+            
+        try:
+            self.to_sweep1 = float(self.entry_to1.get())
+        except:
+            messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to1.get()} to float')
+            self.start_sweep_flag = False
+        
+        try:
+            self.ratio_sweep1 = float(self.entry_ratio1.get())
+        except:
+            messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio1.get()} to float')
+            self.start_sweep_flag = False
+        
+        try:
+            self.delay_factor1 = float(self.entry_delay_factor1.get())
+        except:
+            messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delay_factor1.get()} to float')
+            self.start_sweep_flag = False
+            
+        try:
+            self.from_sweep2 = float(self.entry_from2.get())
+        except:
+            messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from2.get()} to float')
+            self.start_sweep_flag = False
+            
+        try:
+            self.to_sweep2 = float(self.entry_to2.get())
+        except:
+            messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to2.get()} to float')
+            self.start_sweep_flag = False
+        
+        try:
+            self.ratio_sweep2 = float(self.entry_ratio2.get())
+        except:
+            messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio2.get()} to float')
+            self.start_sweep_flag = False
+        
+        try:
+            self.delay_factor2 = float(self.entry_delay_factor2.get())
+        except:
+            messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delay_factor2.get()} to float')
+            self.start_sweep_flag = False
+
         def get_key(val, my_dict):
             for key, value in my_dict.items():
                 if val == value:
@@ -3528,11 +3653,12 @@ class Sweeper2d(tk.Frame):
         manual_sweep_flags = self.manual_sweep_flags
         manual_filenames = self.manual_filenames
 
-        zero_time = time.perf_counter()
-        stop_flag = False
-        self.rewrite_preset()
-        sweeper_write = Sweeper_write()
-        self.open_graph()
+        if self.start_sweep_flag:
+            zero_time = time.perf_counter()
+            stop_flag = False
+            self.rewrite_preset()
+            sweeper_write = Sweeper_write()
+            self.open_graph()
 
 
 class Sweeper3d(tk.Frame):
@@ -4687,115 +4813,149 @@ class Sweeper3d(tk.Frame):
         global ratio_sweep3
         global delay_factor3
         
-        delta1 = float(self.entry_to1.get()) - float(self.entry_from1.get())
-        step1 = globals()['sweeper_write'].step1
-        delta2 = float(self.entry_to2.get()) - float(self.entry_from2.get())
-        step2 = globals()['sweeper_write'].step2
-        delta3 = float(self.entry_to3.get()) - float(self.entry_from3.get())
-        step3 = globals()['sweeper_write'].step3
-        
-        try:
-            if step1 < 0 and delta1 > 0 or step1 > 0 and delta1 < 0:
-                from_sweep1 = float(self.entry_to1.get())
-            elif step1 >= 0 and delta1 >= 0 or step1 <= 0 and delta1 <= 0:
-                from_sweep1 = float(self.entry_from1.get())
-        except ValueError:
-            pass
-        
-        try:
-            if step1 < 0 and delta1 > 0 or step1 > 0 and delta1 < 0:
-                to_sweep1 = float(self.entry_from1.get())
-            elif step1 >= 0 and delta1 >= 0 or step1 <= 0 and delta1 <= 0:
-                to_sweep1 = float(self.entry_to1.get())
-        except ValueError:
-            pass
-        
-        try:
-            if step1 < 0 and delta1 > 0 or step1 > 0 and delta1 < 0:
-                ratio_sweep1 = -float(self.entry_ratio1.get())
-            elif step1 >= 0 and delta1 >= 0 or step1 <= 0 and delta1 <= 0:
-                ratio_sweep1 = float(self.entry_ratio1.get())
-        except ValueError:
-            pass
-        
-        try:
-            delay_factor1 = float(self.entry_delay_factor1.get())
-        except ValueError:
-            pass
-        
-        try:
-            if step2 < 0 and delta2 > 0 or step2 > 0 and delta2 < 0:
-                from_sweep2 = float(self.entry_to2.get())
-            elif step2 >= 0 and delta2 >= 0 or step2 <= 0 and delta2 <= 0:
-                from_sweep2 = float(self.entry_from2.get())
-        except ValueError:
-            pass
-        
-        try:
-            if step2 < 0 and delta2 > 0 or step2 > 0 and delta2 < 0:
-                to_sweep2 = float(self.entry_from2.get())
-            elif step2 >= 0 and delta2 >= 0 or step2 <= 0 and delta2 <= 0:
-                to_sweep2 = float(self.entry_to2.get())
-        except ValueError:
-            pass
-        
-        try:
-            if step2 < 0 and delta2 > 0 or step2 > 0 and delta2 < 0:
-                ratio_sweep2 = - float(self.entry_ratio2.get())
-            elif step2 >= 0 and delta2 >= 0 or step2 <= 0 and delta2 <= 0:
-                ratio_sweep2 = float(self.entry_ratio2.get())
-        except ValueError:
-            pass
-        
-        try:
-            delay_factor2 = float(self.entry_delay_factor2.get())
-        except ValueError:
-            pass
-        
-        try:
-            if step3 < 0 and delta3 > 0 or step3 > 0 and delta3 < 0:
-                from_sweep3 = float(self.entry_to3.get())
-            elif step3 >= 0 and delta3 >= 0 or step3 <= 0 and delta3 <= 0:
-                from_sweep3 = float(self.entry_from3.get())
-        except ValueError:
-            pass
-        
-        try:
-            if step3 < 0 and delta3 > 0 or step3 > 0 and delta3 < 0:
-                to_sweep3 = float(self.entry_from3.get())
-            elif step3 >= 0 and delta3 >= 0 or step3 <= 0 and delta3 <= 0:
-                to_sweep3 = float(self.entry_to3.get())
-        except ValueError:
-            pass
-        
-        try:
-            if step3 < 0 and delta3 > 0 or step3 > 0 and delta3 < 0:
-                ratio_sweep3 = - float(self.entry_ratio3.get())
-            elif step3 >= 0 and delta3 >= 0 or step3 <= 0 and delta3 <= 0:
-                ratio_sweep3 = float(self.entry_ratio3.get())
-        except ValueError:
-            pass
-        
-        try:
-            delay_factor3 = float(self.entry_delay_factor3.get())
-        except ValueError:
-            pass
-        
-        if self.count_option1 == 'step':
-            step1 = ratio_sweep1 
-            ratio_sweep1 = ratio_sweep1 / delay_factor1
-            globals()['sweeper_write'].step1 = step1
-        
-        if self.count_option2 == 'step':
-            step2 = ratio_sweep2 
-            ratio_sweep2 = ratio_sweep2 / delay_factor2
-            globals()['sweeper_write'].step2 = step2
+        if self.start_sweep_flag:
             
-        if self.count_option3 == 'step':
-            step3 = ratio_sweep3 
-            ratio_sweep3 = ratio_sweep3 / delay_factor3
-            if globals()['sweeper_write'].sweepable3 != True:
-                globals()['sweeper_write'].step3 = step3
+            try:
+                from_sweep1 = float(self.entry_from1.get())
+            except:
+                messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from1.get()} to float')
+                return
+                
+            try:
+                to_sweep1 = float(self.entry_to1.get())
+            except:
+                messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to1.get()} to float')
+                return
+            
+            try:
+                ratio_sweep1 = float(self.entry_ratio1.get())
+            except:
+                messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio1.get()} to float')
+                return
+
+            try:
+                delay_factor1 = float(self.entry_delay_factor1.get())
+            except:
+                messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delay_factor1.get()} to float')
+                return
+            
+            try:
+                from_sweep2 = float(self.entry_from2.get())
+            except:
+                messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from2.get()} to float')
+                return
+                
+            try:
+                to_sweep2 = float(self.entry_to2.get())
+            except:
+                messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to2.get()} to float')
+                return
+            
+            try:
+                ratio_sweep2 = float(self.entry_ratio2.get())
+            except:
+                messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio2.get()} to float')
+                return
+
+            try:
+                delay_factor2 = float(self.entry_delay_factor2.get())
+            except:
+                messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delay_factor2.get()} to float')
+                return
+            
+            try:
+                from_sweep3 = float(self.entry_from3.get())
+            except:
+                messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from3.get()} to float')
+                return
+                
+            try:
+                to_sweep3 = float(self.entry_to3.get())
+            except:
+                messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to3.get()} to float')
+                return
+            
+            try:
+                ratio_sweep3 = float(self.entry_ratio3.get())
+            except:
+                messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio3.get()} to float')
+                return
+
+            try:
+                delay_factor3 = float(self.entry_delay_factor3.get())
+            except:
+                messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delay_factor3.get()} to float')
+                return
+                    
+            delta1 = to_sweep1 - from_sweep1
+            step1 = globals()['sweeper_write'].step1
+            
+            delta2 = to_sweep2 - from_sweep2
+            step2 = globals()['sweeper_write'].step2
+            
+            delta3 = to_sweep2 - from_sweep3
+            step3 = globals()['sweeper_write'].step3
+            
+            if np.sign(delta1 * step1) < 0:
+                to_sweep1 = float(self.entry_from1.get())
+                from_sweep1 = float(self.entry_to1.get())
+                ratio_sweep1 = - ratio_sweep1
+                
+            if np.sign(delta2 * step2) < 0:
+                to_sweep2 = float(self.entry_from2.get())
+                from_sweep2 = float(self.entry_to2.get())
+                ratio_sweep2 = - ratio_sweep2
+                
+            if np.sign(delta3 * step3) < 0:
+                to_sweep3 = float(self.entry_from3.get())
+                from_sweep3 = float(self.entry_to3.get())
+                ratio_sweep3 = - ratio_sweep3
+            
+            if self.count_option1 == 'step':
+                step1 = ratio_sweep1
+                ratio_sweep1 = ratio_sweep1 / delay_factor1
+                globals()['sweeper_write'].step1 = step1
+            else:
+                ratio_sweep1 = ratio_sweep1 
+                step1 = ratio_sweep1 * delay_factor1
+                globals()['sweeper_write'].step1 = step1
+                    
+            if self.count_option2 == 'step':
+                step2 = ratio_sweep2
+                ratio_sweep2 = ratio_sweep2 / delay_factor2
+                globals()['sweeper_write'].step2 = step2
+            else:
+                ratio_sweep2 = ratio_sweep2 
+                step2 = ratio_sweep2 * delay_factor2
+                globals()['sweeper_write'].step2 = step2
+                    
+            if self.count_option3 == 'step':
+                step3 = ratio_sweep3
+                ratio_sweep3 = ratio_sweep3 / delay_factor3
+                if globals()['sweeper_write'].sweepable3 != True:
+                    globals()['sweeper_write'].step3 = step3
+                else:
+                    globals()['sweeper_write'].step3 = np.sign(step3) * delta3
+            else:
+                ratio_sweep3 = ratio_sweep3 
+                step3 = ratio_sweep3 * delay_factor3
+                if globals()['sweeper_write'].sweepable3 != True:
+                    globals()['sweeper_write'].step3 = step3
+                else:
+                    globals()['sweeper_write'].step3 = np.sign(step3) * delta3
+            
+            self.from_sweep1 = from_sweep1
+            self.to_sweep1 = to_sweep1
+            self.ratio_sweep1 = ratio_sweep1
+            self.delay_fector1 = delay_factor1
+            self.from_sweep2 = from_sweep2
+            self.to_sweep2 = to_sweep2
+            self.ratio_sweep2 = ratio_sweep2
+            self.delay_fector2 = delay_factor2
+            self.from_sweep3 = from_sweep3
+            self.to_sweep3 = to_sweep3
+            self.ratio_sweep3 = ratio_sweep3
+            self.delay_fector3 = delay_factor3
             
         self.rewrite_preset()
         
@@ -5003,6 +5163,80 @@ class Sweeper3d(tk.Frame):
         global back_and_forth_slave_slave
         global sweeper_write
         
+        self.start_sweep_flag = True
+ 
+        try:
+            self.from_sweep1 = float(self.entry_from1.get())
+        except:
+            messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from1.get()} to float')
+            self.start_sweep_flag = False
+            
+        try:
+            self.to_sweep1 = float(self.entry_to1.get())
+        except:
+            messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to1.get()} to float')
+            self.start_sweep_flag = False
+        
+        try:
+            self.ratio_sweep1 = float(self.entry_ratio1.get())
+        except:
+            messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio1.get()} to float')
+            self.start_sweep_flag = False
+        
+        try:
+            self.delay_factor1 = float(self.entry_delay_factor1.get())
+        except:
+            messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delay_factor1.get()} to float')
+            self.start_sweep_flag = False
+            
+        try:
+            self.from_sweep2 = float(self.entry_from2.get())
+        except:
+            messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from2.get()} to float')
+            self.start_sweep_flag = False
+            
+        try:
+            self.to_sweep2 = float(self.entry_to2.get())
+        except:
+            messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to2.get()} to float')
+            self.start_sweep_flag = False
+        
+        try:
+            self.ratio_sweep2 = float(self.entry_ratio2.get())
+        except:
+            messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio2.get()} to float')
+            self.start_sweep_flag = False
+        
+        try:
+            self.delay_factor2 = float(self.entry_delay_factor2.get())
+        except:
+            messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delay_factor2.get()} to float')
+            self.start_sweep_flag = False
+            
+        try:
+            self.from_sweep3 = float(self.entry_from3.get())
+        except:
+            messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from3.get()} to float')
+            self.start_sweep_flag = False
+            
+        try:
+            self.to_sweep3 = float(self.entry_to3.get())
+        except:
+            messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to3.get()} to float')
+            self.start_sweep_flag = False
+        
+        try:
+            self.ratio_sweep3 = float(self.entry_ratio3.get())
+        except:
+            messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio3.get()} to float')
+            self.start_sweep_flag = False
+        
+        try:
+            self.delay_factor3 = float(self.entry_delay_factor3.get())
+        except:
+            messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delay_factor3.get()} to float')
+            self.start_sweep_flag = False
+        
         def get_key(val, my_dict):
             for key, value in my_dict.items():
                 if val == value:
@@ -5105,11 +5339,11 @@ class Sweeper3d(tk.Frame):
         
         self.rewrite_preset()
 
-        zero_time = time.perf_counter()
-        
-        stop_flag = False
-        sweeper_write = Sweeper_write()
-        self.open_graph()
+        if self.start_sweep_flag:
+            zero_time = time.perf_counter()
+            stop_flag = False
+            sweeper_write = Sweeper_write()
+            self.open_graph()
 
 class Sweeper_write(threading.Thread):
 
