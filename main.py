@@ -2190,7 +2190,10 @@ class Sweeper1d(tk.Frame):
         
         global tozero_flag
         
-        tozero_flag = True
+        answer = messagebox.askyesno('Abort', 'Are you sure you want to set all parameters to 0?')
+        
+        if answer:
+            tozero_flag = True
         
     def pre_sweep(self, i):
         device = globals()[f'device_to_sweep{i}']
@@ -3520,7 +3523,10 @@ class Sweeper2d(tk.Frame):
         
         global tozero_flag
         
-        tozero_flag = True
+        answer = messagebox.askyesno('Abort', 'Are you sure you want to set all parameters to 0?')
+        
+        if answer:
+            tozero_flag = True
         
     def pre_sweep(self, i):
         device = globals()[f'device_to_sweep{i}']
@@ -5179,7 +5185,10 @@ class Sweeper3d(tk.Frame):
         
         global tozero_flag
         
-        tozero_flag = True
+        answer = messagebox.askyesno('Abort', 'Are you sure you want to set all parameters to 0?')
+        
+        if answer:
+            tozero_flag = True
         
     def pre_sweep(self, i):
         device = globals()[f'device_to_sweep{i}']
@@ -5978,21 +5987,82 @@ class Sweeper_write(threading.Thread):
             
             def try_tozero():
                 
-                def try_go(axis, value):
-                    axis = str(axis)
-                    value = float(value)
-                    getattr(globals()[f'device_to_sweep{axis}'], 'set_' + str(globals()[f'parameter_to_sweep{axis}']))(value=value)
-                
-                try_go(1, 0)
-                try:
-                    try_go(2, 0)
+                if len(manual_sweep_flags) == 1:
+                    device1 = globals()['device_to_sweep1']
+                    parameter1 = globals()['parameter_to_sweep1']
                     try:
-                        try_go(3, 0)
+                        current1 = float(getattr(device1, parameter1)())
                     except:
-                        pass
-                except:
-                    pass
-            
+                        current1 = self.value1
+                    steps1 = np.linspace(current1, 0, 10)
+                    if not self.sweepable1:
+                        for step in steps1:
+                            getattr(device1, f'set_{parameter1}')(value = step)
+                            time.sleep(0.1)
+                    else:
+                        getattr(device1, f'set_{parameter1}')(value = 0)
+                
+                elif len(manual_sweep_flag) == 2:
+                    device1 = globals()['device_to_sweep1']
+                    parameter1 = globals()['parameter_to_sweep1']
+                    device2 = globals()['device_to_sweep2']
+                    parameter2 = globals()['parameter_to_sweep2']
+                    try:
+                        current1 = float(getattr(device1, parameter1)())
+                    except:
+                        current1 = self.value1
+                    try:
+                        current2 = float(getattr(device2, parameter2)())
+                    except:
+                        current2 = self.value2
+                    steps1 = np.linspace(current1, 0, 10)
+                    steps2 = np.linspace(current2, 0, 10)
+                    if not self.sweepable2:
+                        for ind, step in enumerate(steps1):
+                            getattr(device1, f'set_{parameter1}')(value = step)
+                            getattr(device2, f'set_{parameter2}')(value = steps2[ind])
+                            time.sleep(0.1)
+                    else:
+                        getattr(device2, f'set_{parameter2}')(value = 0)
+                        for step in steps1:
+                            getattr(device1, f'set_{parameter1}')(value = step)
+                            time.sleep(0.1)
+                    
+                elif len(manual_sweep_flag) == 3:
+                    device1 = globals()['device_to_sweep1']
+                    parameter1 = globals()['parameter_to_sweep1']
+                    device2 = globals()['device_to_sweep2']
+                    parameter2 = globals()['parameter_to_sweep2']
+                    device3 = globals()['device_to_sweep3']
+                    parameter3 = globals()['parameter_to_sweep3']
+                    try:
+                        current1 = float(getattr(device1, parameter1)())
+                    except:
+                        current1 = self.value1
+                    try:
+                        current2 = float(getattr(device2, parameter2)())
+                    except:
+                        current2 = self.value2
+                    try:
+                        current3 = float(getattr(device3, parameter3)())
+                    except:
+                        current3 = self.value3
+                    steps1 = np.linspace(current1, 0, 10)
+                    steps2 = np.linspace(current2, 0, 10)
+                    steps3 = np.linspace(current3, 0, 10)
+                    if not self.sweepable3:
+                        for ind, step in enumerate(steps1):
+                            getattr(device1, f'set_{parameter1}')(value = step)
+                            getattr(device2, f'set_{parameter2}')(value = steps2[ind])
+                            getattr(device3, f'set_{parameter3}')(value = steps3[ind])
+                            time.sleep(0.1)
+                    else:
+                        getattr(device3, f'set_{parameter3}')(value = 0)
+                        for ind, step in enumerate(steps1):
+                            getattr(device1, f'set_{parameter1}')(value = step)
+                            getattr(device2, f'set_{parameter2}')(value = steps2[ind])
+                            time.sleep(0.1)
+                
             global zero_time
             global dataframe
             global manual_sweep_flags
