@@ -106,6 +106,7 @@ def var2str(var, vars_data=locals()):
 parameter_to_sweep1 = ''
 parameter_to_sweep2 = ''
 parameter_to_sweep3 = ''
+parameters_to_read_dict = {}
 from_sweep1 = 0
 to_sweep1 = 1
 ratio_sweep1 = 1
@@ -119,8 +120,10 @@ to_sweep3 = float
 ratio_sweep3 = float
 delay_factor3 = float
 stepper_flag = False
-fastmode_slave_flag = False
-fastmode_master_flag = False
+#fastmode_slave_flag = False
+#fastmode_master_flag = False
+snakemode_slave_flag = False
+snakemode_master_flag = False
 interpolated2D = True
 interpolated3D = True
 uniform2D = True
@@ -230,6 +233,9 @@ def create_preset(dimension):
              dic['status_back_and_forth' + str(i+1)] = [0]
              dic['status_manual' + str(i+1)] = [0]
              dic['manual_filename' + str(i+1)] = ''
+             if i == 1 or i == 2:
+                 #dic['status_fastmode' + str(i+1)] = [0]
+                 dic['status_snakemode' + str(i+1)] = [0]
         dic['condition'] = ''
         dic['filename_sweep'] = filename_sweep
         dic['interpolated'] = [1]
@@ -357,16 +363,6 @@ parameters_to_read = new_parameters_to_read()
 parameters_to_read_copy = parameters_to_read.copy()
 
 zero_time = time.perf_counter()
-
-x = np.linspace(0, 10, 100)
-y = np.linspace(0, 10, 100)
-x, y = np.meshgrid(x, y)
-
-def init_f(x, y):
-    return np.sin(np.sqrt(x**3 + y**3))
-
-z = init_f(x, y)
-
 
 def plot_animation(i, n , filename):
     
@@ -924,6 +920,8 @@ class SetGet(tk.Frame):
         
         self.ind_setget = int(filename_setget[filename_setget.find('-') + 1:-4])
         
+        self.thread_n = 0
+        
     def go_home(self, controller):
         global setget_flag
         
@@ -1439,7 +1437,16 @@ class SetGet(tk.Frame):
         setget_data.to_csv(filename_setget, index=False)
         
         setget_flag = True
-        Sweeper_write()
+        
+        if self.thread_n == 0:
+            self.__dict__[f'thread{self.thread_n}'] = Sweeper_write()
+        else:
+            setget_flag = False
+            time.sleep(0.25)
+            del self.__dict__[f'thread{self.thread_n - 1}']
+            setget_flag = True
+            self.__dict__[f'thread{self.thread_n}'] = Sweeper_write()
+        self.thread_n += 1
         
         if not hasattr(self, 'table_dataframe'):
             self.table_dataframe = ttk.Treeview(self, columns = columns, show = 'headings', height = 1)
@@ -1531,7 +1538,7 @@ class Sweeper1d(tk.Frame):
             self.filename_sweep = os.path.join(cur_dir, name + '.csv')
         
         globals()['setget_flag'] = False
-        globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
+        #globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
 
         label = tk.Label(self, text='1dSweeper', font=LARGE_FONT)
         label.pack(pady=10, padx=10)
@@ -1766,11 +1773,11 @@ class Sweeper1d(tk.Frame):
                     self.parent.after(1)
                     
                 def update_names_get_parameters(interval = 1000):
-                    new_get_parameter_name = self.combo_get_parameters.get()
+                    new_get_parameter_name = self.get_current.get()
                     new_get_parameters_values = list(self.combo_get_parameters['values'])
                     new_get_parameters_values[self.selected_get_option] = new_get_parameter_name
                     
-                    self.parent.dict_lstbox[self.combo_get_parameters['values'][self.combo_get_parameters.current()]] = new_get_parameter_name
+                    self.parent.dict_lstbox[self.combo_get_parameters['values'][self.selected_get_option]] = new_get_parameter_name
                     
                     self.combo_get_parameters['values'] = new_get_parameters_values
                     
@@ -1811,8 +1818,11 @@ class Sweeper1d(tk.Frame):
                 if len(parameters) == 0:
                     parameters = ['']
                 
-                self.combo_get_parameters = ttk.Combobox(tw, value = parameters)
+                self.get_current = tk.StringVar()
+                self.combo_get_parameters = ttk.Combobox(tw, value = parameters, textvariable = self.get_current)
                 self.combo_get_parameters.current(0)
+                
+                
                 self.combo_get_parameters.bind(
                     "<<ComboboxSelected>>", select_get_option)
                 self.combo_get_parameters.grid(row = 3, column = 0, pady = 2)
@@ -2195,10 +2205,14 @@ class Sweeper1d(tk.Frame):
         if answer:
             tozero_flag = True
         
-    def pre_sweep(self, i):
+    def pre_sweep(self, i, start = False):
+        global sweeper_write
         device = globals()[f'device_to_sweep{i}']
         parameter = globals()[f'parameter_to_sweep{i}']
-        sweepable = device.sweepable[device.set_options.index(parameter)]
+        try:
+            sweepable = device.sweepable[device.set_options.index(parameter)]
+        except:
+            sweepable = False
         from_sweep = self.__dict__[f'from_sweep{i}']
         to_sweep = self.__dict__[f'to_sweep{i}']
         ratio_sweep = self.__dict__[f'ratio_sweep{i}']
@@ -2212,22 +2226,67 @@ class Sweeper1d(tk.Frame):
         options = {1: 'master', 2: 'slave', 3: 'slave_slave'}
         
         try:
-            cur_value = float(device.parameter())
-        except:
+            cur_value = float(getattr(device, parameter)())
+        except Exception as e:
+            print(f'Exception happened in pre-sweep {i}: {e}')
+            if start:
+                sweeper_write = Sweeper_write()
+                self.open_graph()
             return
 
         if abs(cur_value - from_sweep) <= eps:
-            return 
+            if start:
+                sweeper_write = Sweeper_write()
+                self.open_graph()
+            return
         else:
-            answer = messagebox.askyesno('Start warning', f'Current {options[i]} value is {cur_value}. \nStarting position is {from_sweep}, go to start?')
+            answer = messagebox.askyesnocancel('Start warning', f'Current {options[i]} value is {cur_value}. \nStarting position is {from_sweep}, go to start?')
             if answer:
                 if not sweepable:
                     getattr(device, f'set_{parameter}')(value = from_sweep)
+                    if start:
+                        sweeper_write = Sweeper_write()
+                        self.open_graph()
                 else:
                     getattr(device, f'set_{parameter}')(value = from_sweep, speed = ratio_sweep)
                     
-                    while abs(float(device.parameter()) - from_sweep) > eps:
-                        time.sleep(1)
+                    self.pop = tk.Toplevel(self)
+                    
+                    def center(toplevel):
+                        toplevel.update_idletasks()
+                    
+                        screen_width = toplevel.winfo_screenwidth()
+                        screen_height = toplevel.winfo_screenheight()
+                    
+                        size = tuple(int(_) for _ in toplevel.geometry().split('+')[0].split('x'))
+                        x = screen_width/2 - size[0]/2
+                        y = screen_height/2 - size[1]/2
+                    
+                        toplevel.geometry("+%d+%d" % (x, y))
+                    
+                    center(self.pop)
+                    
+                    self.label_approaching = tk.Label(self.pop, text = 'Approaching start', font = LARGE_FONT)
+                    self.label_approaching.grid(row = 0, column = 0)
+                    
+                    self.label_position = tk.Label(self.pop, text = '', font = LARGE_FONT)
+                    self.label_position.grid(row = 1, column = 0)
+                    
+                    self.current_position = float(getattr(device, parameter)())
+                    
+                    def update_position():
+                        global sweeper_write
+                        if (abs(self.current_position - from_sweep)) > eps:
+                            self.current_position = float(getattr(device, parameter)())
+                            self.label_position.config(text = f'{"{:.3e}".format(self.current_position)} / {"{:.3e}".format(from_sweep)}')
+                            self.label_position.after(100, update_position)
+                        else:
+                            self.pop.destroy()
+                            if start:
+                                sweeper_write = Sweeper_write()
+                                self.open_graph()
+                    
+                    update_position()
             
 
     def start_sweeping(self):
@@ -2309,8 +2368,8 @@ class Sweeper1d(tk.Frame):
         columns_device = self.combo_to_sweep1['values'][self.combo_to_sweep1.current()]
         columns_parameters = self.sweep_options1['values'][self.sweep_options1.current()]
         columns = ['time', columns_device + '.' + columns_parameters + '_sweep']
-        for option in list(parameters_to_read_dict.values()):
-            columns.append(option)
+        for option in parameters_to_read:
+            columns.append(parameters_to_read_dict[option])
 
         if self.entry_filename.get() != '':
             filename_sweep = self.entry_filename.get()
@@ -2328,9 +2387,10 @@ class Sweeper1d(tk.Frame):
         if self.start_sweep_flag:
             zero_time = time.perf_counter()
             stop_flag = False
-            self.pre_sweep(1)
-            sweeper_write = Sweeper_write()
-            self.open_graph()
+            sweeper_flag1 = True
+            sweeper_flag2 = False
+            sweeper_flag3 = False
+            self.pre_sweep(1, start = True)
 
 
 class Sweeper2d(tk.Frame):
@@ -2359,6 +2419,8 @@ class Sweeper2d(tk.Frame):
         self.status_back_and_forth_master = tk.IntVar(value = int(self.preset['status_back_and_forth1'].values[0]))
         self.status_manual1 = tk.IntVar(value = int(self.preset['status_manual1'].values[0]))
         self.status_back_and_forth_slave = tk.IntVar(value = int(self.preset['status_back_and_forth2'].values[0]))
+        #self.status_fastmode_master = tk.IntVar(value = int(self.preset['status_fastmode2'].values[0]))
+        self.status_snakemode_master = tk.IntVar(value = int(self.preset['status_snakemode2'].values[0]))
         self.status_manual2 = tk.IntVar(value = int(self.preset['status_manual2'].values[0]))
         self.condition = str(self.preset['condition'].values[0])
         self.filename_sweep = self.preset['filename_sweep'].values[0]
@@ -2373,7 +2435,7 @@ class Sweeper2d(tk.Frame):
             self.filename_sweep = os.path.join(cur_dir, name + '.csv')
         
         globals()['setget_flag'] = False
-        globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
+        #globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
 
         label = tk.Label(self, text='2dSweeper', font=LARGE_FONT)
         label.pack(pady=10, padx=10)
@@ -2528,22 +2590,58 @@ class Sweeper2d(tk.Frame):
                 button_set_back_and_forth_slave = tk.Button(tw, text = 'Set', command = update_back_and_forth_slave_count)
                 button_set_back_and_forth_slave.grid(row = 1, column = 1, pady = 2)
                 
-                label_fast_master = tk.Label(tw, text = 'Fast mode')
-                label_fast_master.grid(row = 2, column = 0, pady = 2)
+                #label_fast_master = tk.Label(tw, text = 'Fast mode')
+                #label_fast_master.grid(row = 2, column = 0, pady = 2)
                 
-                checkbox_status = tk.IntVar()
-                checkbox_status.set(int(globals()['fastmode_master_flag']))
+                label_snake_master = tk.Label(tw, text = 'Snake mode')
+                label_snake_master.grid(row = 2, column = 0, pady = 2)
                 
-                checkbox_fast_master = ttk.Checkbutton(tw, variable = checkbox_status, onvalue = 1, offvalue = 0)
-                checkbox_fast_master.grid(row = 2, column = 1, pady = 1)
+                def fastmode_pressed():
+                    
+                    self.parent.preset.loc[0, 'status_fastmode2'] = self.parent.status_fastmode_master.get()
+                    self.parent.preset.to_csv(globals()['sweeper2d_path'], index = False)
+                    
+                    if self.parent.status_fastmode_master.get() == 1:
+                        self.checkbox_snake_master.config(state = 'disable')
+                    else:
+                        self.checkbox_snake_master.config(state = 'normal')
+                    
+                def snakemode_pressed():
+                    
+                    self.parent.preset.loc[0, 'status_snakemode2'] = self.parent.status_snakemode_master.get()
+                    self.parent.preset.to_csv(globals()['sweeper2d_path'], index = False)
+                    
+                    
+                    #if self.parent.status_snakemode_master.get() == 1:
+                    #    self.checkbox_fast_master.config(state = 'disable')
+                    #else:
+                    #    self.checkbox_fast_master.config(state = 'normal')
+                    
+                
+                #self.checkbox_fast_master = ttk.Checkbutton(tw, variable = self.parent.status_fastmode_master, onvalue = 1, offvalue = 0, command = fastmode_pressed)
+                #self.checkbox_fast_master.grid(row = 2, column = 1, pady = 1)
+                
+                #if self.parent.status_snakemode_master.get() == 1:
+                #    self.checkbox_fast_master.config(state = 'disable')
+                
+                self.checkbox_snake_master = ttk.Checkbutton(tw, variable = self.parent.status_snakemode_master, onvalue = 1, offvalue = 0, command = snakemode_pressed)
+                self.checkbox_snake_master.grid(row = 2, column = 1, pady = 1)
+                
+                #if self.parent.status_fastmode_master.get() == 1:
+                #    self.checkbox_snake_master.config(state = 'disable')
                 
                 def hide_toplevel():
                     tw = self.slave_toplevel
                     self.slave_toplevel = None
-                    if checkbox_status.get() == 1:
-                        globals()['fastmode_master_flag'] = True
+                    #if self.parent.status_fastmode_master.get() == 1:
+                    #    globals()['fastmode_master_flag'] = True
+                    #else:
+                    #    globals()['fastmode_master_flag'] = False
+                    if self.parent.status_snakemode_master.get() == 1:
+                        globals()['snakemode_master_flag'] = True
                     else:
-                        globals()['fastmode_master_flag'] = False
+                        globals()['snakemode_master_flag'] = False
+                
                     tw.destroy()
                 
                 tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
@@ -2699,11 +2797,11 @@ class Sweeper2d(tk.Frame):
                     self.parent.after(1)
                     
                 def update_names_get_parameters(interval = 1000):
-                    new_get_parameter_name = self.combo_get_parameters.get()
+                    new_get_parameter_name = self.get_current.get()
                     new_get_parameters_values = list(self.combo_get_parameters['values'])
                     new_get_parameters_values[self.selected_get_option] = new_get_parameter_name
                     
-                    self.parent.dict_lstbox[self.combo_get_parameters['values'][self.combo_get_parameters.current()]] = new_get_parameter_name
+                    self.parent.dict_lstbox[self.combo_get_parameters['values'][self.selected_get_option]] = new_get_parameter_name
                     
                     self.combo_get_parameters['values'] = new_get_parameters_values
                     
@@ -2744,7 +2842,8 @@ class Sweeper2d(tk.Frame):
                 if len(parameters) == 0:
                     parameters = ['']
                 
-                self.combo_get_parameters = ttk.Combobox(tw, value = parameters)
+                self.get_current = tk.StringVar()
+                self.combo_get_parameters = ttk.Combobox(tw, value = parameters, textvariable = self.get_current)
                 self.combo_get_parameters.current(0)
                 self.combo_get_parameters.bind(
                     "<<ComboboxSelected>>", select_get_option)
@@ -3528,10 +3627,14 @@ class Sweeper2d(tk.Frame):
         if answer:
             tozero_flag = True
         
-    def pre_sweep(self, i):
+    def pre_sweep(self, i, start = False):
+        global sweeper_write
         device = globals()[f'device_to_sweep{i}']
         parameter = globals()[f'parameter_to_sweep{i}']
-        sweepable = device.sweepable[device.set_options.index(parameter)]
+        try:
+            sweepable = device.sweepable[device.set_options.index(parameter)]
+        except:
+            sweepable = False
         from_sweep = self.__dict__[f'from_sweep{i}']
         to_sweep = self.__dict__[f'to_sweep{i}']
         ratio_sweep = self.__dict__[f'ratio_sweep{i}']
@@ -3545,22 +3648,84 @@ class Sweeper2d(tk.Frame):
         options = {1: 'master', 2: 'slave', 3: 'slave_slave'}
         
         try:
-            cur_value = float(device.parameter())
-        except:
+            cur_value = float(getattr(device, parameter)())
+        except Exception as e:
+            print(f'Exception happened in pre-sweep {i}: {e}')
+            if start:
+                sweeper_write = Sweeper_write()
+                self.open_graph()
             return
 
         if abs(cur_value - from_sweep) <= eps:
-            return 
+            if start:
+                sweeper_write = Sweeper_write()
+                self.open_graph()
+            return
         else:
-            answer = messagebox.askyesno('Start warning', f'Current {options[i]} value is {cur_value}. \nStarting position is {from_sweep}, go to start?')
+            answer = messagebox.askyesnocancel('Start warning', f'Current {options[i]} value is {cur_value}. \nStarting position is {from_sweep}, go to start?')
             if answer:
                 if not sweepable:
                     getattr(device, f'set_{parameter}')(value = from_sweep)
+                    if start:
+                        sweeper_write = Sweeper_write()
+                        self.open_graph()
                 else:
                     getattr(device, f'set_{parameter}')(value = from_sweep, speed = ratio_sweep)
                     
-                    while abs(float(device.parameter()) - from_sweep) > eps:
-                        time.sleep(1)
+                    self.__dict__[f'pop{i}'] = tk.Toplevel(self)
+                    
+                    def center(toplevel):
+                    
+                        screen_width = toplevel.winfo_screenwidth()
+                        screen_height = toplevel.winfo_screenheight()
+                    
+                        size = tuple(int(_) for _ in toplevel.geometry().split('+')[0].split('x'))
+                        x = screen_width/2 - size[0]/2
+                        y = screen_height/2 - size[1]/2
+                    
+                        toplevel.geometry("+%d+%d" % (x, y))
+                    
+                    center(self.__dict__[f'pop{i}'])
+                    
+                    self.__dict__[f'label_approaching{i}'] = tk.Label(self.__dict__[f'pop{i}'], text = 'Approaching start', font = LARGE_FONT)
+                    self.__dict__[f'label_approaching{i}'].grid(row = 0, column = 0)
+                    
+                    self.__dict__[f'label_position{i}'] = tk.Label(self.__dict__[f'pop{i}'], text = '', font = LARGE_FONT)
+                    self.__dict__[f'label_position{i}'].grid(row = 1, column = 0)
+                    
+                    self.__dict__[f'current_position{i}'] = float(getattr(device, parameter)())
+                    
+                    def update_position(i, start, aux = False):
+                        global sweeper_write
+                        if (abs(self.__dict__[f'current_position{i}'] - from_sweep)) > eps:
+                            self.__dict__[f'current_position{i}'] = float(getattr(device, parameter)())
+                            self.__dict__[f'label_position{i}'].config(text = f'{"{:.3e}".format(self.__dict__[f"current_position{i}"])} / {"{:.3e}".format(from_sweep)}')
+                            self.__dict__[f'label_position{i}'].after(100, lambda: update_position(i, start))
+                            if not start:
+                                self.start_sweep_flag = False
+                        else:
+                            if self.__dict__[f'pop{i}'].winfo_exists():
+                                if not aux:
+                                    self.__dict__[f'pop{i}'].destroy()
+                                else:
+                                    self.__dict__[f'pop{i-1}'].after(100, lambda: update_position(i-1))
+                            
+                            if start:
+                                if self.start_sweep_flag:
+                                    sweeper_write = Sweeper_write()
+                                    self.open_graph()
+                                else:
+                                    self.__dict__[f'pop{i}'].after(100, lambda: update_position(i, start))
+                            else:
+                                self.start_sweep_flag = True
+                                try:
+                                    start = True
+                                    self.__dict__[f'pop{i}'].after(100, lambda: update_position(i+1, start, aux = True))
+                                except Exception as e:
+                                    print(f'Exception happened in pre-sweep {i}: {e}')
+                                    self.__dict__[f'pop{i}'].after(100, lambda: update_position(i, start))
+                    
+                    update_position(i, start)
 
     def start_sweeping(self):
 
@@ -3595,6 +3760,8 @@ class Sweeper2d(tk.Frame):
         global zero_time
         global back_and_forth_master
         global back_and_forth_slave
+        global snakemode_master_flag
+        #global fastmode_master_flag
         global sweeper_write
 
         self.start_sweep_flag = True
@@ -3695,16 +3862,13 @@ class Sweeper2d(tk.Frame):
         columns = ['time', columns_device1 + '.' + columns_parameters1 + '_sweep',
                    columns_device2 + '.' + columns_parameters2 + '_sweep']
             
-        for option in list(parameters_to_read_dict.values()):
-            columns.append(option)
+        for option in parameters_to_read:
+            columns.append(parameters_to_read_dict[option])
 
         # fixing sweeper parmeters
         
         if self.entry_filename.get() != '':
             filename_sweep = self.entry_filename.get()
-        sweeper_flag1 = False
-        sweeper_flag2 = True
-        sweeper_flag3 = False
         interpolated2D = self.interpolated
         uniform2D = self.uniform
         
@@ -3719,11 +3883,14 @@ class Sweeper2d(tk.Frame):
         if self.start_sweep_flag:
             zero_time = time.perf_counter()
             stop_flag = False
+            sweeper_flag1 = False
+            sweeper_flag2 = True
+            sweeper_flag3 = False
+            snakemode_master_flag = self.status_snakemode_master.get()
+            #fastmode_master_flag = self.status_fastmode_master.get()
             self.rewrite_preset()
             self.pre_sweep(1)
-            self.pre_sweep(2)
-            sweeper_write = Sweeper_write()
-            self.open_graph()
+            self.pre_sweep(2, start = True)
 
 
 class Sweeper3d(tk.Frame):
@@ -3759,8 +3926,12 @@ class Sweeper3d(tk.Frame):
         self.status_back_and_forth_master = tk.IntVar(value = int(self.preset['status_back_and_forth1'].values[0]))
         self.status_manual1 = tk.IntVar(value = int(self.preset['status_manual1'].values[0]))
         self.status_back_and_forth_slave = tk.IntVar(value = int(self.preset['status_back_and_forth2'].values[0]))
+        #self.status_fastmode_master = tk.IntVar(value = int(self.preset['status_fastmode2'].values[0]))
+        self.status_snakemode_master = tk.IntVar(value = int(self.preset['status_snakemode2'].values[0]))
         self.status_manual2 = tk.IntVar(value = int(self.preset['status_manual2'].values[0]))
         self.status_back_and_forth_slave_slave = tk.IntVar(value = int(self.preset['status_back_and_forth3'].values[0]))
+        #self.status_fastmode_slave = tk.IntVar(value = int(self.preset['status_fastmode3'].values[0]))
+        self.status_snakemode_slave = tk.IntVar(value = int(self.preset['status_snakemode3'].values[0]))
         self.status_manual3 = tk.IntVar(value = int(self.preset['status_manual3'].values[0]))
         self.filename_sweep = self.preset['filename_sweep'].values[0]
         self.condition = str(self.preset['condition'].values[0])
@@ -3775,7 +3946,7 @@ class Sweeper3d(tk.Frame):
             self.filename_sweep = os.path.join(cur_dir, name + '.csv')
         
         globals()['setget_flag'] = False
-        globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
+        #globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
         
         label = tk.Label(self, text='3dSweeper', font=LARGE_FONT)
         label.pack(pady=10, padx=10)
@@ -3973,22 +4144,56 @@ class Sweeper3d(tk.Frame):
                 button_set_back_and_forth_slave = tk.Button(tw, text = 'Set', command = update_back_and_forth_slave_count)
                 button_set_back_and_forth_slave.grid(row = 1, column = 1, pady = 2)
                 
-                label_fast_master = tk.Label(tw, text = 'Fast mode')
-                label_fast_master.grid(row = 2, column = 0, pady = 2)
+                #label_fast_master = tk.Label(tw, text = 'Fast mode')
+                #label_fast_master.grid(row = 2, column = 0, pady = 2)
                 
-                checkbox_status = tk.IntVar()
-                checkbox_status.set(int(globals()['fastmode_master_flag']))
+                label_snake_master = tk.Label(tw, text = 'Snake mode')
+                label_snake_master.grid(row = 2, column = 0, pady = 2)
                 
-                checkbox_fast_master = ttk.Checkbutton(tw, variable = checkbox_status, onvalue = 1, offvalue = 0)
-                checkbox_fast_master.grid(row = 2, column = 1, pady = 1)
+                def fastmode_pressed():
+                    
+                    self.parent.preset.loc[0, 'status_fastmode2'] = self.parent.status_fastmode_master.get()
+                    self.parent.preset.to_csv(globals()['sweeper3d_path'], index = False)
+                    
+                    if self.parent.status_fastmode_master.get() == 1:
+                        self.checkbox_snake_master.config(state = 'disable')
+                    else:
+                        self.checkbox_snake_master.config(state = 'normal')
+                    
+                def snakemode_pressed():
+                    
+                    self.parent.preset.loc[0, 'status_snakemode2'] = self.parent.status_snakemode_master.get()
+                    self.parent.preset.to_csv(globals()['sweeper3d_path'], index = False)
+                    
+                    #if self.parent.status_snakemode_master.get() == 1:
+                    #    self.checkbox_fast_master.config(state = 'disable')
+                    #else:
+                    #   self.checkbox_fast_master.config(state = 'normal')
+                
+                #self.checkbox_fast_master = ttk.Checkbutton(tw, variable = self.parent.status_fastmode_master, onvalue = 1, offvalue = 0, command = fastmode_pressed)
+                #self.checkbox_fast_master.grid(row = 2, column = 1, pady = 1)
+                
+                #if self.parent.status_snakemode_master.get() == 1:
+                #    self.checkbox_fast_master.config(state = 'disable')
+                
+                self.checkbox_snake_master = ttk.Checkbutton(tw, variable = self.parent.status_snakemode_master, onvalue = 1, offvalue = 0, command = snakemode_pressed)
+                self.checkbox_snake_master.grid(row = 2, column = 1, pady = 1)
+                
+                #if self.parent.status_fastmode_master.get() == 1:
+                #    self.checkbox_snake_master.config(state = 'disable')
                 
                 def hide_toplevel():
                     tw = self.slave_toplevel
                     self.slave_toplevel = None
-                    if checkbox_status.get() == 1:
-                        globals()['fastmode_master_flag'] = True
+                    #if self.parent.status_fastmode_master.get() == 1:
+                    #    globals()['fastmode_master_flag'] = True
+                    #else:
+                    #    globals()['fastmode_master_flag'] = False
+                    if self.parent.status_snakemode_master.get() == 1:
+                        globals()['snakemode_master_flag'] = True
                     else:
-                        globals()['fastmode_master_flag'] = False
+                        globals()['snakemode_master_flag'] = False
+                
                     tw.destroy()
                 
                 tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
@@ -4061,22 +4266,52 @@ class Sweeper3d(tk.Frame):
                 button_set_back_and_forth_slave_slave = tk.Button(tw, text = 'Set', command = update_back_and_forth_slave_slave_count)
                 button_set_back_and_forth_slave_slave.grid(row = 1, column = 1, pady = 2)
                 
-                label_fast_master = tk.Label(tw, text = 'Fast mode')
-                label_fast_master.grid(row = 2, column = 0, pady = 2)
+                #label_fast_master = tk.Label(tw, text = 'Fast mode')
+                #label_fast_master.grid(row = 2, column = 0, pady = 2)
                 
-                checkbox_status = tk.IntVar()
-                checkbox_status.set(int(globals()['fastmode_master_flag']))
+                label_snake_master = tk.Label(tw, text = 'Snake mode')
+                label_snake_master.grid(row = 2, column = 0, pady = 2)
                 
-                checkbox_fast_slave_ = ttk.Checkbutton(tw, variable = checkbox_status, onvalue = 1, offvalue = 0)
-                checkbox_fast_slave_.grid(row = 2, column = 1, pady = 1)
+                def fastmode_pressed():
+                    
+                    self.parent.preset.loc[0, 'status_fastmode3'] = self.parent.status_fastmode_slave.get()
+                    self.parent.preset.to_csv(globals()['sweeper3d_path'], index = False)
+                    
+                    if self.parent.status_fastmode_slave.get() == 1:
+                        self.checkbox_snake_slave.config(state = 'disable')
+                    else:
+                        self.checkbox_snake_slave.config(state = 'normal')
+                    
+                def snakemode_pressed():
+                    
+                    self.parent.preset.loc[0, 'status_snakemode3'] = self.parent.status_snakemode_slave.get()
+                    self.parent.preset.to_csv(globals()['sweeper3d_path'], index = False)
+                    
+                    #if self.parent.status_snakemode_slave.get() == 1:
+                    #    self.checkbox_fast_slave.config(state = 'disable')
+                    #else:
+                    #    self.checkbox_fast_slave.config(state = 'normal')
+                
+                #self.checkbox_fast_slave = ttk.Checkbutton(tw, variable = self.parent.status_fastmode_slave, onvalue = 1, offvalue = 0, command = fastmode_pressed)
+                #self.checkbox_fast_slave.grid(row = 2, column = 1, pady = 1)
+                
+                #if self.parent.status_snakemode_slave.get() == 1:
+                #    self.checkbox_fast_slave.config(state = 'disable')
+                
+                self.checkbox_snake_slave = ttk.Checkbutton(tw, variable = self.parent.status_snakemode_slave, onvalue = 1, offvalue = 0, command = snakemode_pressed)
+                self.checkbox_snake_slave.grid(row = 2, column = 1, pady = 1)
+                
+                #if self.parent.status_fastmode_slave.get() == 1:
+                #    self.checkbox_snake_slave.config(state = 'disable')
                 
                 def hide_toplevel():
                     tw = self.slave_slave_toplevel
                     self.slave_slave_toplevel = None
-                    if checkbox_status.get() == 1:
-                        globals()['fastmode_slave_flag'] = True
+                    if self.parent.status_snakemode_slave.get() == 1:
+                        globals()['snakemode_slave_flag'] = True
                     else:
-                        globals()['fastmode_slave_flag'] = False
+                        globals()['snakemode_slave_flag'] = False
+                
                     tw.destroy()
                 
                 tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
@@ -4094,12 +4329,12 @@ class Sweeper3d(tk.Frame):
                                            variable=self.status_back_and_forth_slave_slave, onvalue=1,
                                            offvalue=0, command=lambda: self.save_back_and_forth_slave_slave_status())
         self.checkbox_back_and_forth_slave_slave.place(relx=0.5, rely=0.62)
-        CreateSlaveSlaveToplevel(self.checkbox_back_and_forth_slave_slave, parent)
+        CreateSlaveSlaveToplevel(self.checkbox_back_and_forth_slave_slave, self)
         
         self.label_back_and_forth_slave = tk.Label(self, text = '🔁', font = SUPER_LARGE)
         self.label_back_and_forth_slave.place(relx = 0.5135, rely = 0.61)
         CreateToolTip(self.label_back_and_forth_slave, 'Back and forth sweep\nfor this axis \n Right click to configure')
-        CreateSlaveSlaveToplevel(self.label_back_and_forth_slave, parent)
+        CreateSlaveSlaveToplevel(self.label_back_and_forth_slave, self)
 
         def stepper_mode():
             global stepper_flag
@@ -4233,11 +4468,11 @@ class Sweeper3d(tk.Frame):
                     self.parent.after(1)
                     
                 def update_names_get_parameters(interval = 1000):
-                    new_get_parameter_name = self.combo_get_parameters.get()
+                    new_get_parameter_name = self.get_current.get()
                     new_get_parameters_values = list(self.combo_get_parameters['values'])
                     new_get_parameters_values[self.selected_get_option] = new_get_parameter_name
                     
-                    self.parent.dict_lstbox[self.combo_get_parameters['values'][self.combo_get_parameters.current()]] = new_get_parameter_name
+                    self.parent.dict_lstbox[self.combo_get_parameters['values'][self.selected_get_option]] = new_get_parameter_name
                     
                     self.combo_get_parameters['values'] = new_get_parameters_values
                     
@@ -4278,7 +4513,8 @@ class Sweeper3d(tk.Frame):
                 if len(parameters) == 0:
                     parameters = ['']
                 
-                self.combo_get_parameters = ttk.Combobox(tw, value = parameters)
+                self.get_current = tk.StringVar()
+                self.combo_get_parameters = ttk.Combobox(tw, value = parameters, textvariable = self.get_current)
                 self.combo_get_parameters.current(0)
                 self.combo_get_parameters.bind(
                     "<<ComboboxSelected>>", select_get_option)
@@ -5190,10 +5426,14 @@ class Sweeper3d(tk.Frame):
         if answer:
             tozero_flag = True
         
-    def pre_sweep(self, i):
+    def pre_sweep(self, i, start = False):
+        global sweeper_write
         device = globals()[f'device_to_sweep{i}']
         parameter = globals()[f'parameter_to_sweep{i}']
-        sweepable = device.sweepable[device.set_options.index(parameter)]
+        try:
+            sweepable = device.sweepable[device.set_options.index(parameter)]
+        except:
+            sweepable = False
         from_sweep = self.__dict__[f'from_sweep{i}']
         to_sweep = self.__dict__[f'to_sweep{i}']
         ratio_sweep = self.__dict__[f'ratio_sweep{i}']
@@ -5207,22 +5447,84 @@ class Sweeper3d(tk.Frame):
         options = {1: 'master', 2: 'slave', 3: 'slave_slave'}
         
         try:
-            cur_value = float(device.parameter())
-        except:
+            cur_value = float(getattr(device, parameter)())
+        except Exception as e:
+            print(f'Exception happened in pre-sweep {i}: {e}')
+            if start:
+                sweeper_write = Sweeper_write()
+                self.open_graph()
             return
 
         if abs(cur_value - from_sweep) <= eps:
-            return 
+            if start:
+                sweeper_write = Sweeper_write()
+                self.open_graph()
+            return
         else:
-            answer = messagebox.askyesno('Start warning', f'Current {options[i]} value is {cur_value}. \nStarting position is {from_sweep}, go to start?')
+            answer = messagebox.askyesnocancel('Start warning', f'Current {options[i]} value is {cur_value}. \nStarting position is {from_sweep}, go to start?')
             if answer:
                 if not sweepable:
                     getattr(device, f'set_{parameter}')(value = from_sweep)
+                    if start:
+                        sweeper_write = Sweeper_write()
+                        self.open_graph()
                 else:
                     getattr(device, f'set_{parameter}')(value = from_sweep, speed = ratio_sweep)
                     
-                    while abs(float(device.parameter()) - from_sweep) > eps:
-                        time.sleep(1)
+                    self.__dict__[f'pop{i}'] = tk.Toplevel(self)
+                    
+                    def center(toplevel):
+                    
+                        screen_width = toplevel.winfo_screenwidth()
+                        screen_height = toplevel.winfo_screenheight()
+                    
+                        size = tuple(int(_) for _ in toplevel.geometry().split('+')[0].split('x'))
+                        x = screen_width/2 - size[0]/2
+                        y = screen_height/2 - size[1]/2
+                    
+                        toplevel.geometry("+%d+%d" % (x, y))
+                    
+                    center(self.__dict__[f'pop{i}'])
+                    
+                    self.__dict__[f'label_approaching{i}'] = tk.Label(self.__dict__[f'pop{i}'], text = 'Approaching start', font = LARGE_FONT)
+                    self.__dict__[f'label_approaching{i}'].grid(row = 0, column = 0)
+                    
+                    self.__dict__[f'label_position{i}'] = tk.Label(self.__dict__[f'pop{i}'], text = '', font = LARGE_FONT)
+                    self.__dict__[f'label_position{i}'].grid(row = 1, column = 0)
+                    
+                    self.__dict__[f'current_position{i}'] = float(getattr(device, parameter)())
+                    
+                    def update_position(i, start, aux = False):
+                        global sweeper_write
+                        if (abs(self.__dict__[f'current_position{i}'] - from_sweep)) > eps:
+                            self.__dict__[f'current_position{i}'] = float(getattr(device, parameter)())
+                            self.__dict__[f'label_position{i}'].config(text = f'{"{:.3e}".format(self.__dict__[f"current_position{i}"])} / {"{:.3e}".format(from_sweep)}')
+                            self.__dict__[f'label_position{i}'].after(100, lambda: update_position(i, start))
+                            if not start:
+                                self.start_sweep_flag = False
+                        else:
+                            if self.__dict__[f'pop{i}'].winfo_exists():
+                                if not aux:
+                                    self.__dict__[f'pop{i}'].destroy()
+                                else:
+                                    self.__dict__[f'pop{i-1}'].after(100, lambda: update_position(i-1))
+                            if start:
+                                if self.start_sweep_flag:
+                                    sweeper_write = Sweeper_write()
+                                    self.open_graph()
+                                else:
+                                    self.__dict__[f'pop{i}'].after(100, lambda: update_position(i, start))
+                            else:
+                                self.start_sweep_flag = True
+                                try:
+                                    if i == 2:
+                                        start = True
+                                    self.__dict__[f'pop{i}'].after(100, lambda: update_position(i+1, start, aux = True))
+                                except Exception as e:
+                                    print(f'Exception happened in pre-sweep {i}: {e}')
+                                    self.__dict__[f'pop{i}'].after(100, lambda: update_position(i, start))
+                    
+                    update_position(i, start)
 
     def start_sweeping(self):
 
@@ -5262,7 +5564,11 @@ class Sweeper3d(tk.Frame):
         global manual_sweep_flags
         global zero_time
         global back_and_forth_master
+        #global fastmode_master_flag
+        global snakemode_master_flag
         global back_and_forth_slave
+        #global fastmode_slave_flag
+        global snakemode_slave_flag
         global back_and_forth_slave_slave
         global sweeper_write
         
@@ -5395,16 +5701,13 @@ class Sweeper3d(tk.Frame):
                    columns_device2 + '.' + columns_parameters2 + '_sweep',
                    columns_device3 + '.' + columns_parameters3 + '_sweep']
         
-        for option in list(parameters_to_read_dict.values()):
-            columns.append(option)
+        for option in parameters_to_read:
+            columns.append(parameters_to_read_dict[option])
 
         # fixing sweeper parmeters
         
         if self.entry_filename.get() != '':
             filename_sweep = self.entry_filename.get()
-        sweeper_flag1 = False
-        sweeper_flag2 = False
-        sweeper_flag3 = True
         
         interpolated3D = self.interpolated
         uniform3D = self.uniform
@@ -5423,11 +5726,16 @@ class Sweeper3d(tk.Frame):
         if self.start_sweep_flag:
             zero_time = time.perf_counter()
             stop_flag = False
+            sweeper_flag1 = False
+            sweeper_flag2 = False
+            sweeper_flag3 = True
+            snakemode_master_flag = self.status_snakemode_master.get()
+            #fastmode_master_flag = self.status_fastmode_master.get()
+            snakemode_slave_flag = self.status_snakemode_slave.get()
+            #fastmode_slave_flag = self.status_fastmode_slave.get()
             self.pre_sweep(1)
             self.pre_sweep(2)
-            self.pre_sweep(3)
-            sweeper_write = Sweeper_write()
-            self.open_graph()
+            self.pre_sweep(3, start = True)
 
 class Sweeper_write(threading.Thread):
 
@@ -5442,7 +5750,7 @@ class Sweeper_write(threading.Thread):
         self.device_to_sweep1 = device_to_sweep1
         self.parameter_to_sweep1 = parameter_to_sweep1
         self.parameters_to_read = parameters_to_read
-        self.parameters_to_read_dict = globals()['parameters_to_read_dict']
+        self.parameters_to_read_dict = parameters_to_read_dict
         print(f'Parameters to read are {self.parameters_to_read}')
         self.from_sweep1 = float(from_sweep1)
         self.to_sweep1 = float(to_sweep1)
@@ -5866,11 +6174,12 @@ class Sweeper_write(threading.Thread):
                         parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
                                                   option)()
                         dataframe.append(parameter_value)
-                    except:
+                    except Exception as e:
+                        print(f'Exception happened in setget_write: {e}')
                         dataframe.append(None)
                         
                 time.sleep(0.2)
-                
+                    
                 with open(filename_setget, 'a') as f_object:
                     try:
                         writer_object = writer(f_object)
@@ -5878,6 +6187,8 @@ class Sweeper_write(threading.Thread):
                         f_object.close()
                     except KeyboardInterrupt:
                         f_object.close()
+                    except Exception as e:
+                        print(f'Exception happened in setget_write append: {e}')
                     finally:
                         f_object.close()
         
@@ -5890,7 +6201,7 @@ class Sweeper_write(threading.Thread):
             global data
             global manual_sweep_flag
             
-            for parameter in list(self.parameters_to_read_dict.keys()):
+            for parameter in self.parameters_to_read:
                 index_dot = len(parameter) - parameter[::-1].find('.') - 1
                 adress = parameter[:index_dot]
                 option = parameter[index_dot + 1:]
@@ -6375,10 +6686,12 @@ class Sweeper_write(threading.Thread):
             elif walks > 1:
                 for i in range(1, walks + 1):
                     inner_loop_single(direction = round(2 * (i % 2) - 1))
-                    if globals()['fastmode_slave_flag'] == True and len(manual_sweep_flags) == 3:
-                        step(axis = 2)
-                    elif globals()['fastmode_master_flag'] == True and len(manual_sweep_flags) == 2:
-                        step(axis = 1)
+                    if globals()['snakemode_slave_flag'] == True and len(manual_sweep_flags) == 3:
+                        if i != walks and back_and_forth_slave_slave != 1:
+                            step(axis = 2)
+                    elif globals()['snakemode_master_flag'] == True and len(manual_sweep_flags) == 2:
+                        if i != walks and back_and_forth_slave != 1:
+                            step(axis = 1)
                     step(axis = len(manual_sweep_flags), back = True)
                     if not getattr(self, f'sweepable{len(manual_sweep_flags)}') == True:
                         step(axis = len(manual_sweep_flags), back = True)
@@ -6422,13 +6735,16 @@ class Sweeper_write(threading.Thread):
                         self.mapper2D.append_master(value = self.value1)
                     if len(manual_sweep_flags) == 3:
                         self.mapper3D.append_slave(value = self.value2)
+
                     step(cur_axis)
+                    
                     if len(manual_sweep_flags) == 2:
                         globals()['dataframe_after'] = [*globals()['dataframe']]
                     elif len(manual_sweep_flags) == 3:
                         globals()['dataframe_after_after'] = [*globals()['dataframe']]
                     else:
                         raise Exception('manual_sweep_flag is not correct size, should be 1, 2 or 3, but got ', len(manual_sweep_flags))
+                
                     inner_loop_back_and_forth()
                     update_filename()
                     
@@ -6470,7 +6786,7 @@ class Sweeper_write(threading.Thread):
             elif walks > 1:
                 for i in range(1, walks + 1):
                     external_loop_single(round(2 * (i % 2) - 1))
-                    if globals()['fastmode_master_flag'] == True and len(manual_sweep_flags) == 3:
+                    if globals()['snakemode_master_flag'] == True and len(manual_sweep_flags) == 3:
                         step(axis = 1)
                     step(axis = len(manual_sweep_flags) - 1, back = True)
                     if not getattr(self, f'sweepable{len(manual_sweep_flags) - 1}') == True:
