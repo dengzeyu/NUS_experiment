@@ -2205,10 +2205,12 @@ class Sweeper1d(tk.Frame):
         if answer:
             tozero_flag = True
         
-    def pre_sweep(self, i, start = False):
+    def pre_sweep(self):
         global sweeper_write
-        device = globals()[f'device_to_sweep{i}']
-        parameter = globals()[f'parameter_to_sweep{i}']
+        global device_to_sweep1
+        global parameter_to_sweep1
+        device = device_to_sweep1
+        parameter = parameter_to_sweep1
         try:
             sweepable = device.sweepable[device.set_options.index(parameter)]
         except:
@@ -2223,30 +2225,25 @@ class Sweeper1d(tk.Frame):
         except:
             eps = 0.0001 * delta
         
-        options = {1: 'master', 2: 'slave', 3: 'slave_slave'}
-        
         try:
             cur_value = float(getattr(device, parameter)())
         except Exception as e:
-            print(f'Exception happened in pre-sweep {i}: {e}')
-            if start:
-                sweeper_write = Sweeper_write()
-                self.open_graph()
+            print(f'Exception happened in pre-sweep 1: {e}')
+            sweeper_write = Sweeper_write()
+            self.open_graph()
             return
 
         if abs(cur_value - from_sweep) <= eps:
-            if start:
-                sweeper_write = Sweeper_write()
-                self.open_graph()
+            sweeper_write = Sweeper_write()
+            self.open_graph()
             return
         else:
-            answer = messagebox.askyesnocancel('Start warning', f'Current {options[i]} value is {cur_value}. \nStarting position is {from_sweep}, go to start?')
+            answer = messagebox.askyesnocancel('Start warning', f'Current master value is {cur_value}. \nStarting position is {from_sweep}, go to start?')
             if answer:
                 if not sweepable:
                     getattr(device, f'set_{parameter}')(value = from_sweep)
-                    if start:
-                        sweeper_write = Sweeper_write()
-                        self.open_graph()
+                    sweeper_write = Sweeper_write()
+                    self.open_graph()
                 else:
                     getattr(device, f'set_{parameter}')(value = from_sweep, speed = ratio_sweep)
                     
@@ -2282,9 +2279,8 @@ class Sweeper1d(tk.Frame):
                             self.label_position.after(100, update_position)
                         else:
                             self.pop.destroy()
-                            if start:
-                                sweeper_write = Sweeper_write()
-                                self.open_graph()
+                            sweeper_write = Sweeper_write()
+                            self.open_graph()
                     
                     update_position()
             
@@ -2390,7 +2386,7 @@ class Sweeper1d(tk.Frame):
             sweeper_flag1 = True
             sweeper_flag2 = False
             sweeper_flag3 = False
-            self.pre_sweep(1, start = True)
+            self.pre_sweep1()
 
 
 class Sweeper2d(tk.Frame):
@@ -3627,52 +3623,41 @@ class Sweeper2d(tk.Frame):
         if answer:
             tozero_flag = True
         
-    def pre_sweep(self, i, start = False):
+    def pre_sweep1(self):
         global sweeper_write
-        device = globals()[f'device_to_sweep{i}']
-        parameter = globals()[f'parameter_to_sweep{i}']
+        device = globals()['device_to_sweep1']
+        parameter = globals()['parameter_to_sweep1']
         try:
             sweepable = device.sweepable[device.set_options.index(parameter)]
         except:
             sweepable = False
-        from_sweep = self.__dict__[f'from_sweep{i}']
-        to_sweep = self.__dict__[f'to_sweep{i}']
-        ratio_sweep = self.__dict__[f'ratio_sweep{i}']
+        from_sweep = self.from_sweep1
+        to_sweep = self.to_sweep1
+        ratio_sweep = self.ratio_sweep1
         delta = abs(to_sweep - from_sweep)
         
         try:
-            eps = float(device.eps[device.set_options.index(parameter)])
+            self.eps1 = float(device.eps[device.set_options.index(parameter)])
         except:
-            eps = 0.0001 * delta
-        
-        options = {1: 'master', 2: 'slave', 3: 'slave_slave'}
+            self.eps1 = 0.0001 * delta
         
         try:
             cur_value = float(getattr(device, parameter)())
         except Exception as e:
-            print(f'Exception happened in pre-sweep {i}: {e}')
-            if start:
-                sweeper_write = Sweeper_write()
-                self.open_graph()
+            print(f'Exception happened in pre-sweep 1: {e}')
             return
 
-        if abs(cur_value - from_sweep) <= eps:
-            if start:
-                sweeper_write = Sweeper_write()
-                self.open_graph()
+        if abs(cur_value - from_sweep) <= self.eps1:
             return
         else:
-            answer = messagebox.askyesnocancel('Start warning', f'Current {options[i]} value is {cur_value}. \nStarting position is {from_sweep}, go to start?')
+            answer = messagebox.askyesnocancel('Start warning', f'Current master value is {cur_value}. \nStarting position is {from_sweep}, go to start?')
             if answer:
                 if not sweepable:
                     getattr(device, f'set_{parameter}')(value = from_sweep)
-                    if start:
-                        sweeper_write = Sweeper_write()
-                        self.open_graph()
                 else:
                     getattr(device, f'set_{parameter}')(value = from_sweep, speed = ratio_sweep)
                     
-                    self.__dict__[f'pop{i}'] = tk.Toplevel(self)
+                    self.pop1 = tk.Toplevel(self)
                     
                     def center(toplevel):
                     
@@ -3685,47 +3670,105 @@ class Sweeper2d(tk.Frame):
                     
                         toplevel.geometry("+%d+%d" % (x, y))
                     
-                    center(self.__dict__[f'pop{i}'])
+                    center(self.pop1)
                     
-                    self.__dict__[f'label_approaching{i}'] = tk.Label(self.__dict__[f'pop{i}'], text = 'Approaching start', font = LARGE_FONT)
-                    self.__dict__[f'label_approaching{i}'].grid(row = 0, column = 0)
+                    self.label_approaching1 = tk.Label(self.pop1, text = 'Approaching start', font = LARGE_FONT)
+                    self.label_approaching1.grid(row = 0, column = 0)
                     
-                    self.__dict__[f'label_position{i}'] = tk.Label(self.__dict__[f'pop{i}'], text = '', font = LARGE_FONT)
-                    self.__dict__[f'label_position{i}'].grid(row = 1, column = 0)
+                    self.label_position1 = tk.Label(self.pop1, text = '', font = LARGE_FONT)
+                    self.label_position1.grid(row = 1, column = 0)
                     
-                    self.__dict__[f'current_position{i}'] = float(getattr(device, parameter)())
+                    self.current_position1 = float(getattr(device, parameter)())
                     
-                    def update_position(i, start, aux = False):
+                    def update_position():
                         global sweeper_write
-                        if (abs(self.__dict__[f'current_position{i}'] - from_sweep)) > eps:
-                            self.__dict__[f'current_position{i}'] = float(getattr(device, parameter)())
-                            self.__dict__[f'label_position{i}'].config(text = f'{"{:.3e}".format(self.__dict__[f"current_position{i}"])} / {"{:.3e}".format(from_sweep)}')
-                            self.__dict__[f'label_position{i}'].after(100, lambda: update_position(i, start))
-                            if not start:
-                                self.start_sweep_flag = False
+                        if (abs(self.current_position1 - from_sweep)) > self.eps1:
+                            self.current_position1 = float(getattr(device, parameter)())
+                            self.label_position1.config(text = f'{"{:.3e}".format(self.current_position1)} / {"{:.3e}".format(self.from_sweep1)}')
+                            self.label_position1.after(100, update_position)
+                            self.start_sweep_flag = False
                         else:
-                            if self.__dict__[f'pop{i}'].winfo_exists():
-                                if not aux:
-                                    self.__dict__[f'pop{i}'].destroy()
-                                else:
-                                    self.__dict__[f'pop{i-1}'].after(100, lambda: update_position(i-1))
-                            
-                            if start:
-                                if self.start_sweep_flag:
-                                    sweeper_write = Sweeper_write()
-                                    self.open_graph()
-                                else:
-                                    self.__dict__[f'pop{i}'].after(100, lambda: update_position(i, start))
-                            else:
-                                self.start_sweep_flag = True
-                                try:
-                                    start = True
-                                    self.__dict__[f'pop{i}'].after(100, lambda: update_position(i+1, start, aux = True))
-                                except Exception as e:
-                                    print(f'Exception happened in pre-sweep {i}: {e}')
-                                    self.__dict__[f'pop{i}'].after(100, lambda: update_position(i, start))
+                            self.start_sweep_flag = True
+                            self.pop1.destroy()
                     
-                    update_position(i, start)
+                    update_position()
+                
+    def pre_sweep2(self):
+        global sweeper_write
+        device = globals()['device_to_sweep2']
+        parameter = globals()['parameter_to_sweep2']
+        try:
+            sweepable = device.sweepable[device.set_options.index(parameter)]
+        except:
+            sweepable = False
+        from_sweep = self.from_sweep2
+        to_sweep = self.to_sweep2
+        ratio_sweep = self.ratio_sweep2
+        delta = abs(to_sweep - from_sweep)
+        
+        try:
+            self.eps2 = float(device.eps[device.set_options.index(parameter)])
+        except:
+            self.eps2 = 0.0001 * delta
+        
+        try:
+            cur_value = float(getattr(device, parameter)())
+        except Exception as e:
+            print(f'Exception happened in pre-sweep 2: {e}')
+            if self.start_sweep_flag:
+                sweeper_write = Sweeper_write()
+                self.open_graph()
+            return
+
+        if abs(cur_value - from_sweep) <= self.eps2:
+            if self.start_sweep_flag:
+                sweeper_write = Sweeper_write()
+                self.open_graph()
+            return
+        else:
+            answer = messagebox.askyesnocancel('Start warning', f'Current slave value is {cur_value}. \nStarting position is {from_sweep}, go to start?')
+            if answer:
+                if not sweepable:
+                    getattr(device, f'set_{parameter}')(value = from_sweep)
+                else:
+                    getattr(device, f'set_{parameter}')(value = from_sweep, speed = ratio_sweep)
+                    
+                    self.pop2 = tk.Toplevel(self)
+                    
+                    def center(toplevel):
+                    
+                        screen_width = toplevel.winfo_screenwidth()
+                        screen_height = toplevel.winfo_screenheight()
+                    
+                        size = tuple(int(_) for _ in toplevel.geometry().split('+')[0].split('x'))
+                        x = screen_width/2 - size[0]/2
+                        y = screen_height/2 - size[1]/2
+                    
+                        toplevel.geometry("+%d+%d" % (x, y))
+                    
+                    center(self.pop2)
+                    
+                    self.label_approaching2 = tk.Label(self.pop2, text = 'Approaching start', font = LARGE_FONT)
+                    self.label_approaching2.grid(row = 0, column = 0)
+                    
+                    self.label_position2 = tk.Label(self.pop2, text = '', font = LARGE_FONT)
+                    self.label_position2.grid(row = 1, column = 0)
+                    
+                    self.current_position2 = float(getattr(device, parameter)())
+                    
+                    def update_position():
+                        global sweeper_write
+                        if (abs(self.current_position2 - from_sweep)) > self.eps2:
+                            self.current_position2 = float(getattr(device, parameter)())
+                            self.label_position2.config(text = f'{"{:.3e}".format(self.current_position2)} / {"{:.3e}".format(self.from_sweep2)}')
+                            self.label_position2.after(100, update_position)
+                        else:
+                            self.pop1.destroy()
+                            if self.start_sweep_flag:
+                                sweeper_write = Sweeper_write()
+                                self.open_graph()
+                    
+                    update_position()
 
     def start_sweeping(self):
 
@@ -3889,8 +3932,8 @@ class Sweeper2d(tk.Frame):
             snakemode_master_flag = self.status_snakemode_master.get()
             #fastmode_master_flag = self.status_fastmode_master.get()
             self.rewrite_preset()
-            self.pre_sweep(1)
-            self.pre_sweep(2, start = True)
+            self.pre_sweep1()
+            self.pre_sweep2()
 
 
 class Sweeper3d(tk.Frame):
@@ -5426,52 +5469,41 @@ class Sweeper3d(tk.Frame):
         if answer:
             tozero_flag = True
         
-    def pre_sweep(self, i, start = False):
+    def pre_sweep1(self):
         global sweeper_write
-        device = globals()[f'device_to_sweep{i}']
-        parameter = globals()[f'parameter_to_sweep{i}']
+        device = globals()['device_to_sweep1']
+        parameter = globals()['parameter_to_sweep1']
         try:
             sweepable = device.sweepable[device.set_options.index(parameter)]
         except:
             sweepable = False
-        from_sweep = self.__dict__[f'from_sweep{i}']
-        to_sweep = self.__dict__[f'to_sweep{i}']
-        ratio_sweep = self.__dict__[f'ratio_sweep{i}']
+        from_sweep = self.from_sweep1
+        to_sweep = self.to_sweep1
+        ratio_sweep = self.ratio_sweep1
         delta = abs(to_sweep - from_sweep)
         
         try:
-            eps = float(device.eps[device.set_options.index(parameter)])
+            self.eps1 = float(device.eps[device.set_options.index(parameter)])
         except:
-            eps = 0.0001 * delta
-        
-        options = {1: 'master', 2: 'slave', 3: 'slave_slave'}
+            self.eps1 = 0.0001 * delta
         
         try:
             cur_value = float(getattr(device, parameter)())
         except Exception as e:
-            print(f'Exception happened in pre-sweep {i}: {e}')
-            if start:
-                sweeper_write = Sweeper_write()
-                self.open_graph()
+            print(f'Exception happened in pre-sweep 1: {e}')
             return
 
-        if abs(cur_value - from_sweep) <= eps:
-            if start:
-                sweeper_write = Sweeper_write()
-                self.open_graph()
+        if abs(cur_value - from_sweep) <= self.eps1:
             return
         else:
-            answer = messagebox.askyesnocancel('Start warning', f'Current {options[i]} value is {cur_value}. \nStarting position is {from_sweep}, go to start?')
+            answer = messagebox.askyesnocancel('Start warning', f'Current master value is {cur_value}. \nStarting position is {from_sweep}, go to start?')
             if answer:
                 if not sweepable:
                     getattr(device, f'set_{parameter}')(value = from_sweep)
-                    if start:
-                        sweeper_write = Sweeper_write()
-                        self.open_graph()
                 else:
                     getattr(device, f'set_{parameter}')(value = from_sweep, speed = ratio_sweep)
                     
-                    self.__dict__[f'pop{i}'] = tk.Toplevel(self)
+                    self.pop1 = tk.Toplevel(self)
                     
                     def center(toplevel):
                     
@@ -5484,47 +5516,175 @@ class Sweeper3d(tk.Frame):
                     
                         toplevel.geometry("+%d+%d" % (x, y))
                     
-                    center(self.__dict__[f'pop{i}'])
+                    center(self.pop1)
                     
-                    self.__dict__[f'label_approaching{i}'] = tk.Label(self.__dict__[f'pop{i}'], text = 'Approaching start', font = LARGE_FONT)
-                    self.__dict__[f'label_approaching{i}'].grid(row = 0, column = 0)
+                    self.label_approaching1 = tk.Label(self.pop1, text = 'Approaching start', font = LARGE_FONT)
+                    self.label_approaching1.grid(row = 0, column = 0)
                     
-                    self.__dict__[f'label_position{i}'] = tk.Label(self.__dict__[f'pop{i}'], text = '', font = LARGE_FONT)
-                    self.__dict__[f'label_position{i}'].grid(row = 1, column = 0)
+                    self.label_position1 = tk.Label(self.pop1, text = '', font = LARGE_FONT)
+                    self.label_position1.grid(row = 1, column = 0)
                     
-                    self.__dict__[f'current_position{i}'] = float(getattr(device, parameter)())
+                    self.current_position1 = float(getattr(device, parameter)())
                     
-                    def update_position(i, start, aux = False):
+                    def update_position():
                         global sweeper_write
-                        if (abs(self.__dict__[f'current_position{i}'] - from_sweep)) > eps:
-                            self.__dict__[f'current_position{i}'] = float(getattr(device, parameter)())
-                            self.__dict__[f'label_position{i}'].config(text = f'{"{:.3e}".format(self.__dict__[f"current_position{i}"])} / {"{:.3e}".format(from_sweep)}')
-                            self.__dict__[f'label_position{i}'].after(100, lambda: update_position(i, start))
-                            if not start:
-                                self.start_sweep_flag = False
+                        if (abs(self.current_position1 - from_sweep)) > self.eps1:
+                            self.current_position1 = float(getattr(device, parameter)())
+                            self.label_position1.config(text = f'{"{:.3e}".format(self.current_position1)} / {"{:.3e}".format(self.from_sweep1)}')
+                            self.label_position1.after(100, update_position)
+                            self.start_sweep_flag = False
                         else:
-                            if self.__dict__[f'pop{i}'].winfo_exists():
-                                if not aux:
-                                    self.__dict__[f'pop{i}'].destroy()
-                                else:
-                                    self.__dict__[f'pop{i-1}'].after(100, lambda: update_position(i-1))
-                            if start:
-                                if self.start_sweep_flag:
-                                    sweeper_write = Sweeper_write()
-                                    self.open_graph()
-                                else:
-                                    self.__dict__[f'pop{i}'].after(100, lambda: update_position(i, start))
-                            else:
-                                self.start_sweep_flag = True
-                                try:
-                                    if i == 2:
-                                        start = True
-                                    self.__dict__[f'pop{i}'].after(100, lambda: update_position(i+1, start, aux = True))
-                                except Exception as e:
-                                    print(f'Exception happened in pre-sweep {i}: {e}')
-                                    self.__dict__[f'pop{i}'].after(100, lambda: update_position(i, start))
+                            self.start_sweep_flag = True
+                            self.pop1.destroy()
                     
-                    update_position(i, start)
+                    update_position()
+                    
+    def pre_sweep2(self):
+        global sweeper_write
+        device = globals()['device_to_sweep2']
+        parameter = globals()['parameter_to_sweep2']
+        try:
+            sweepable = device.sweepable[device.set_options.index(parameter)]
+        except:
+            sweepable = False
+        from_sweep = self.from_sweep2
+        to_sweep = self.to_sweep2
+        ratio_sweep = self.ratio_sweep2
+        delta = abs(to_sweep - from_sweep)
+        
+        try:
+            self.eps2 = float(device.eps[device.set_options.index(parameter)])
+        except:
+            self.eps2 = 0.0001 * delta
+        
+        try:
+            cur_value = float(getattr(device, parameter)())
+        except Exception as e:
+            print(f'Exception happened in pre-sweep 1: {e}')
+            return
+
+        if abs(cur_value - from_sweep) <= self.eps2:
+            return
+        else:
+            answer = messagebox.askyesnocancel('Start warning', f'Current slave value is {cur_value}. \nStarting position is {from_sweep}, go to start?')
+            if answer:
+                if not sweepable:
+                    getattr(device, f'set_{parameter}')(value = from_sweep)
+                else:
+                    getattr(device, f'set_{parameter}')(value = from_sweep, speed = ratio_sweep)
+                    
+                    self.pop2 = tk.Toplevel(self)
+                    
+                    def center(toplevel):
+                    
+                        screen_width = toplevel.winfo_screenwidth()
+                        screen_height = toplevel.winfo_screenheight()
+                    
+                        size = tuple(int(_) for _ in toplevel.geometry().split('+')[0].split('x'))
+                        x = screen_width/2 - size[0]/2
+                        y = screen_height/2 - size[1]/2
+                    
+                        toplevel.geometry("+%d+%d" % (x, y))
+                    
+                    center(self.pop2)
+                    
+                    self.label_approaching2 = tk.Label(self.pop2, text = 'Approaching start', font = LARGE_FONT)
+                    self.label_approaching2.grid(row = 0, column = 0)
+                    
+                    self.label_position2 = tk.Label(self.pop2, text = '', font = LARGE_FONT)
+                    self.label_position2.grid(row = 1, column = 0)
+                    
+                    self.current_position2 = float(getattr(device, parameter)())
+                    
+                    def update_position():
+                        global sweeper_write
+                        if (abs(self.current_position2 - from_sweep)) > self.eps2:
+                            self.current_position2 = float(getattr(device, parameter)())
+                            self.label_position2.config(text = f'{"{:.3e}".format(self.current_position2)} / {"{:.3e}".format(self.from_sweep2)}')
+                            self.label_position2.after(100, update_position)
+                            self.start_sweep_flag = False
+                        else:
+                            self.start_sweep_flag = True
+                            self.pop2.destroy()
+                    
+                    update_position()
+                
+    def pre_sweep3(self):
+        global sweeper_write
+        device = globals()['device_to_sweep3']
+        parameter = globals()['parameter_to_sweep3']
+        try:
+            sweepable = device.sweepable[device.set_options.index(parameter)]
+        except:
+            sweepable = False
+        from_sweep = self.from_sweep3
+        to_sweep = self.to_sweep3
+        ratio_sweep = self.ratio_sweep3
+        delta = abs(to_sweep - from_sweep)
+        
+        try:
+            self.eps3 = float(device.eps[device.set_options.index(parameter)])
+        except:
+            self.eps3 = 0.0001 * delta
+        
+        try:
+            cur_value = float(getattr(device, parameter)())
+        except Exception as e:
+            print(f'Exception happened in pre-sweep 3: {e}')
+            if self.start_sweep_flag:
+                sweeper_write = Sweeper_write()
+                self.open_graph()
+            return
+
+        if abs(cur_value - from_sweep) <= self.eps3:
+            if self.start_sweep_flag:
+                sweeper_write = Sweeper_write()
+                self.open_graph()
+            return
+        else:
+            answer = messagebox.askyesnocancel('Start warning', f'Current slave-slave value is {cur_value}. \nStarting position is {from_sweep}, go to start?')
+            if answer:
+                if not sweepable:
+                    getattr(device, f'set_{parameter}')(value = from_sweep)
+                else:
+                    getattr(device, f'set_{parameter}')(value = from_sweep, speed = ratio_sweep)
+                    
+                    self.pop3 = tk.Toplevel(self)
+                    
+                    def center(toplevel):
+                    
+                        screen_width = toplevel.winfo_screenwidth()
+                        screen_height = toplevel.winfo_screenheight()
+                    
+                        size = tuple(int(_) for _ in toplevel.geometry().split('+')[0].split('x'))
+                        x = screen_width/2 - size[0]/2
+                        y = screen_height/2 - size[1]/2
+                    
+                        toplevel.geometry("+%d+%d" % (x, y))
+                    
+                    center(self.pop3)
+                    
+                    self.label_approaching3 = tk.Label(self.pop2, text = 'Approaching start', font = LARGE_FONT)
+                    self.label_approaching3.grid(row = 0, column = 0)
+                    
+                    self.label_position3 = tk.Label(self.pop2, text = '', font = LARGE_FONT)
+                    self.label_position3.grid(row = 1, column = 0)
+                    
+                    self.current_position3 = float(getattr(device, parameter)())
+                    
+                    def update_position():
+                        global sweeper_write
+                        if (abs(self.current_position2 - from_sweep)) > self.eps3:
+                            self.current_position3 = float(getattr(device, parameter)())
+                            self.label_position3.config(text = f'{"{:.3e}".format(self.current_position3)} / {"{:.3e}".format(self.from_sweep3)}')
+                            self.label_position3.after(100, update_position)
+                        else:
+                            self.pop3.destroy()
+                            if self.start_sweep_flag:
+                                sweeper_write = Sweeper_write()
+                                self.open_graph()
+                    
+                    update_position()
 
     def start_sweeping(self):
 
@@ -5733,9 +5893,9 @@ class Sweeper3d(tk.Frame):
             #fastmode_master_flag = self.status_fastmode_master.get()
             snakemode_slave_flag = self.status_snakemode_slave.get()
             #fastmode_slave_flag = self.status_fastmode_slave.get()
-            self.pre_sweep(1)
-            self.pre_sweep(2)
-            self.pre_sweep(3, start = True)
+            self.pre_sweep1()
+            self.pre_sweep2()
+            self.pre_sweep3()
 
 class Sweeper_write(threading.Thread):
 
@@ -6541,7 +6701,30 @@ class Sweeper_write(threading.Thread):
                 setattr(self, 'step' + axis, - getattr(self, 'step' + axis))
                 globals()['ratio_sweep' + axis] = - globals()['ratio_sweep' + axis]
             else:
-                setattr(self, 'value' + axis, globals()['from_sweep' + axis])
+                if self.__dict__[f'sweepable{axis}']:
+                    from_sweep = float(globals()['from_sweep' + axis])
+                    speed = float(globals()['ratio_sweep' + axis])
+                    device_to_sweep = globals()[f'device_to_sweep{axis}']
+                    parameter_to_sweep = globals()[f'parameter_to_sweep{axis}']
+                    if hasattr(device_to_sweep, 'eps'):
+                        eps = device_to_sweep.eps[device_to_sweep.set_options.index(parameter_to_sweep)]
+                    else:
+                        eps = abs(float(getattr(self, f'step{axis}')) * 0.1)
+                    if hasattr(device_to_sweep, 'maxspeed'):
+                        speed_ = device_to_sweep.maxspeed[device_to_sweep.set_options.index(parameter_to_sweep)]
+                        if speed_ != None:
+                            speed = speed_
+                    getattr(device_to_sweep, f'set_{parameter_to_sweep}')(value = from_sweep, speed = speed)
+                    current_value = float(getattr(device_to_sweep, parameter_to_sweep)())
+                    delta = abs(current_value - from_sweep)
+                    while delta > eps:
+                        time.sleep(0.1)
+                        getattr(device_to_sweep, f'set_{parameter_to_sweep}')(value = from_sweep, speed = speed)
+                        current_value = float(getattr(device_to_sweep, parameter_to_sweep)())
+                        delta = abs(current_value - from_sweep)
+                        print((current_value, from_sweep, eps))
+                else:    
+                    setattr(self, f'value{axis}', globals()[f'from_sweep{axis}'])
                 
             print(f'Back and forth transposition (axis = {axis}) happened\nNow From is {globals()["from_sweep" + axis]}, To is {globals()["to_sweep" + axis]}')
             
@@ -6688,9 +6871,23 @@ class Sweeper_write(threading.Thread):
                     inner_loop_single(direction = round(2 * (i % 2) - 1))
                     if globals()['snakemode_slave_flag'] == True and len(manual_sweep_flags) == 3:
                         if i != walks and back_and_forth_slave_slave != 1:
+                            self.mapper3D.walks = 1
+                            self.mapper3D.slave_slave_done_walking()
+                            self.mapper3D.concatenate_all()
+                            self.mapper3D.clear_slave_slave()
+                            self.mapper3D.clear_sub_slave_slaves()
+                            self.mapper3D.clear_parameters()
+                            self.mapper3D.append_slave(value = self.value2)
                             step(axis = 2)
                     elif globals()['snakemode_master_flag'] == True and len(manual_sweep_flags) == 2:
                         if i != walks and back_and_forth_slave != 1:
+                            self.mapper2D.walks = 1
+                            self.mapper2D.slave_done_walking()
+                            self.mapper2D.concatenate_all()
+                            self.mapper2D.clear_slave()
+                            self.mapper2D.clear_sub_slaves()
+                            self.mapper2D.clear_parameters()
+                            self.mapper2D.append_master(value = self.value1)
                             step(axis = 1)
                     step(axis = len(manual_sweep_flags), back = True)
                     if not getattr(self, f'sweepable{len(manual_sweep_flags)}') == True:
@@ -6702,6 +6899,8 @@ class Sweeper_write(threading.Thread):
                     
             else:
                 raise Exception('back_and_forth_slave is not correct, needs >= 1, but got ', back_and_forth_slave)
+           
+            time.sleep(0.05) 
            
             if len(manual_sweep_flags) == 2:
                 self.mapper2D.slave_done_walking()
@@ -6787,7 +6986,14 @@ class Sweeper_write(threading.Thread):
                 for i in range(1, walks + 1):
                     external_loop_single(round(2 * (i % 2) - 1))
                     if globals()['snakemode_master_flag'] == True and len(manual_sweep_flags) == 3:
-                        step(axis = 1)
+                        if i != walks and back_and_forth_slave != 1:
+                            self.mapper3D.walks = 1
+                            self.mapper3D.clear_slave_slave()
+                            self.mapper3D.clear_slave()
+                            self.mapper3D.clear_parameters()
+                            self.mapper3D.stack_iteration() 
+                            self.mapper2D.append_master(value = self.value1)
+                            step(axis = 1)
                     step(axis = len(manual_sweep_flags) - 1, back = True)
                     if not getattr(self, f'sweepable{len(manual_sweep_flags) - 1}') == True:
                         step(axis = len(manual_sweep_flags) - 1, back = True)
