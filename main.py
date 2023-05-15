@@ -3721,6 +3721,15 @@ class Sweeper2d(tk.Frame):
         global sweeper_write
         device = globals()['device_to_sweep2']
         parameter = globals()['parameter_to_sweep2']
+        
+        def try_start():
+            global sweeper_write
+            if self.start_sweep_flag:
+                sweeper_write = Sweeper_write()
+                self.open_graph()
+            else:
+                self.after(100, try_start)
+        
         try:
             sweepable = device.sweepable[device.set_options.index(parameter)]
         except:
@@ -3749,15 +3758,11 @@ class Sweeper2d(tk.Frame):
             cur_value = float(getattr(device, parameter)())
         except Exception as e:
             print(f'Exception happened in pre-sweep 2: {e}')
-            if self.start_sweep_flag:
-                sweeper_write = Sweeper_write()
-                self.open_graph()
+            try_start()
             return
 
         if abs(cur_value - from_sweep) <= self.eps2:
-            if self.start_sweep_flag:
-                sweeper_write = Sweeper_write()
-                self.open_graph()
+            try_start()
             return
         else:
             answer = messagebox.askyesnocancel('Start warning', f'Current slave value is {cur_value}. \nStarting position is {from_sweep}, go to start?')
@@ -3797,10 +3802,8 @@ class Sweeper2d(tk.Frame):
                             self.label_position2.config(text = f'{"{:.3e}".format(self.current_position2)} / {"{:.3e}".format(from_sweep)}')
                             self.label_position2.after(100, update_position)
                         else:
-                            self.pop1.destroy()
-                            if self.start_sweep_flag:
-                                sweeper_write = Sweeper_write()
-                                self.open_graph()
+                            self.pop2.destroy()
+                            try_start()
                     
                     update_position()
 
@@ -5675,6 +5678,15 @@ class Sweeper3d(tk.Frame):
                     update_position()
                 
     def pre_sweep3(self):
+        
+        def try_start():
+            global sweeper_write
+            if self.start_sweep_flag:
+                sweeper_write = Sweeper_write()
+                self.open_graph()
+            else:
+                self.after(100, try_start)
+        
         global sweeper_write
         device = globals()['device_to_sweep3']
         parameter = globals()['parameter_to_sweep3']
@@ -5706,15 +5718,11 @@ class Sweeper3d(tk.Frame):
             cur_value = float(getattr(device, parameter)())
         except Exception as e:
             print(f'Exception happened in pre-sweep 3: {e}')
-            if self.start_sweep_flag:
-                sweeper_write = Sweeper_write()
-                self.open_graph()
+            try_start()
             return
 
         if abs(cur_value - from_sweep) <= self.eps3:
-            if self.start_sweep_flag:
-                sweeper_write = Sweeper_write()
-                self.open_graph()
+            try_start()
             return
         else:
             answer = messagebox.askyesnocancel('Start warning', f'Current slave-slave value is {cur_value}. \nStarting position is {from_sweep}, go to start?')
@@ -5755,9 +5763,7 @@ class Sweeper3d(tk.Frame):
                             self.label_position3.after(100, update_position)
                         else:
                             self.pop3.destroy()
-                            if self.start_sweep_flag:
-                                sweeper_write = Sweeper_write()
-                                self.open_graph()
+                            try_start()
                     
                     update_position()
 
@@ -6006,6 +6012,7 @@ class Sweeper_write(threading.Thread):
             data = pd.read_csv(manual_filenames[0])
             self.from_sweep1 = data['steps'].values[0]
             self.to_sweep1 = data['steps'].values[-1]
+        self.cur_manual_index1 = 0
         self.ratio_sweep1 = float(ratio_sweep1)
         self.delay_factor1 = float(delay_factor1)
         self.value1 = float(from_sweep1)
@@ -6053,6 +6060,7 @@ class Sweeper_write(threading.Thread):
                 data = pd.read_csv(manual_filenames[1])
                 self.from_sweep2 = data['steps'].values[0]
                 self.to_sweep2 = data['steps'].values[-1]
+            self.cur_manual_index2 = 0
             self.ratio_sweep2 = float(ratio_sweep2)
             self.delay_factor2 = float(delay_factor2)
             self.filename_sweep = filename_sweep
@@ -6113,6 +6121,7 @@ class Sweeper_write(threading.Thread):
                 data = pd.read_csv(manual_filenames[1])
                 self.from_sweep2 = data['steps'].values[0]
                 self.to_sweep2 = data['steps'].values[-1]
+            self.cur_manual_index2 = 0
             self.ratio_sweep2 = float(ratio_sweep2)
             self.delay_factor2 = float(delay_factor2)
             self.from_sweep3 = float(from_sweep3)
@@ -6121,6 +6130,7 @@ class Sweeper_write(threading.Thread):
                 data = pd.read_csv(manual_filenames[2])
                 self.from_sweep3 = data['steps'].values[0]
                 self.to_sweep3 = data['steps'].values[-1]
+            self.cur_manual_index3 = 0
             self.ratio_sweep3 = float(ratio_sweep3)
             self.delay_factor3 = float(delay_factor3)
             self.filename_sweep = filename_sweep
@@ -6833,13 +6843,19 @@ class Sweeper_write(threading.Thread):
             
             axis = str(axis)
             setattr(self, 'value' + axis, data[i])
+            print('Im here')
+            print(i, data, axis)
             try:
                 setattr(self, 'step' + axis, abs(data[i+1] - data[i-1]) / 2)
-            except IndexError:
+            except IndexError as i:
+                print(f'Index error: {i}')
                 try:
                     setattr(self, 'step' + axis, abs(data[i] - data[i-1]))
-                except IndexError:
+                except IndexError as i:
+                    print(f'Index error 2: {i}')
                     setattr(self, 'step' + axis, abs(data[i] - data[i+1]))
+            except Exception as e:
+                print(f'Exception: {e}')
                     
             print('Step was determined')
                     
@@ -6924,19 +6940,20 @@ class Sweeper_write(threading.Thread):
                 data_inner = pd.read_csv(manual_filenames[len(manual_filenames) - 1]).values.reshape(-1)
                 for i, value in enumerate(data_inner[::direction]):
                     if manual_sweep_flags[len(manual_sweep_flags) - 1] == 1:
-                        data_inner = pd.read_csv(manual_filenames[len(manual_filenames) - 1]).values.reshape(-1)
-                        determine_step(i, data_inner, len(manual_sweep_flags))
-                        if len(manual_sweep_flags) == 1:
-                            inner_step(value1 = value)
-                        elif len(manual_sweep_flags) == 2:
-                            inner_step(value2 = value)
-                        elif len(manual_sweep_flags) == 3:
-                            inner_step(value3 = value)
-                        else:
-                            raise Exception('manual_sweep_flag length is not correct, needs 1, 2 or 3, but got ', len(manual_sweep_flags))
-                    
-                        if not self.started:
-                            self.started = True
+                        if not self.__dict__[f'cur_manual_index{len(manual_sweep_flags)}'] > i:
+                            determine_step(i, data_inner, len(manual_sweep_flags))
+                            self.__dict__[f'cur_manual_index{len(manual_sweep_flags)}'] = i 
+                            if len(manual_sweep_flags) == 1:
+                                inner_step(value1 = value)
+                            elif len(manual_sweep_flags) == 2:
+                                inner_step(value2 = value)
+                            elif len(manual_sweep_flags) == 3:
+                                inner_step(value3 = value)
+                            else:
+                                raise Exception('manual_sweep_flag length is not correct, needs 1, 2 or 3, but got ', len(manual_sweep_flags))
+                        
+                            if not self.started:
+                                self.started = True
                     
                     else:
                         break
@@ -6967,17 +6984,7 @@ class Sweeper_write(threading.Thread):
             elif walks > 1:
                 for i in range(1, walks + 1):
                     inner_loop_single(direction = round(2 * (i % 2) - 1))
-                    if globals()['snakemode_slave_flag'] == True and len(manual_sweep_flags) == 3:
-                        if i != walks and back_and_forth_slave_slave != 1:
-                            self.mapper3D.walks = 1
-                            self.mapper3D.slave_slave_done_walking()
-                            self.mapper3D.concatenate_all()
-                            self.mapper3D.clear_slave_slave()
-                            self.mapper3D.clear_sub_slave_slaves()
-                            self.mapper3D.clear_parameters()
-                            self.mapper3D.append_slave(value = self.value2)
-                            step(axis = 2)
-                    elif globals()['snakemode_master_flag'] == True and len(manual_sweep_flags) == 2:
+                    if globals()['snakemode_master_flag'] == True and len(manual_sweep_flags) == 2:
                         if i != walks and back_and_forth_slave != 1:
                             self.mapper2D.walks = 1
                             self.mapper2D.slave_done_walking()
@@ -6985,8 +6992,42 @@ class Sweeper_write(threading.Thread):
                             self.mapper2D.clear_slave()
                             self.mapper2D.clear_sub_slaves()
                             self.mapper2D.clear_parameters()
-                            self.mapper2D.append_master(value = self.value1)
-                            step(axis = 1)
+                            if manual_sweep_flags[0] == 0:
+                                self.mapper2D.append_master(value = self.value1)
+                                step(axis = 1)
+                            else:
+                                self.cur_manual_index1 += 1
+                                data_outer = pd.read_csv(manual_filenames[0])
+                                steps = data_outer.values.reshape(-1)
+                                determine_step(self.cur_manual_index1, steps, 1)
+                                value = steps[self.cur_manual_index1]
+                                self.mapper2D.append_master(value = value)
+                                step(axis = 1, value = value)
+                                print(f'value = {value}')
+                        elif i == walks and back_and_forth_slave != 1 and manual_sweep_flags[0] == 1:
+                            self.cur_manual_index1 += 1
+                            
+                    elif globals()['snakemode_slave_flag'] == True and len(manual_sweep_flags) == 3:
+                        if i != walks and back_and_forth_slave_slave != 1:
+                            self.mapper3D.walks = 1
+                            self.mapper3D.slave_slave_done_walking()
+                            self.mapper3D.concatenate_all()
+                            self.mapper3D.clear_slave_slave()
+                            self.mapper3D.clear_sub_slave_slaves()
+                            self.mapper3D.clear_parameters()
+                            if manual_sweep_flags[1] == 0:
+                                self.mapper3D.append_slave(value = self.value2)
+                                step(axis = 2)
+                            else:
+                                self.cur_manual_index2 += 1
+                                data_middle = pd.read_csv(manual_filenames[1])
+                                steps = data_middle.values.reshape(-1)
+                                determine_step(self.cur_manual_index2, steps, 2)
+                                value = steps[self.cur_manual_index2]
+                                self.mapper3D.append_slave(value = value)
+                                step(axis = 2, value = value)
+                        elif i == walks and back_and_forth_slave_slave != 1 and manual_sweep_flags[1] == 1:
+                            self.cur_manual_index2 += 1
                     step(axis = len(manual_sweep_flags), back = True)
                     if not getattr(self, f'sweepable{len(manual_sweep_flags)}') == True:
                         step(axis = len(manual_sweep_flags), back = True)
@@ -7046,24 +7087,25 @@ class Sweeper_write(threading.Thread):
                     update_filename()
                     
             elif manual_sweep_flags[-2] == 1:
-                print(manual_sweep_flags)
                 data_middle = pd.read_csv(manual_filenames[-2]).values.reshape(-1)
                 for i, value in enumerate(data_middle[::direction]):
-                    if manual_sweep_flags[-2] == 1:
-                        determine_step(i, data_middle, cur_axis)
-                        if len(manual_sweep_flags) == 2:
-                            self.mapper2D.append_master(value = value)
-                        if len(manual_sweep_flags) == 3:
-                            self.mapper3D.append_slave(value = value)
-                        step(cur_axis, value = value)
-                        if len(manual_sweep_flags) == 2:
-                            globals()['dataframe_after'] = [*globals()['dataframe']]
+                    if not self.__dict__[f'cur_manual_index{len(manual_sweep_flags) - 1}'] > i:
+                        if manual_sweep_flags[-2] == 1:
+                            determine_step(i, data_middle, cur_axis)
+                            if len(manual_sweep_flags) == 2:
+                                self.mapper2D.append_master(value = value)
+                            if len(manual_sweep_flags) == 3:
+                                self.mapper3D.append_slave(value = value)
+                            step(cur_axis, value = value)
+                            if len(manual_sweep_flags) == 2:
+                                globals()['dataframe_after'] = [*globals()['dataframe']]
+                            else:
+                                globals()['dataframe_after_after'] = [*globals()['dataframe']]
+                            self.__dict__[f'cur_manual_index{len(manual_sweep_flags) - 1}'] = i
+                            inner_loop_back_and_forth()
+                            update_filename()
                         else:
-                            globals()['dataframe_after_after'] = [*globals()['dataframe']]
-                        inner_loop_back_and_forth()
-                        update_filename()
-                    else:
-                        break
+                            break
             else:
                 raise Exception('manual_sweep_flag is not correct, needs 0 or 1, but got ', manual_sweep_flags[-1])
             
@@ -7089,9 +7131,20 @@ class Sweeper_write(threading.Thread):
                             self.mapper3D.clear_slave_slave()
                             self.mapper3D.clear_slave()
                             self.mapper3D.clear_parameters()
-                            self.mapper3D.stack_iteration() 
-                            self.mapper2D.append_master(value = self.value1)
-                            step(axis = 1)
+                            self.mapper3D.stack_iteration()
+                            if manual_sweep_flags[1] == 0:
+                                self.mapper3D.append_master(value = self.value1)
+                                step(axis = 1)
+                            else:
+                                self.cur_manual_index1 += 1
+                                data_outer = pd.read_csv(manual_filenames[0])
+                                steps = data_outer.values.reshape(-1)
+                                determine_step(self.cur_manual_index1, data_outer, 1)
+                                value = steps[self.cur_manual_index1]
+                                self.mapper3D.append_master(value = value)
+                                step(axis = 1, value = value)
+                        elif i == walks and back_and_forth_slave != 1 and manual_sweep_flags[1] == 1:
+                            self.cur_manual_index1 += 1
                     step(axis = len(manual_sweep_flags) - 1, back = True)
                     if not getattr(self, f'sweepable{len(manual_sweep_flags) - 1}') == True:
                         step(axis = len(manual_sweep_flags) - 1, back = True)
@@ -7126,15 +7179,18 @@ class Sweeper_write(threading.Thread):
             elif manual_sweep_flags[0] == 1:
                 data_external = pd.read_csv(manual_filenames[0]).values.reshape(-1)
                 for i, value in enumerate(data_external[::direction]):
-                    if manual_sweep_flags[0] == 1:
-                        determine_step(i, data_external, 1)
-                        self.mapper3D.append_master(value = value)
-                        step(1, value = value)
-                        globals()['dataframe_after'] = [*globals()['dataframe']]
-                        external_loop_back_and_forth()
-                        update_filename()
-                    else:
-                        break
+                    if not self.cur_manual_index1 >= i:
+                        if manual_sweep_flags[0] == 1:
+                            determine_step(i, data_external, 1)
+                            self.mapper3D.append_master(value = value)
+                            step(1, value = value)
+                            globals()['dataframe_after'] = [*globals()['dataframe']]
+                            self.cur_manual_index1 = i
+                            external_loop_back_and_forth()
+                            update_filename()
+                        else:
+                            break
+                    
             else:
                 raise Exception('manual_sweep_flag is not correct, needs 0 or 1, but got ', manual_sweep_flags[-2])
             
