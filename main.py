@@ -6669,7 +6669,8 @@ class Sweeper_write(threading.Thread):
                             value = getattr(self, f'value{str(axis)}')
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
                             delay_factor = globals()['delay_factor' + str(axis)]
-                            time.sleep(delay_factor)
+                            if self.started:
+                                time.sleep(delay_factor)
                             dataframe.append("{:.3e}".format(getattr(self, 'value' + str(axis))))
                             if back == False:
                                 setattr(self, f'value{str(axis)}', getattr(self, f'value{str(axis)}') + getattr(self, f'step{str(axis)}'))
@@ -6680,7 +6681,8 @@ class Sweeper_write(threading.Thread):
                             
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
                             delay_factor = globals()['delay_factor' + str(axis)]
-                            time.sleep(delay_factor)
+                            if self.started:
+                                time.sleep(delay_factor)
                             dataframe.append("{:.3e}".format(value))
                         
                         ###################
@@ -6701,7 +6703,8 @@ class Sweeper_write(threading.Thread):
                                 
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
                             delay_factor = globals()['delay_factor' + str(axis)]
-                            time.sleep(delay_factor)
+                            if self.started:
+                                time.sleep(delay_factor)
                             dataframe.append("{:.3e}".format(getattr(self, f'value{str(axis)}')))
                             if back == False:
                                 setattr(self, f'value{str(axis)}', getattr(self, f'value{str(axis)}') + getattr(self, f'step{str(axis)}'))
@@ -6714,7 +6717,8 @@ class Sweeper_write(threading.Thread):
                             speed = float(globals()['ratio_sweep' + str(axis)])
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
                             delay_factor = globals()['delay_factor' + str(axis)]
-                            time.sleep(delay_factor)
+                            if self.started:
+                                time.sleep(delay_factor)
                             dataframe.append("{:.3e}".format(value))
                         globals()['self'] = self
                         exec(script, globals())
