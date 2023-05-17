@@ -31,7 +31,7 @@ class mapper2D():
 
     def append_slave(self, value):
         if not hasattr(self, f'slave{self.cur_walk}'):
-            self.__dict__[f'slave{self.cur_walk}'] = np.array([])
+            self.__dict__[f'slave{self.cur_walk}'] = np.array([value])
         else:
             self.__dict__[f'slave{self.cur_walk}'] = np.concatenate((self.__dict__[f'slave{self.cur_walk}'], [value]))
     
@@ -63,12 +63,14 @@ class mapper2D():
             
             if not hasattr(self, 'map_slave') and not hasattr(self, 'map_master'):  #first time
                 print('Mapper concatenated at first time')
+                print(self.slave)
                 self.map_slave = np.array([self.slave])
                 self.map_master = np.array([np.ones_like(self.slave) * self.master[-1]])
                 self.create_files()
             
             elif hasattr(self, 'map_slave') and hasattr(self, 'map_master'):
                 print('Mapper concatenated')
+                
                 self.check_sizes()
                 self.map_slave = np.vstack([self.map_slave, self.slave])
                 self.map_master = np.vstack([self.map_master, np.ones_like(self.slave) * self.master[-1]])
@@ -119,6 +121,7 @@ class mapper2D():
             if not self.interpolated: #raw
                 
                 if not hasattr(self, f'map_{parameter}'):
+                    
                     if hasattr(self, parameter):
                         self.__dict__[f'map_{parameter}'] = np.array([self.__dict__[parameter]])
                         self.append_line_to_file(parameter, self.__dict__[parameter])
@@ -126,6 +129,7 @@ class mapper2D():
                         self.__dict__[f'map_{parameter}'] = np.array([[]])
                     
                 elif hasattr(self, f'map_{parameter}'):
+                    
                     if hasattr(self, parameter):
                         self.__dict__[f'map_{parameter}'] = np.vstack([self.__dict__[f'map_{parameter}'], self.__dict__[parameter]])
                         self.append_line_to_file(parameter, self.__dict__[parameter])
@@ -281,7 +285,7 @@ class mapper3D():
 
     def append_slave_slave(self, value):
         if not hasattr(self, f'slave_slave{self.cur_walk}'):
-            self.__dict__[f'slave_slave{self.cur_walk}'] = np.array([])
+            self.__dict__[f'slave_slave{self.cur_walk}'] = np.array([value])
         else:
             self.__dict__[f'slave_slave{self.cur_walk}'] = np.concatenate((self.__dict__[f'slave_slave{self.cur_walk}'], [value]))
     

@@ -25,6 +25,7 @@ import numpy as np
 import numpy.ma as ma
 import glob
 import serial
+from IPy import IP
 
 def serial_ports():
     """ Lists serial port names
@@ -35,7 +36,7 @@ def serial_ports():
             A list of the serial ports available on the system
     """
     if sys.platform.startswith('win'):
-        ports = ['COM%s' % (i + 1) for i in range(256)]
+        ports = [f'COM{i+1}' for i in range(256)]
     elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
         # this excludes your current terminal "/dev/tty"
         ports = glob.glob('/dev/tty[A-Za-z]*')
@@ -174,17 +175,6 @@ condition = ''
 
 if not exists(os.path.join(core_dir, 'config')):
     os.mkdir(os.path.join(core_dir, 'config'))
-    
-remote_devices_path = os.path.join(core_dir, 'config', 'remote_devices.txt')
-if not exists(remote_devices_path):
-    with open(remote_devices_path, 'w') as file:
-        try:
-            file.write('{}')
-            file.close()
-        except:
-            file.close()
-        finally:
-            file.close()
 
 manual_sweep_flags = [0]
 manual_filenames = [os.path.join(cur_dir, 'manual' + datetime.today().strftime(
@@ -204,9 +194,9 @@ cur_animation_num = 1
 
 #creating config files if they were deleted
 
-adress_dictionary_path = os.path.join(core_dir, 'config', 'adress_dictionary.txt')
-if not exists(adress_dictionary_path):
-    with open(adress_dictionary_path, 'w') as file:
+address_dictionary_path = os.path.join(core_dir, 'config', 'address_dictionary.txt')
+if not exists(address_dictionary_path):
+    with open(address_dictionary_path, 'w') as file:
         try:
             file.write('{}')
             file.close()
@@ -316,30 +306,38 @@ for i in range (len(list_of_devices)):
 list_of_devices.insert(0, 'Time')
 types_of_devices.insert(0, 'Time')
 
-with open(remote_devices_path) as file:
-    remote_devices = file.readlines()
-    
-for ind, _ in enumerate(remote_devices):
-    if remote_devices[ind].endswith('\n'):
-        remote_devices[ind] = remote_devices[ind][:-1]
-    list_of_devices.append(remote_devices[ind])
-    types_of_devices.append('Not a class')
-    
-print(f'Remote devices: {remote_devices}')
+with open(os.path.join(core_dir, 'config', 'address_dictionary.txt'), 'r') as file:
+    address_dict = file.read()
+address_dict = json.loads(address_dict)
 
-with open(os.path.join(core_dir, 'config', 'adress_dictionary.txt'), 'r') as file:
-    adress_dict = file.read()
-adress_dict = json.loads(adress_dict)
-    
+for address in list(address_dict.keys()):
+    if ':' in address and not '::' in address:
+        try:
+            ip = IP(address.split(':')[0])
+            list_of_devices.append(address)
+            types_of_devices.append('Not a class')
+        except ValueError:
+            pass
+    elif not ':' in address:
+        try:
+            ip = IP(address)
+            list_of_devices.append(address)
+            types_of_devices.append('Not a class')
+        except ValueError:
+            pass
+        
 for ind_, type_ in enumerate(types_of_devices):
     if type_ == 'Not a class':
-        if list_of_devices[ind_] in list(adress_dict.keys()):
-            types_of_devices[ind_] = adress_dict[list_of_devices[ind_]]
+        if list_of_devices[ind_] in list(address_dict.keys()):
+            types_of_devices[ind_] = address_dict[list_of_devices[ind_]]
 
 list_of_devices_addresses = list_of_devices.copy()
 for ind, device in enumerate(list_of_devices_addresses):
     if types_of_devices[ind] != 'Not a class':
-        list_of_devices[ind] = str_to_class(types_of_devices[ind])(adress =  list_of_devices_addresses[ind])
+        try:
+            list_of_devices[ind] = str_to_class(types_of_devices[ind])(adress =  list_of_devices_addresses[ind])
+        except Exception as e:
+            print(f'Exception happened in initialising {list_of_devices[ind]}: {e}')
 
 device_to_sweep1 = list_of_devices[0]
 device_to_sweep2 = list_of_devices[0]
@@ -364,7 +362,7 @@ parameters_to_read_copy = parameters_to_read.copy()
 
 zero_time = time.perf_counter()
 
-def plot_animation(i, n , filename):
+def plot_animation(i, n, filename):
     
     def axes_settings(i, pad = 0, tick_size = 4, label_size = 6, x_pad =0, y_pad = 1, title_size = 8, title_pad = -5):
         globals()[f'ax{i}'].tick_params(axis='y', which='both', length = 0, pad=pad, labelsize=tick_size)
@@ -674,6 +672,32 @@ def my_animate(i, n, filename):
         raise Exception(f'Plot flag can only be "plot" or "map", not {plot_flag}')
 
 
+def get_filename_index():
+    global filename_sweep
+    global cur_dir
+    
+    files = os.listdir(cur_dir)
+    ind = [0]
+    basic_name = filename_sweep[len(cur_dir)+ 1:-4]
+    if '-' in basic_name:
+        basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('-') - 1)] #all before last -
+    if '_' in basic_name and len(manual_sweep_flags) != 1:
+        basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('_') - 1)] #all before last _
+    if '_' in basic_name and len(manual_sweep_flags) == 3:
+        basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('_') - 1)] #all before last _
+    for file in files:
+        if basic_name in file and 'manual' not in file and 'setget' not in file:
+            index_start = len(file) - file[::-1].find('-') - 1
+            index_stop = file.find('.csv')
+            try:
+                ind.append(int(file[index_start + 1 : index_stop]))
+            except:
+                ind.append(np.nan)
+    previous_ind = int(np.nanmax(ind))
+    if np.isnan(previous_ind):
+        previous_ind = 0
+    return previous_ind + 1
+
 zero_time = time.perf_counter()
 
 class Universal_frontend(tk.Tk):
@@ -780,7 +804,7 @@ class Devices(tk.Frame):
         self.combo_types.place(relx = 0.2, rely = 0.1)
         
     def set_type_to_adress(self, interval = 100):
-        global adress_dict
+        global address_dict
         global types_of_devices
         global parameters_to_read
         global parameters_to_read_copy
@@ -790,10 +814,10 @@ class Devices(tk.Frame):
         
             types_of_devices[self.combo_adresses.current()] = list(self.combo_types['values'])[self.combo_types.current()]
             
-            adress_dict[list(self.combo_adresses['values'])[self.combo_adresses.current()]] = list(self.combo_types['values'])[self.combo_types.current()]
+            address_dict[list(self.combo_adresses['values'])[self.combo_adresses.current()]] = list(self.combo_types['values'])[self.combo_types.current()]
             
-            with open(os.path.join(core_dir, 'config', 'adress_dictionary.txt'), "w") as outfile:
-                json.dump(adress_dict, outfile)
+            with open(os.path.join(core_dir, 'config', 'address_dictionary.txt'), "w") as outfile:
+                json.dump(address_dict, outfile)
                 
             parameters_to_read = new_parameters_to_read()
             parameters_to_read_copy = parameters_to_read.copy()
@@ -1530,12 +1554,14 @@ class Sweeper1d(tk.Frame):
         self.manual_filenames = [self.preset['manual_filename1'].values[0]]
         self.filename_sweep = self.preset['filename_sweep'][0]
 
+        index = get_filename_index()
+
         try:
             name = os.path.basename(self.filename_sweep).split('.')[0]
             if int(name[:2]) in np.linspace(0, 99, 100, dtype = int) and int(name[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(name[4:6]) in np.linspace(1, 32, 32, dtype = int):
-                self.filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}.csv')
+                self.filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}-{index}.csv')
         except:
-            self.filename_sweep = os.path.join(cur_dir, name + '.csv')
+            self.filename_sweep = os.path.join(cur_dir, f'{name}-{index}.csv')
         
         globals()['setget_flag'] = False
         #globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
@@ -1992,8 +2018,33 @@ class Sweeper1d(tk.Frame):
         if self.entry_delay_factor.get() != self.delay_factor1_init:
             self.preset.loc[0, 'delay_factor1'] = self.entry_delay_factor.get()
             self.preset.to_csv(globals()['sweeper1d_path'], index = False)
-        if self.entry_filename.get() != self.filename_sweep:
-            self.preset.loc[0, 'filename_sweep'] = self.entry_filename.get()
+            
+        def basename(filename, ext = '.csv'):
+            """
+            Example: removes '-123' from 'my-name-123.csv'
+            returns 'my-name.csv'
+            """
+            
+            if '-' in filename:
+                filename = filename[:-len(ext)]
+                ind = len(filename) - filename[::-1].index('-') - 1
+                flag = True
+                s = 0
+                for letter in filename[ind + 1:]:
+                    if not letter.isdigit():
+                        flag = False
+                        break
+                    else:
+                        s += 1
+                if flag:
+                    filename = filename[:-(s + 1)]
+                
+                return f'{filename}{ext}'
+            
+        current_filename = basename(self.entry_filename.get())
+            
+        if current_filename != basename(self.filename_sweep):
+            self.preset.loc[0, 'filename_sweep'] = current_filename
             self.preset.to_csv(globals()['sweeper1d_path'], index = False)
 
     def update_sweep_configuration(self):
@@ -2114,7 +2165,9 @@ class Sweeper1d(tk.Frame):
         df.to_csv(filename, index=False)
         self.manual_filenames[0] = filename
         os.startfile(filename)
+        self.status_manual.set(1)
         #update preset
+        self.preset.loc[0, 'status_manual1'] = 1
         self.preset.loc[0, 'manual_filename1'] = str(self.manual_filenames[0])
         self.preset.to_csv(globals()['sweeper1d_path'], index = False)
 
@@ -2123,7 +2176,8 @@ class Sweeper1d(tk.Frame):
                                                                  title='Select a manual sweeper',
                                                                  filetypes=(('CSV files', '*.csv*'),
                                                                             ('all files', '*.*')))
-        
+        self.status_manual.set(1)
+        self.preset.loc[0, 'status_manual1'] = 1
         self.preset.loc[0, 'manual_filename1'] = str(self.manual_filenames[0])
         self.preset.to_csv(globals()['sweeper1d_path'], index = False)
 
@@ -2137,8 +2191,35 @@ class Sweeper1d(tk.Frame):
         self.entry_filename.delete(0, tk.END)
         self.entry_filename.insert(0, filename_sweep)
         self.entry_filename.after(1)
-        if self.entry_filename.get() != self.filename_sweep:
-            self.preset.loc[0, 'filename_sweep'] = self.entry_filename.get()
+        
+        current_filename = self.entry_filename.get()
+        
+        def basename(filename, ext = '.csv'):
+            """
+            Example: removes '-123' from 'my-name-123.csv'
+            returns 'my-name.csv'
+            """
+            
+            if '-' in filename:
+                filename = filename[:-len(ext)]
+                ind = len(filename) - filename[::-1].index('-') - 1
+                flag = True
+                s = 0
+                for letter in filename[ind + 1:]:
+                    if not letter.isdigit():
+                        flag = False
+                        break
+                    else:
+                        s += 1
+                if flag:
+                    filename = filename[:-(s + 1)]
+                
+                return f'{filename}{ext}'
+            
+        current_filename = basename(current_filename)
+        
+        if current_filename != basename(self.filename_sweep):
+            self.preset.loc[0, 'filename_sweep'] = current_filename
             self.preset.to_csv(globals()['sweeper1d_path'], index = False)
             
     def open_graph(self):
@@ -2384,6 +2465,8 @@ class Sweeper1d(tk.Frame):
 
         if self.entry_filename.get() != '':
             filename_sweep = self.entry_filename.get()
+            
+        print(filename_sweep)
         sweeper_flag1 = True
         sweeper_flag2 = False
         sweeper_flag3 = False
@@ -2438,12 +2521,14 @@ class Sweeper2d(tk.Frame):
         self.interpolated = int(self.preset['interpolated'].values[0])
         self.uniform = int(self.preset['interpolated'].values[0])
         
+        index = get_filename_index()
+        
         try:
             name = os.path.basename(self.filename_sweep).split('.')[0]
             if int(name[:2]) in np.linspace(0, 99, 100, dtype = int) and int(name[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(name[4:6]) in np.linspace(1, 32, 32, dtype = int):
-                self.filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}.csv')
+                self.filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}-{index}.csv')
         except:
-            self.filename_sweep = os.path.join(cur_dir, name + '.csv')
+            self.filename_sweep = os.path.join(cur_dir, f'{name}-{index}.csv')
         
         globals()['setget_flag'] = False
         #globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
@@ -3354,8 +3439,33 @@ class Sweeper2d(tk.Frame):
         if self.entry_delay_factor2.get() != self.delay_factor2_init:
             self.preset.loc[0, 'delay_factor2'] = self.entry_delay_factor2.get()
             self.preset.to_csv(globals()['sweeper2d_path'], index = False)
-        if self.entry_filename.get() != self.filename_sweep:
-            self.preset.loc[0, 'filename_sweep'] = self.entry_filename.get()
+            
+        def basename(filename, ext = '.csv'):
+            """
+            Example: removes '-123' from 'my-name-123.csv'
+            returns 'my-name.csv'
+            """
+            
+            if '-' in filename:
+                filename = filename[:-len(ext)]
+                ind = len(filename) - filename[::-1].index('-') - 1
+                flag = True
+                s = 0
+                for letter in filename[ind + 1:]:
+                    if not letter.isdigit():
+                        flag = False
+                        break
+                    else:
+                        s += 1
+                if flag:
+                    filename = filename[:-(s + 1)]
+                
+                return f'{filename}{ext}'
+            
+        current_filename = basename(self.entry_filename.get())
+            
+        if current_filename != basename(self.filename_sweep):
+            self.preset.loc[0, 'filename_sweep'] = current_filename
             self.preset.to_csv(globals()['sweeper2d_path'], index = False)
         
         self.preset.loc[0, 'condition'] = self.text_condition.get(1.0, tk.END)[:-1]
@@ -3551,7 +3661,9 @@ class Sweeper2d(tk.Frame):
         df.to_csv(filename, index=False)
         self.manual_filenames[i] = filename
         os.startfile(filename)
+        self.__dict__[f'status_manual{i + 1}'].set(1)
         #update preset
+        self.preset.loc[0, f'status_manual{i + 1}'] = 1
         self.preset.loc[0, f'manual_filename{i + 1}'] = str(self.manual_filenames[i])
         self.preset.to_csv(globals()['sweeper2d_path'], index = False)
 
@@ -3561,6 +3673,9 @@ class Sweeper2d(tk.Frame):
                                                                  filetypes=(('CSV files', '*.csv*'),
                                                                             ('all files', '*.*')))
         
+        self.__dict__[f'status_manual{i + 1}'].set(1)
+        #update preset
+        self.preset.loc[0, f'status_manual{i + 1}'] = 1
         self.preset.loc[0, f'manual_filename{i + 1}'] = str(self.manual_filenames[i])
         self.preset.to_csv(globals()['sweeper2d_path'], index = False)
 
@@ -3574,8 +3689,33 @@ class Sweeper2d(tk.Frame):
         self.entry_filename.delete(0, tk.END)
         self.entry_filename.insert(0, filename_sweep)
         self.entry_filename.after(1)
-        if self.entry_filename.get() != self.filename_sweep:
-            self.preset.loc[0, 'filename_sweep'] = self.entry_filename.get()
+        
+        def basename(filename, ext = '.csv'):
+            """
+            Example: removes '-123' from 'my-name-123.csv'
+            returns 'my-name.csv'
+            """
+            
+            if '-' in filename:
+                filename = filename[:-len(ext)]
+                ind = len(filename) - filename[::-1].index('-') - 1
+                flag = True
+                s = 0
+                for letter in filename[ind + 1:]:
+                    if not letter.isdigit():
+                        flag = False
+                        break
+                    else:
+                        s += 1
+                if flag:
+                    filename = filename[:-(s + 1)]
+                
+                return f'{filename}{ext}'
+        
+        current_filename = basename(self.entry_filename.get())
+        
+        if current_filename != basename(self.filename_sweep):
+            self.preset.loc[0, 'filename_sweep'] = current_filename
             self.preset.to_csv(globals()['sweeper2d_path'], index = False)
 
     def open_graph(self):
@@ -4027,12 +4167,14 @@ class Sweeper3d(tk.Frame):
         self.interpolated = int(self.preset['interpolated'].values[0])
         self.uniform = int(self.preset['uniform'].values[0])
         
+        index = get_filename_index()
+        
         try:
             name = os.path.basename(self.filename_sweep).split('.')[0]
             if int(name[:2]) in np.linspace(0, 99, 100, dtype = int) and int(name[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(name[4:6]) in np.linspace(1, 32, 32, dtype = int):
-                self.filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}.csv')
+                self.filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}-{index}.csv')
         except:
-            self.filename_sweep = os.path.join(cur_dir, name + '.csv')
+            self.filename_sweep = os.path.join(cur_dir, f'{name}-{index}.csv')
         
         globals()['setget_flag'] = False
         #globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
@@ -5181,8 +5323,33 @@ class Sweeper3d(tk.Frame):
         if self.entry_delay_factor3.get() != self.delay_factor3_init:
             self.preset.loc[0, 'delay_factor3'] = self.entry_delay_factor3.get()
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
-        if self.entry_filename.get() != self.filename_sweep:
-            self.preset.loc[0, 'filename_sweep'] = self.entry_filename.get()
+            
+        def basename(filename, ext = '.csv'):
+            """
+            Example: removes '-123' from 'my-name-123.csv'
+            returns 'my-name.csv'
+            """
+            
+            if '-' in filename:
+                filename = filename[:-len(ext)]
+                ind = len(filename) - filename[::-1].index('-') - 1
+                flag = True
+                s = 0
+                for letter in filename[ind + 1:]:
+                    if not letter.isdigit():
+                        flag = False
+                        break
+                    else:
+                        s += 1
+                if flag:
+                    filename = filename[:-(s + 1)]
+                
+                return f'{filename}{ext}'
+            
+        current_filename = basename(self.entry_filename.get())
+            
+        if current_filename != basename(self.filename_sweep):
+            self.preset.loc[0, 'filename_sweep'] = current_filename
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
         self.preset.loc[0, 'condition'] = self.text_condition.get(1.0, tk.END)[:-1]
         self.preset.loc[0, 'interpolated'] = self.interpolated
@@ -5431,7 +5598,10 @@ class Sweeper3d(tk.Frame):
         df.to_csv(filename, index=False)
         self.manual_filenames[i] = filename
         os.startfile(filename)
+        self.__dict__[f'status_manual{i + 1}'].set(1)
+        
         #update preset
+        self.preset.loc[0, f'status_manual{i + 1}'] = 1
         self.preset.loc[0, f'manual_filename{i + 1}'] = str(self.manual_filenames[i])
         self.preset.to_csv(globals()['sweeper3d_path'], index = False)
 
@@ -5441,6 +5611,10 @@ class Sweeper3d(tk.Frame):
                                                                  filetypes=(('CSV files', '*.csv*'),
                                                                             ('all files', '*.*')))
         
+        self.__dict__[f'status_manual{i + 1}'].set(1)
+        
+        #update preset
+        self.preset.loc[0, f'status_manual{i + 1}'] = 1
         self.preset.loc[0, f'manual_filename{i + 1}'] = str(self.manual_filenames[i])
         self.preset.to_csv(globals()['sweeper3d_path'], index = False)
 
@@ -5454,8 +5628,33 @@ class Sweeper3d(tk.Frame):
         self.entry_filename.delete(0, tk.END)
         self.entry_filename.insert(0, filename_sweep)
         self.entry_filename.after(1)
-        if self.entry_filename.get() != self.filename_sweep:
-            self.preset.loc[0, 'filename_sweep'] = self.entry_filename.get()
+        
+        def basename(filename, ext = '.csv'):
+            """
+            Example: removes '-123' from 'my-name-123.csv'
+            returns 'my-name.csv'
+            """
+            
+            if '-' in filename:
+                filename = filename[:-len(ext)]
+                ind = len(filename) - filename[::-1].index('-') - 1
+                flag = True
+                s = 0
+                for letter in filename[ind + 1:]:
+                    if not letter.isdigit():
+                        flag = False
+                        break
+                    else:
+                        s += 1
+                if flag:
+                    filename = filename[:-(s + 1)]
+                
+                return f'{filename}{ext}'
+            
+        current_filename = self.entry_filename.get()
+        
+        if current_filename != basename(self.filename_sweep):
+            self.preset.loc[0, 'filename_sweep'] = current_filename
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
 
     def open_graph(self):
@@ -6074,7 +6273,7 @@ class Sweeper_write(threading.Thread):
                 self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
                 self.nstep2 = int(abs(self.nstep2))
                 
-                index = self.update_filename()
+                index = get_filename_index()
                 self.mapper2D = mapper2D(self.parameter_to_sweep1, self.parameter_to_sweep2, 
                                          self.parameters_to_read, cur_dir, interpolated = interpolated2D,
                                          uniform = uniform2D, _from = self.from_sweep2, _to = self.to_sweep2,
@@ -6156,7 +6355,7 @@ class Sweeper_write(threading.Thread):
                 self.nstep3 = (float(to_sweep3) - float(from_sweep3)) / self.ratio_sweep3 / self.delay_factor3
                 self.nstep3 = int(abs(self.nstep3))
                 
-                index = self.update_filename()
+                index = get_filename_index()
                 self.mapper3D = mapper3D(self.parameter_to_sweep1, self.parameter_to_sweep2, self.parameter_to_sweep3, 
                                          self.parameters_to_read, cur_dir, interpolated = interpolated3D,
                                          uniform = uniform3D, _from = self.from_sweep3, _to = self.to_sweep3,
@@ -6227,7 +6426,7 @@ class Sweeper_write(threading.Thread):
 
         self.grid_space = True
 
-        if self.condition != '':
+        if any(s in self.condition for s in ['==', '!=', '>=', '<=', '<', '>']):
             #creating grid space for sweep parameters
             if self.sweeper_flag2 == True:
                 ax1 = np.linspace(self.from_sweep1, self.to_sweep1, self.nstep1 + 1)
@@ -6258,7 +6457,7 @@ class Sweeper_write(threading.Thread):
                             if not np.isnan(space[i][j][k][0]):
                                 self.grid_space.append(space[i][j][k])
                                 
-        print(self.grid_space)
+        print(f'grid is {self.grid_space}')
                                 
 
     def func(self, tup, condition_str, sweep_dimension):
@@ -6298,7 +6497,7 @@ class Sweeper_write(threading.Thread):
         
         conditions = condition_str.split('\n')
         
-        dict_operations = {' == ': isequal, ' != ': notequal, ' > ': ismore, 
+        dict_operations = {' = ': isequal, ' == ': isequal, ' != ': notequal, ' > ': ismore, 
                            ' < ': isless, ' >= ': ismoreequal, ' <= ': islessequal}
         
         dict_variables = {'x': 'tup[0]', 'X': 'tup[0]', 'y': 'tup[1]', 'Y': 'tup[1]',
@@ -6306,6 +6505,7 @@ class Sweeper_write(threading.Thread):
                           'SlaveSlave': 'tup[2]'}
         
         for condition in conditions:
+            
             for variable in list(dict_variables.keys()):
                 condition = condition.replace(variable, dict_variables[variable])
             
@@ -6324,33 +6524,6 @@ class Sweeper_write(threading.Thread):
                 return 1
             
         return result
-
-    def update_filename(self):
-        global filename_sweep
-        global cur_dir
-        
-        files = os.listdir(cur_dir)
-        ind = [0]
-        basic_name = filename_sweep[len(cur_dir)+ 1:-4]
-        if '-' in basic_name:
-            basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('-') - 1)] #all before last -
-        if '_' in basic_name and len(manual_sweep_flags) != 1:
-            basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('_') - 1)] #all before last _
-        if '_' in basic_name and len(manual_sweep_flags) == 3:
-            basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('_') - 1)] #all before last _
-        print(f'Basic name is {basic_name}')
-        for file in files:
-            if basic_name in file and 'manual' not in file and 'setget' not in file:
-                index_start = len(file) - file[::-1].find('-') - 1
-                index_stop = file.find('.csv')
-                try:
-                    ind.append(int(file[index_start + 1 : index_stop]))
-                except:
-                    ind.append(np.nan)
-        previous_ind = int(np.nanmax(ind))
-        if np.isnan(previous_ind):
-            previous_ind = 0
-        return previous_ind + 1
 
     def transposition(self, a, b):
         
@@ -6387,15 +6560,14 @@ class Sweeper_write(threading.Thread):
         Grid size defined by dgrid_area which is tuple'''
         
         if grid_area == True:
-            print('Grid area is True')
             return True
         else:
             def includance(point, reference,sweep_dimension = 2):
                 '''equity with tolerance'''
                 if sweep_dimension == 2:
-                    return np.isclose(point[0], reference[0]) and np.isclose(point[1], reference[1])
+                    return np.isclose(point[0], reference[0], atol = self.step1/2) and np.isclose(point[1], reference[1], atol = self.step2/2)
                 if sweep_dimension == 3:
-                    return np.isclose(point[0], reference[0]) and np.isclose(point[1], reference[1]) and np.isclose(point[2], reference[2])
+                    return np.isclose(point[0], reference[0], atol = self.step1/2) and np.isclose(point[1], reference[1], atol = self.step2/2) and np.isclose(point[2], reference[2], atol = self.step3/2)
             
             if sweep_dimension == 2:
                 for reference in grid_area:
@@ -6446,6 +6618,7 @@ class Sweeper_write(threading.Thread):
                     except Exception as e:
                         print(f'Exception happened in setget_write: {e}')
                         dataframe.append(None)
+                        return
                         
                 time.sleep(0.2)
                     
@@ -6669,8 +6842,7 @@ class Sweeper_write(threading.Thread):
                             value = getattr(self, f'value{str(axis)}')
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
                             delay_factor = globals()['delay_factor' + str(axis)]
-                            if self.started:
-                                time.sleep(delay_factor)
+                            time.sleep(delay_factor)
                             dataframe.append("{:.3e}".format(getattr(self, 'value' + str(axis))))
                             if back == False:
                                 setattr(self, f'value{str(axis)}', getattr(self, f'value{str(axis)}') + getattr(self, f'step{str(axis)}'))
@@ -6681,8 +6853,7 @@ class Sweeper_write(threading.Thread):
                             
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value)
                             delay_factor = globals()['delay_factor' + str(axis)]
-                            if self.started:
-                                time.sleep(delay_factor)
+                            time.sleep(delay_factor)
                             dataframe.append("{:.3e}".format(value))
                         
                         ###################
@@ -6703,8 +6874,7 @@ class Sweeper_write(threading.Thread):
                                 
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
                             delay_factor = globals()['delay_factor' + str(axis)]
-                            if self.started:
-                                time.sleep(delay_factor)
+                            time.sleep(delay_factor)
                             dataframe.append("{:.3e}".format(getattr(self, f'value{str(axis)}')))
                             if back == False:
                                 setattr(self, f'value{str(axis)}', getattr(self, f'value{str(axis)}') + getattr(self, f'step{str(axis)}'))
@@ -6717,8 +6887,7 @@ class Sweeper_write(threading.Thread):
                             speed = float(globals()['ratio_sweep' + str(axis)])
                             getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
                             delay_factor = globals()['delay_factor' + str(axis)]
-                            if self.started:
-                                time.sleep(delay_factor)
+                            time.sleep(delay_factor)
                             dataframe.append("{:.3e}".format(value))
                         globals()['self'] = self
                         exec(script, globals())
@@ -6796,6 +6965,31 @@ class Sweeper_write(threading.Thread):
                 fractional2 = round(10 * fractional2)
                 filename_sweep = os.path.join(f'{cur_dir}', f'{basic_name}_{integer1}.{fractional1}_{integer2}.{fractional2}-{previous_ind + 1}.csv')
                 
+            sweeper = globals()['Sweeper_object']
+            
+            sweeper.entry_filename.delete(0, tk.END)
+            sweeper.entry_filename.insert(0, filename_sweep)
+            sweeper.entry_filename.after(1)
+            
+            def get_fract(num):
+                if num % 3 == 1:
+                    s = [num]
+                    while num > 1:
+                        num -= 3
+                        s.append(num)
+                    return s
+                else:
+                    return num
+                
+            graphs = get_fract(globals()['cur_animation_num'])
+            
+            for num in graphs:
+                try:
+                    graph_object = globals()[f'graph_object{num}']
+                    if hasattr(graph_object, 'label_filename'):
+                        graph_object.label_filename.config(text = filename_sweep)
+                except:
+                    pass
             
             globals()['dataframe'] = pd.DataFrame(columns=self.columns)
             globals()['dataframe'].to_csv(filename_sweep, index=False)
@@ -6847,8 +7041,6 @@ class Sweeper_write(threading.Thread):
             
             axis = str(axis)
             setattr(self, 'value' + axis, data[i])
-            print('Im here')
-            print(i, data, axis)
             try:
                 setattr(self, 'step' + axis, abs(data[i+1] - data[i-1]) / 2)
             except IndexError as i:
@@ -6883,8 +7075,8 @@ class Sweeper_write(threading.Thread):
             '''Determines current point in sweep space and its boundaries'''
             
             point = []
-            for ind, flag in enumerate(manual_sweep_flags):
-                point.append(getattr(self, 'value' + str(ind + 1)))
+            for ind, _ in enumerate(manual_sweep_flags):
+                point.append(getattr(self, f'value{ind + 1}'))
                     
             print('Current point was determined')
             return point
@@ -6910,9 +7102,12 @@ class Sweeper_write(threading.Thread):
                     append_read_parameters()
                     tofile() 
                 else:
+                    self.mapper2D.append_slave(value = self.value2)
                     if manual_sweep_flags[1] == 0:
                         self.value2 += self.step2
-                    self.mapper2D.append_slave(value = np.nan)
+                    for parameter in self.parameters_to_read:
+                        self.mapper2D.append_parameter(str(parameter), np.nan)
+                    
             elif len(manual_sweep_flags) == 3:
                 point = current_point()
                 if self.isinarea(point = point, grid_area = self.grid_space, sweep_dimension = len(manual_sweep_flags)):
@@ -6925,8 +7120,11 @@ class Sweeper_write(threading.Thread):
                     append_read_parameters()
                     tofile() 
                 else:
+                    self.mapper3D.append_slave_slave(value = self.value3)
                     if manual_sweep_flags[2] == 0:
                         self.value3 += self.step3
+                    for parameter in self.parameters_to_read:
+                        self.mapper3D.append_parameter(str(parameter), np.nan)
             else:
                 raise Exception('manual_sweep_flag length is not correct, needs 1, 2 or 3, but got ', len(manual_sweep_flags))
                 
@@ -8157,12 +8355,21 @@ class Graph():
         self.button_pause.place(relx = 0.02, rely = 0.82)
         CreateToolTip(self.button_pause, 'Pause\Continue sweep')
         
-        self.button_stop = tk.Button(self.tw, text = '⏹️', font = LARGE_FONT, command = lambda: globals()['Sweeper_object'].stop())
+        self.button_stop = tk.Button(self.tw, text = '⏹️', font = LARGE_FONT, command = self.stop_clicked)
         self.button_stop.place(relx = 0.06, rely = 0.82)
         CreateToolTip(self.button_stop, 'Stop sweep')
         
         self.button_tozero = tk.Button(self.tw, text = 'To zero', width = 11, command = lambda: globals()['Sweeper_object'].tozero())
         self.button_tozero.place(relx = 0.1, rely = 0.82, width = 48, height = 32)
+        
+        if not globals()['setget_flag']:
+            
+            self.label_filename = tk.Label(self.tw, text = globals()['filename_sweep'], font = LARGE_FONT)
+            self.label_filename.place(relx = 0.6, rely = 0.82)
+            
+        else:
+            self.label_setget_filename = tk.Label(self.tw, text = globals()['filename_setget'], font = LARGE_FONT)
+            self.label_setget_filename.place(relx = 0.6, rely = 0.82)
         
         def close_graph():
             if self.order == globals()['cur_animation_num'] - 3:
@@ -8286,6 +8493,12 @@ class Graph():
         elif self.button_pause['text'] == r'▶':
             self.button_pause.config(text = '⏸️')
         globals()['Sweeper_object'].pause()
+        
+    def stop_clicked(self):
+        if not globals()['setget_flag']:
+            globals()['Sweeper_object'].stop()
+        else:
+            globals()['setget_flag'] = False
 
     def ax_update(self, event):
         global columns
@@ -8410,6 +8623,9 @@ def main():
             pass
     
     while True:
+        globals()['stop_flag'] = True
+        for i in [1, 2, 3]:
+            globals()[f'sweeper_flag{i}'] = False
         sys.exit()
 
 
