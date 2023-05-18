@@ -26,6 +26,8 @@ import numpy.ma as ma
 import glob
 import serial
 from IPy import IP
+from PIL import Image, ImageTk
+from itertools import count, cycle
 
 def serial_ports():
     """ Lists serial port names
@@ -1957,6 +1959,116 @@ class Sweeper1d(tk.Frame):
             self, text='📊', font = SUPER_LARGE, command=lambda: self.open_graph())
         graph_button.place(relx=0.7, rely=0.76)
         CreateToolTip(graph_button, 'Graph')
+        
+        class ImageLabel(tk.Label):
+            """
+            A Label that displays images, and plays them if they are gifs
+            :im: A PIL Image instance or a string filename
+            """
+            def load(self, im):
+                if isinstance(im, str):
+                    im = Image.open(im)
+                frames = []
+         
+                try:
+                    for i in count(1):
+                        frames.append(ImageTk.PhotoImage(im.copy()))
+                        im.seek(i)
+                except EOFError:
+                    pass
+                self.frames = cycle(frames)
+         
+                try:
+                    self.delay = im.info['duration']
+                except:
+                    self.delay = 100
+         
+                if len(frames) == 1:
+                    self.config(image=next(self.frames))
+                else:
+                    self.next_frame()
+         
+            def unload(self):
+                self.config(image=None)
+                self.frames = None
+         
+            def next_frame(self):
+                if self.frames:
+                    self.config(image=next(self.frames))
+                    self.after(self.delay, self.next_frame)
+                  
+        self.cur_walk1 = 1  
+                  
+        def animate():
+            
+            def get_time_remaining():
+                global zero_time
+                global from_sweep1
+                global to_sweep1
+                global sweeper_write
+                
+                def ConvertSectoDay(n):
+
+                    n = int(n)
+                    day = n // (24 * 3600)
+                    n = n % (24 * 3600)
+                    hour = n // 3600
+                    n %= 3600
+                    minutes = n // 60
+                    n %= 60
+                    seconds = n
+                    if day == 0:
+                        if hour == 0:
+                            if minutes == 0:
+                                s = f'{seconds} s'
+                            else:
+                                s = f'{minutes} m\n{seconds} s'
+                        else:
+                            s = f'{hour} h\n{minutes} m\n{seconds} s'
+                    else:
+                        s = f'{day} d\n{hour} h\n{minutes} m\n{seconds} s'
+                
+                    return s
+                
+                t = time.perf_counter() - zero_time
+                delta = abs(from_sweep1 - to_sweep1)
+                
+                if sweeper_write.sweepable1:
+                    x = float(sweeper_write.current_value)
+                else:
+                    x = float(sweeper_write.value1)
+                    
+                try:    
+                    if self.status_back_and_forth_master.get() == 0:
+                        tau = t * abs(to_sweep1 - x) / abs(x - from_sweep1)
+                    else:
+                        tau = t * ((self.back_and_forth_master_count - self.cur_walk1) * delta + abs(to_sweep1 - x)) / ((self.cur_walk1 - 1)*delta + abs(x - from_sweep1))
+                    return ConvertSectoDay(tau)
+                except ZeroDivisionError:
+                    return '...'
+            
+            if self.start_sweep_flag:
+                if not hasattr(self, 'gif_label'):
+                    self.gif_label = ImageLabel(self)
+                    self.gif_label.place(relx = 0.75, rely = 0.5)
+                    if 'loading.gif' in os.listdir(os.path.join(core_dir, 'config')):
+                        self.gif_label.load(os.path.join(core_dir, 'config', 'loading.gif'))
+                if not hasattr(self, 'time_label'):
+                    self.time_label = tk.Label(self, text = 'Time left: ...', font = LARGE_FONT)
+                    self.time_label.place(relx = 0.8, rely = 0.5)
+                else:
+                    self.time_label.config(text = f'Time left: {get_time_remaining()}')
+            else:
+                if hasattr(self, 'gif_label'):
+                    self.gif_label.place_forget()
+                    del self.gif_label
+                if hasattr(self, 'time_label'):
+                    self.time_label.place_forget()
+                    del self.time_label
+            self.after(1000, animate)
+            
+        self.start_sweep_flag = False
+        animate()
 
     def update_sweep_parameters(self, event, interval=100):
         global types_of_devices
@@ -3323,6 +3435,136 @@ class Sweeper2d(tk.Frame):
         graph_button.place(relx=0.7, rely=0.8)
         CreateToolTip(graph_button, 'Graph')
         CreateInterpolatedToplevel(graph_button, self)
+        
+        class ImageLabel(tk.Label):
+            """
+            A Label that displays images, and plays them if they are gifs
+            :im: A PIL Image instance or a string filename
+            """
+            def load(self, im):
+                if isinstance(im, str):
+                    im = Image.open(im)
+                frames = []
+         
+                try:
+                    for i in count(1):
+                        frames.append(ImageTk.PhotoImage(im.copy()))
+                        im.seek(i)
+                except EOFError:
+                    pass
+                self.frames = cycle(frames)
+         
+                try:
+                    self.delay = im.info['duration']
+                except:
+                    self.delay = 100
+         
+                if len(frames) == 1:
+                    self.config(image=next(self.frames))
+                else:
+                    self.next_frame()
+         
+            def unload(self):
+                self.config(image=None)
+                self.frames = None
+         
+            def next_frame(self):
+                if self.frames:
+                    self.config(image=next(self.frames))
+                    self.after(self.delay, self.next_frame)
+                    
+        self.cur_walk1 = 1  
+        self.cur_walk2 = 1
+                  
+        def animate():
+            
+            def get_time_remaining():
+                global zero_time
+                global from_sweep1
+                global to_sweep1
+                global ratio_sweep1
+                global from_sweep2
+                global to_sweep2
+                global delay_factor1
+                global sweeper_write
+                
+                def ConvertSectoDay(n):
+                    
+                    try:
+                        n = int(n)
+                    except OverflowError:
+                        n = int(1e6)
+                    day = n // (24 * 3600)
+                    n = n % (24 * 3600)
+                    hour = n // 3600
+                    n %= 3600
+                    minutes = n // 60
+                    n %= 60
+                    seconds = n
+                    if day == 0:
+                        if hour == 0:
+                            if minutes == 0:
+                                s = f'{seconds} s'
+                            else:
+                                s = f'{minutes} m\n{seconds} s'
+                        else:
+                            s = f'{hour} h\n{minutes} m\n{seconds} s'
+                    else:
+                        s = f'{day} d\n{hour} h\n{minutes} m\n{seconds} s'
+                
+                    return s
+                
+                t = time.perf_counter() - zero_time
+                delta = abs(from_sweep2 - to_sweep2)
+                nstep1 = np.ceil(abs((from_sweep1 - to_sweep1) / ratio_sweep1 / delay_factor1) + 1)
+                
+                if sweeper_write.sweepable1:
+                    x = float(sweeper_write.current_value)
+                else:
+                    x = float(sweeper_write.value2)
+                    
+                try:    
+                    if self.status_back_and_forth_slave.get() == 0:
+                        back_and_forth_slave = 1
+                    else:
+                        back_and_forth_slave = self.back_and_forth_slave_count
+                    if self.status_back_and_forth_master.get() == 0:
+                        back_and_forth_master = 1
+                    else:
+                        back_and_forth_master = self.back_and_forth_master_count
+                    
+                    tau = (self.cur_walk1 - nstep1) * delay_factor1 + (t + (self.cur_walk1 - 1) * delay_factor1) * ((nstep1*back_and_forth_master*back_and_forth_slave - self.cur_walk2) * delta + (to_sweep2 - x)) / ((self.cur_walk2 - 1) * delta + (x - from_sweep2)) #time * how musch to go / how much has gone already
+                    
+                    return ConvertSectoDay(tau)
+                except ZeroDivisionError as e:
+                    print(f'ZeroDivisionException happened: {e}')
+                    return '...'
+                except RuntimeWarning as e:
+                    print(f'RuntimeWarning happened: {e}')
+                    return '...'
+            
+            if self.start_sweep_flag:
+                if not hasattr(self, 'gif_label'):
+                    self.gif_label = ImageLabel(self)
+                    self.gif_label.place(relx = 0.75, rely = 0.5)
+                    if 'loading.gif' in os.listdir(os.path.join(core_dir, 'config')):
+                        self.gif_label.load(os.path.join(core_dir, 'config', 'loading.gif'))
+                if not hasattr(self, 'time_label'):
+                    self.time_label = tk.Label(self, text = 'Time left: ...', font = LARGE_FONT)
+                    self.time_label.place(relx = 0.8, rely = 0.5)
+                else:
+                    self.time_label.config(text = f'Time left: {get_time_remaining()}')
+            else:
+                if hasattr(self, 'gif_label'):
+                    self.gif_label.place_forget()
+                    del self.gif_label
+                if hasattr(self, 'time_label'):
+                    self.time_label.place_forget()
+                    del self.time_label
+            self.after(1000, animate)
+            
+        self.start_sweep_flag = False
+        animate()
 
     def update_sweep_parameters1(self, event, interval=100):
         global types_of_devices
@@ -5161,6 +5403,146 @@ class Sweeper3d(tk.Frame):
         graph_button.place(relx=0.75, rely=0.8)
         CreateToolTip(graph_button, 'Graph')
         CreateInterpolatedToplevel(graph_button, self)
+        
+        class ImageLabel(tk.Label):
+            """
+            A Label that displays images, and plays them if they are gifs
+            :im: A PIL Image instance or a string filename
+            """
+            def load(self, im):
+                if isinstance(im, str):
+                    im = Image.open(im)
+                frames = []
+         
+                try:
+                    for i in count(1):
+                        frames.append(ImageTk.PhotoImage(im.copy()))
+                        im.seek(i)
+                except EOFError:
+                    pass
+                self.frames = cycle(frames)
+         
+                try:
+                    self.delay = im.info['duration']
+                except:
+                    self.delay = 100
+         
+                if len(frames) == 1:
+                    self.config(image=next(self.frames))
+                else:
+                    self.next_frame()
+         
+            def unload(self):
+                self.config(image=None)
+                self.frames = None
+         
+            def next_frame(self):
+                if self.frames:
+                    self.config(image=next(self.frames))
+                    self.after(self.delay, self.next_frame)
+                    
+        self.cur_walk1 = 1  
+        self.cur_walk2 = 1
+        self.cur_walk3 = 1
+                  
+        def animate():
+            
+            def get_time_remaining():
+                global zero_time
+                global from_sweep1
+                global to_sweep1
+                global ratio_sweep1
+                global delay_factor1
+                global from_sweep2
+                global to_sweep2
+                global ratio_sweep2
+                global delay_factor2
+                global from_sweep3
+                global to_sweep3
+                global sweeper_write
+                
+                def ConvertSectoDay(n):
+                    
+                    try:
+                        n = int(n)
+                    except OverflowError:
+                        n = int(1e6)
+                    day = n // (24 * 3600)
+                    n = n % (24 * 3600)
+                    hour = n // 3600
+                    n %= 3600
+                    minutes = n // 60
+                    n %= 60
+                    seconds = n
+                    if day == 0:
+                        if hour == 0:
+                            if minutes == 0:
+                                s = f'{seconds} s'
+                            else:
+                                s = f'{minutes} m\n{seconds} s'
+                        else:
+                            s = f'{hour} h\n{minutes} m\n{seconds} s'
+                    else:
+                        s = f'{day} d\n{hour} h\n{minutes} m\n{seconds} s'
+                
+                    return s
+                
+                t = time.perf_counter() - zero_time
+                delta = abs(from_sweep3 - to_sweep3)
+                nstep1 = np.ceil(abs((from_sweep1 - to_sweep1) / ratio_sweep1 / delay_factor1) + 1)
+                nstep2 = np.ceil(abs((from_sweep2 - to_sweep2) / ratio_sweep2 / delay_factor2) + 1)
+                
+                if sweeper_write.sweepable1:
+                    x = float(sweeper_write.current_value)
+                else:
+                    x = float(sweeper_write.value3)
+                    
+                try:    
+                    if self.status_back_and_forth_slave.get() == 0:
+                        back_and_forth_slave = 1
+                    else:
+                        back_and_forth_slave = self.back_and_forth_slave_count
+                    if self.status_back_and_forth_master.get() == 0:
+                        back_and_forth_master = 1
+                    else:
+                        back_and_forth_master = self.back_and_forth_master_count
+                    if self.status_back_and_forth_slave_slave.get() == 0:
+                        back_and_forth_slave_slave = 1
+                    else:
+                        back_and_forth_slave_slave = self.back_and_forth_slave_slave_count
+                    
+                    tau = (self.cur_walk1 - nstep1) * delay_factor1 + (self.cur_walk2 - nstep2) * delay_factor2 + (t + (self.cur_walk1 - 1) * delay_factor1 + (self.cur_walk2 - 1) * delay_factor2) * ((nstep1*nstep2*back_and_forth_master*back_and_forth_slave*back_and_forth_slave_slave - self.cur_walk2) * delta + (to_sweep3 - x)) / ((self.cur_walk3 - 1) * delta + (x - from_sweep3)) #time * how musch to go / how much has gone already
+                    
+                    return ConvertSectoDay(tau)
+                except ZeroDivisionError as e:
+                    print(f'ZeroDivisionException happened: {e}')
+                    return '...'
+                except RuntimeWarning as e:
+                    print(f'RuntimeWarning happened: {e}')
+                    return '...'
+            
+            if self.start_sweep_flag:
+                if not hasattr(self, 'gif_label'):
+                    self.gif_label = ImageLabel(self)
+                    self.gif_label.place(relx = 0.75, rely = 0.5)
+                    if 'loading.gif' in os.listdir(os.path.join(core_dir, 'config')):
+                        self.gif_label.load(os.path.join(core_dir, 'config', 'loading.gif'))
+                if not hasattr(self, 'time_label'):
+                    self.time_label = tk.Label(self, text = 'Time left: ...', font = LARGE_FONT)
+                    self.time_label.place(relx = 0.8, rely = 0.5)
+                else:
+                    self.time_label.config(text = f'Time left: {get_time_remaining()}')
+            else:
+                if hasattr(self, 'gif_label'):
+                    self.gif_label.place_forget()
+                    del self.gif_label
+                if hasattr(self, 'time_label'):
+                    self.time_label.place_forget()
+                    del self.time_label
+            self.after(1000, animate)
+            
+        self.start_sweep_flag = False
+        animate()
 
     def update_sweep_parameters1(self, event, interval=100):
         global types_of_devices
@@ -6018,20 +6400,23 @@ class Sweeper3d(tk.Frame):
 
             try:
                 self.from_sweep1 = float(self.entry_from1.get())
+                from_sweep1 = self.from_sweep1
             except:
-                messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from1.get()} to float')
+                messagebox.showerror('Invalid value in "From1" entrybox', f'Can not convert {self.entry_from1.get()} to float')
                 self.start_sweep_flag = False
                 
             try:
                 self.to_sweep1 = float(self.entry_to1.get())
+                to_sweep1 = self.to_sweep1
             except:
-                messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to1.get()} to float')
+                messagebox.showerror('Invalid value in "To1" entrybox', f'Can not convert {self.entry_to1.get()} to float')
                 self.start_sweep_flag = False
         
         try:
             self.delay_factor1 = float(self.entry_delay_factor1.get())
+            delay_factor1 = self.delay_factor1
         except:
-            messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delay_factor1.get()} to float')
+            messagebox.showerror('Invalid value in "Delay factor1" entrybox', f'Can not convert {self.entry_delay_factor1.get()} to float')
             self.start_sweep_flag = False
         
         if self.status_manual1.get() == 0:  
@@ -6042,28 +6427,32 @@ class Sweeper3d(tk.Frame):
                     self.ratio_sweep1 = self.ratio_sweep1 / self.delay_factor1
                 if self.from_sweep1 > self.to_sweep1 and self.ratio_sweep1 > 0:
                     self.ratio_sweep1 = - self.ratio_sweep1
+                ratio_sweep1 = self.ratio_sweep1
             except:
-                messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio1.get()} to float')
+                messagebox.showerror('Invalid value in "Ratio1" entrybox', f'Can not convert {self.entry_ratio1.get()} to float')
                 self.start_sweep_flag = False
             
         if self.status_manual2.get() == 0:  
             
             try:
                 self.from_sweep2 = float(self.entry_from2.get())
+                from_sweep2 = self.from_sweep2
             except:
-                messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from2.get()} to float')
+                messagebox.showerror('Invalid value in "From2" entrybox', f'Can not convert {self.entry_from2.get()} to float')
                 self.start_sweep_flag = False
                 
             try:
                 self.to_sweep2 = float(self.entry_to2.get())
+                to_sweep2 = self.to_sweep2
             except:
-                messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to2.get()} to float')
+                messagebox.showerror('Invalid value in "To2" entrybox', f'Can not convert {self.entry_to2.get()} to float')
                 self.start_sweep_flag = False
         
         try:
             self.delay_factor2 = float(self.entry_delay_factor2.get())
+            delay_factor2 = self.delay_factor2
         except:
-            messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delay_factor2.get()} to float')
+            messagebox.showerror('Invalid value in "Delay factor2" entrybox', f'Can not convert {self.entry_delay_factor2.get()} to float')
             self.start_sweep_flag = False
         
         if self.status_manual2.get() == 0:  
@@ -6074,28 +6463,32 @@ class Sweeper3d(tk.Frame):
                     self.ratio_sweep2 = self.ratio_sweep2 / self.delay_factor2
                 if self.from_sweep2 > self.to_sweep2 and self.ratio_sweep2 > 0:
                     self.ratio_sweep2 = - self.ratio_sweep2
+                ratio_sweep2 = self.ratio_sweep2
             except:
-                messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio2.get()} to float')
+                messagebox.showerror('Invalid value in "Ratio2" entrybox', f'Can not convert {self.entry_ratio2.get()} to float')
                 self.start_sweep_flag = False
                 
         if self.status_manual3.get() == 0:  
                 
             try:
                 self.from_sweep3 = float(self.entry_from3.get())
+                from_sweep3 =self.from_sweep3
             except:
-                messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from3.get()} to float')
+                messagebox.showerror('Invalid value in "From3" entrybox', f'Can not convert {self.entry_from3.get()} to float')
                 self.start_sweep_flag = False
                 
             try:
                 self.to_sweep3 = float(self.entry_to3.get())
+                to_sweep3 = self.to_sweep3
             except:
-                messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to3.get()} to float')
+                messagebox.showerror('Invalid value in "To3" entrybox', f'Can not convert {self.entry_to3.get()} to float')
                 self.start_sweep_flag = False
         
         try:
             self.delay_factor3 = float(self.entry_delay_factor3.get())
+            delay_factor3 = self.delay_factor3
         except:
-            messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delay_factor3.get()} to float')
+            messagebox.showerror('Invalid value in "Delay factor3" entrybox', f'Can not convert {self.entry_delay_factor3.get()} to float')
             self.start_sweep_flag = False
         
         if self.status_manual3.get() == 0:  
@@ -6106,8 +6499,9 @@ class Sweeper3d(tk.Frame):
                     self.ratio_sweep3 = self.ratio_sweep3 / self.delay_factor3
                 if self.from_sweep3 > self.to_sweep3 and self.ratio_sweep3 > 0:
                     self.ratio_sweep3 = - self.ratio_sweep3
+                ratio_sweep3 = self.ratio_sweep3
             except:
-                messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio3.get()} to float')
+                messagebox.showerror('Invalid value in "Ratio3" entrybox', f'Can not convert {self.entry_ratio3.get()} to float')
                 self.start_sweep_flag = False
             
             def get_key(val, my_dict):
@@ -7181,11 +7575,13 @@ class Sweeper_write(threading.Thread):
             walks = globals()[flags_dict[len(manual_sweep_flags)]]
             if walks == 1:
                 inner_loop_single()
+                globals()['Sweeper_object'].__dict__[f'cur_walk{len(manual_sweep_flags)}'] += 1
                 back_and_forth_transposition(len(manual_sweep_flags), False)
             
             elif walks > 1:
                 for i in range(1, walks + 1):
                     inner_loop_single(direction = round(2 * (i % 2) - 1))
+                    globals()['Sweeper_object'].__dict__[f'cur_walk{len(manual_sweep_flags)}'] += 1
                     if globals()['snakemode_master_flag'] == True and len(manual_sweep_flags) == 2:
                         if i != walks and back_and_forth_slave != 1:
                             self.mapper2D.walks = 1
@@ -7197,6 +7593,7 @@ class Sweeper_write(threading.Thread):
                             if manual_sweep_flags[0] == 0:
                                 self.mapper2D.append_master(value = self.value1)
                                 step(axis = 1)
+                                globals()['Sweeper_object'].cur_walk1 += 1
                             else:
                                 self.cur_manual_index1 += 1
                                 data_outer = pd.read_csv(manual_filenames[0])
@@ -7205,7 +7602,7 @@ class Sweeper_write(threading.Thread):
                                 value = steps[self.cur_manual_index1]
                                 self.mapper2D.append_master(value = value)
                                 step(axis = 1, value = value)
-                                print(f'value = {value}')
+                                globals()['Sweeper_object'].cur_walk1 += 1
                         elif i == walks and back_and_forth_slave != 1 and manual_sweep_flags[0] == 1:
                             self.cur_manual_index1 += 1
                             
@@ -7278,6 +7675,8 @@ class Sweeper_write(threading.Thread):
 
                     step(cur_axis)
                     
+                    globals()['Sweeper_object'].__dict__[f'cur_walk{cur_axis}'] += 1
+                    
                     if len(manual_sweep_flags) == 2:
                         globals()['dataframe_after'] = [*globals()['dataframe']]
                     elif len(manual_sweep_flags) == 3:
@@ -7299,6 +7698,7 @@ class Sweeper_write(threading.Thread):
                             if len(manual_sweep_flags) == 3:
                                 self.mapper3D.append_slave(value = value)
                             step(cur_axis, value = value)
+                            globals()['Sweeper_object'].__dict__[f'cur_walk{cur_axis}'] += 1
                             if len(manual_sweep_flags) == 2:
                                 globals()['dataframe_after'] = [*globals()['dataframe']]
                             else:
@@ -7375,6 +7775,7 @@ class Sweeper_write(threading.Thread):
                 while condition(1) and manual_sweep_flags[0] == 0:
                     self.mapper3D.append_master(value = self.value1)
                     step(1)
+                    globals()['Sweeper_object'].cur_walk1 += 1
                     globals()['dataframe_after'] = [*globals()['dataframe']]
                     external_loop_back_and_forth()
                     update_filename()
@@ -7386,6 +7787,7 @@ class Sweeper_write(threading.Thread):
                             determine_step(i, data_external, 1)
                             self.mapper3D.append_master(value = value)
                             step(1, value = value)
+                            globals()['Sweeper_object'].cur_walk1 += 1
                             globals()['dataframe_after'] = [*globals()['dataframe']]
                             self.cur_manual_index1 = i
                             external_loop_back_and_forth()
@@ -7481,6 +7883,10 @@ class Sweeper_write(threading.Thread):
                 
         if self.setget_flag == True:
             setget_write()
+        
+        globals()['Sweeper_object'].start_sweep_flag = False
+        for i in range(1, len(manual_sweep_flag) + 1):
+            globals()['Sweeper_object'].__dict__['cur_walk{i}'] = 1
         
         self.sweepable1 = False
         self.sweepable2 = False
