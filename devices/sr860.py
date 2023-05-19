@@ -11,20 +11,41 @@ def get(device, command):
     #return np.round(np.random.random(1), 1) #to test the program without device it would return random numbers
     return device.query(command)
 
+class my_SR860(SR860):
+    
+    from pymeasure.instruments import Instrument
+    
+    xnoize = Instrument.measurement("OUTP? 8",
+                               """ Reads the Xnoise value in Volts """
+                               )
+    
+    ynoize = Instrument.measurement("OUTP? 9",
+                               """ Reads the Xnoise value in Volts """
+                               )
+    
+    FFT = Instrument.measurement("FCRY?",
+                               """ Reads the amplitude of FFT on the cursor position """
+                               )
+    
+    DC_bias = Instrument.control(
+        "SOFF?", "SOFF %0.9e",
+        """A floating property that represents the internal lock-in frequency in Hz
+        This property can be set.""")
+
 class sr860():
 
     def __init__(self, adress='GPIB0::3::INSTR'):
 
-        self.sr860 = SR860(adress)
+        self.sr860 = my_SR860(adress)
         
         self.set_options = ['amplitude', 'frequency', 'phase', 'sensitivity', 
                             'time_constant', 'input_range', 'low_pass_filter_slope', 'synchronous_filter_status',
-                            'AUX1_output', 'AUX2_output', 'AUX3_output', 'AUX4_output', 'Write']
+                            'AUX1_output', 'AUX2_output', 'AUX3_output', 'AUX4_output', 'dc_bias', 'Write']
 
-        self.get_options = ['x', 'y', 'r', 'Θ', 'xnoize', 'ynoize', 'ch1', 'ch2', 'FFT', 'sensitivity', 
+        self.get_options = ['x', 'y', 'r', 'Θ', 'xnoize', 'ynoize', 'FFT', 'sensitivity', 
                             'time_constant', 'input_range', 'low_pass_filter_slope', 'synchronous_filter_status',
                             'AUX1_input', 'AUX2_input', 'AUX3_input', 'AUX4_input', 
-                            'amplitude', 'frequency', 'phase', 'Read']
+                            'amplitude', 'frequency', 'phase', 'dc_bias', 'Read']
 
     def IDN(self):
         device = rm.open_resource(
@@ -88,12 +109,6 @@ class sr860():
     def synchronous_filter_status(self):
         return self.sr860.filter_synchronous
 
-    def ch1(self):
-        return self.sr860.channel1
-
-    def ch2(self):
-        return self.sr860.channel2
-
     def AUX1_input(self):
         return self.sr860.aux_in_1
 
@@ -105,6 +120,9 @@ class sr860():
 
     def AUX4_input(self):
         return self.sr860.aux_in_4
+    
+    def dc_bias(self):
+        return self.sr860.DC_bias
     
     def set_write(self, value):
         device = rm.open_resource(
@@ -148,9 +166,12 @@ class sr860():
     def set_AUX4_output(self, value=0):
         self.sr860.aux_out_4 = value
         
+    def set_dc_bias(self, value):
+        self.sr860.DC_bias = value
+        
 def main():
-    device = sr860()
-    device.set_time_constant(2.49)
+    device = sr860('GPIB0::2::INSTR')
+    print(device.dc_bias())
     
 if __name__ == '__main__':
     main()
