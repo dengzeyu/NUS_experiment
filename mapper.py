@@ -39,8 +39,15 @@ class mapper2D():
         self.master = np.concatenate((self.master, [value]))
         
     def append_parameter(self, parameter: str, value):
-        if hasattr(self, parameter):
-            self.__dict__[parameter] = np.concatenate((self.__dict__[parameter], [value]))
+        
+        try:
+            value = float(value)
+            
+            if hasattr(self, parameter):
+                self.__dict__[parameter] = np.concatenate((self.__dict__[parameter], [value]))
+        except:
+            if hasattr(self, parameter):
+                self.__dict__[parameter] = np.concatenate((self.__dict__[parameter], [np.nan]))
             
     def add_sub_slave(self):
         self.cur_walk += 1
@@ -296,8 +303,15 @@ class mapper3D():
         self.master = np.concatenate((self.master, [value]))
         
     def append_parameter(self, parameter: str, value):
-        if hasattr(self, parameter):
-            self.__dict__[parameter] = np.concatenate((self.__dict__[parameter], [value]))
+        
+        try:
+            value = float(value)
+            
+            if hasattr(self, parameter):
+                self.__dict__[parameter] = np.concatenate((self.__dict__[parameter], [value]))
+        except:
+            if hasattr(self, parameter):
+                self.__dict__[parameter] = np.concatenate((self.__dict__[parameter], [np.nan]))
     
     def add_sub_slave_slave(self):
         self.cur_walk += 1

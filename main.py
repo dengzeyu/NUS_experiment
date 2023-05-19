@@ -2513,7 +2513,7 @@ class Sweeper1d(tk.Frame):
         global zero_time
         global sweeper_write
 
-        self.start_sweep_flag = True
+        self.pre_sweep_flag = True
  
         if self.status_manual.get() == 0:
     
@@ -2522,21 +2522,21 @@ class Sweeper1d(tk.Frame):
                 from_sweep1 = self.from_sweep1
             except:
                 messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from.get()} to float')
-                self.start_sweep_flag = False
+                self.pre_sweep_flag = False
                 
             try:
                 self.to_sweep1 = float(self.entry_to.get())
                 to_sweep1 = self.to_sweep1
             except:
                 messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to.get()} to float')
-                self.start_sweep_flag = False
+                self.pre_sweep_flag = False
         
         try:
             self.delay_factor1 = float(self.entry_delay_factor.get())
             delay_factor1 = self.delay_factor1
         except:
             messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delaty_factor.get()} to float')
-            self.start_sweep_flag = False
+            self.pre_sweep_flag = False
         
         if self.status_manual.get() == 0:
         
@@ -2549,7 +2549,7 @@ class Sweeper1d(tk.Frame):
                 ratio_sweep1 = self.ratio_sweep1
             except:
                 messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio.get()} to float')
-                self.start_sweep_flag = False
+                self.pre_sweep_flag = False
         
         def get_key(val, my_dict):
             for key, value in my_dict.items():
@@ -2590,7 +2590,7 @@ class Sweeper1d(tk.Frame):
         
         self.rewrite_preset()
 
-        if self.start_sweep_flag:
+        if self.pre_sweep_flag:
             zero_time = time.perf_counter()
             stop_flag = False
             sweeper_flag1 = True
@@ -4226,7 +4226,7 @@ class Sweeper2d(tk.Frame):
         #global fastmode_master_flag
         global sweeper_write
 
-        self.start_sweep_flag = True
+        self.pre_sweep_flag = True
 
         if self.status_manual1.get() == 0:
 
@@ -4235,21 +4235,21 @@ class Sweeper2d(tk.Frame):
                 from_sweep1 = self.from_sweep1
             except:
                 messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from1.get()} to float')
-                self.start_sweep_flag = False
+                self.pre_sweep_flag = False
                 
             try:
                 self.to_sweep1 = float(self.entry_to1.get())
                 to_sweep1 = self.to_sweep1
             except:
                 messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to1.get()} to float')
-                self.start_sweep_flag = False
+                self.pre_sweep_flag = False
         
         try:
             self.delay_factor1 = float(self.entry_delay_factor1.get())
             delay_factor1 = self.delay_factor1
         except:
             messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delay_factor1.get()} to float')
-            self.start_sweep_flag = False
+            self.pre_sweep_flag = False
         
         if self.status_manual1.get() == 0:
         
@@ -4262,7 +4262,7 @@ class Sweeper2d(tk.Frame):
                 ratio_sweep1 = self.ratio_sweep1
             except:
                 messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio1.get()} to float')
-                self.start_sweep_flag = False
+                self.pre_sweep_flag = False
             
         if self.status_manual2.get() == 0:
             
@@ -4271,21 +4271,21 @@ class Sweeper2d(tk.Frame):
                 from_sweep2 = self.from_sweep2
             except:
                 messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from2.get()} to float')
-                self.start_sweep_flag = False
+                self.pre_sweep_flagg = False
                 
             try:
                 self.to_sweep2 = float(self.entry_to2.get())
                 to_sweep2 = self.to_sweep2
             except:
                 messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to2.get()} to float')
-                self.start_sweep_flag = False
+                self.pre_sweep_flag = False
         
         try:
             self.delay_factor2 = float(self.entry_delay_factor2.get())
             delay_factor2 = self.delay_factor2
         except:
             messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delay_factor2.get()} to float')
-            self.start_sweep_flag = False
+            self.pre_sweep_flag = False
         
         if self.status_manual2.get() == 0:
         
@@ -4298,7 +4298,7 @@ class Sweeper2d(tk.Frame):
                 ratio_sweep2 = self.ratio_sweep2
             except:
                 messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio2.get()} to float')
-                self.start_sweep_flag = False
+                self.pre_sweep_flag = False
 
         def get_key(val, my_dict):
             for key, value in my_dict.items():
@@ -4351,7 +4351,7 @@ class Sweeper2d(tk.Frame):
         manual_sweep_flags = self.manual_sweep_flags
         manual_filenames = self.manual_filenames
 
-        if self.start_sweep_flag:
+        if self.pre_sweep_flag:
             zero_time = time.perf_counter()
             stop_flag = False
             sweeper_flag1 = False
@@ -6394,7 +6394,7 @@ class Sweeper3d(tk.Frame):
         global back_and_forth_slave_slave
         global sweeper_write
         
-        self.start_sweep_flag = True
+        self.pre_sweep_flag = True
 
         if self.status_manual1.get() == 0:    
 
@@ -6403,21 +6403,21 @@ class Sweeper3d(tk.Frame):
                 from_sweep1 = self.from_sweep1
             except:
                 messagebox.showerror('Invalid value in "From1" entrybox', f'Can not convert {self.entry_from1.get()} to float')
-                self.start_sweep_flag = False
+                self.pre_sweep_flag = False
                 
             try:
                 self.to_sweep1 = float(self.entry_to1.get())
                 to_sweep1 = self.to_sweep1
             except:
                 messagebox.showerror('Invalid value in "To1" entrybox', f'Can not convert {self.entry_to1.get()} to float')
-                self.start_sweep_flag = False
+                self.pre_sweep_flag = False
         
         try:
             self.delay_factor1 = float(self.entry_delay_factor1.get())
             delay_factor1 = self.delay_factor1
         except:
             messagebox.showerror('Invalid value in "Delay factor1" entrybox', f'Can not convert {self.entry_delay_factor1.get()} to float')
-            self.start_sweep_flag = False
+            self.pre_sweep_flag = False
         
         if self.status_manual1.get() == 0:  
         
@@ -6430,7 +6430,7 @@ class Sweeper3d(tk.Frame):
                 ratio_sweep1 = self.ratio_sweep1
             except:
                 messagebox.showerror('Invalid value in "Ratio1" entrybox', f'Can not convert {self.entry_ratio1.get()} to float')
-                self.start_sweep_flag = False
+                self.pre_sweep_flag = False
             
         if self.status_manual2.get() == 0:  
             
@@ -6439,21 +6439,21 @@ class Sweeper3d(tk.Frame):
                 from_sweep2 = self.from_sweep2
             except:
                 messagebox.showerror('Invalid value in "From2" entrybox', f'Can not convert {self.entry_from2.get()} to float')
-                self.start_sweep_flag = False
+                self.pre_sweep_flag = False
                 
             try:
                 self.to_sweep2 = float(self.entry_to2.get())
                 to_sweep2 = self.to_sweep2
             except:
                 messagebox.showerror('Invalid value in "To2" entrybox', f'Can not convert {self.entry_to2.get()} to float')
-                self.start_sweep_flag = False
+                self.pre_sweep_flag = False
         
         try:
             self.delay_factor2 = float(self.entry_delay_factor2.get())
             delay_factor2 = self.delay_factor2
         except:
             messagebox.showerror('Invalid value in "Delay factor2" entrybox', f'Can not convert {self.entry_delay_factor2.get()} to float')
-            self.start_sweep_flag = False
+            self.pre_sweep_flag = False
         
         if self.status_manual2.get() == 0:  
         
@@ -6466,7 +6466,7 @@ class Sweeper3d(tk.Frame):
                 ratio_sweep2 = self.ratio_sweep2
             except:
                 messagebox.showerror('Invalid value in "Ratio2" entrybox', f'Can not convert {self.entry_ratio2.get()} to float')
-                self.start_sweep_flag = False
+                self.pre_sweep_flag = False
                 
         if self.status_manual3.get() == 0:  
                 
@@ -6475,21 +6475,21 @@ class Sweeper3d(tk.Frame):
                 from_sweep3 =self.from_sweep3
             except:
                 messagebox.showerror('Invalid value in "From3" entrybox', f'Can not convert {self.entry_from3.get()} to float')
-                self.start_sweep_flag = False
+                self.pre_sweep_flag = False
                 
             try:
                 self.to_sweep3 = float(self.entry_to3.get())
                 to_sweep3 = self.to_sweep3
             except:
                 messagebox.showerror('Invalid value in "To3" entrybox', f'Can not convert {self.entry_to3.get()} to float')
-                self.start_sweep_flag = False
+                self.pre_sweep_flag = False
         
         try:
             self.delay_factor3 = float(self.entry_delay_factor3.get())
             delay_factor3 = self.delay_factor3
         except:
             messagebox.showerror('Invalid value in "Delay factor3" entrybox', f'Can not convert {self.entry_delay_factor3.get()} to float')
-            self.start_sweep_flag = False
+            self.pre_sweep_flag = False
         
         if self.status_manual3.get() == 0:  
         
@@ -6502,7 +6502,7 @@ class Sweeper3d(tk.Frame):
                 ratio_sweep3 = self.ratio_sweep3
             except:
                 messagebox.showerror('Invalid value in "Ratio3" entrybox', f'Can not convert {self.entry_ratio3.get()} to float')
-                self.start_sweep_flag = False
+                self.pre_sweep_flag = False
             
             def get_key(val, my_dict):
                 for key, value in my_dict.items():
@@ -6570,7 +6570,7 @@ class Sweeper3d(tk.Frame):
         
         self.rewrite_preset()
 
-        if self.start_sweep_flag:
+        if self.pre_sweep_flag:
             zero_time = time.perf_counter()
             stop_flag = False
             sweeper_flag1 = False
@@ -7149,7 +7149,7 @@ class Sweeper_write(threading.Thread):
                     else:
                         getattr(device1, f'set_{parameter1}')(value = 0)
                 
-                elif len(manual_sweep_flag) == 2:
+                elif len(manual_sweep_flags) == 2:
                     device1 = globals()['device_to_sweep1']
                     parameter1 = globals()['parameter_to_sweep1']
                     device2 = globals()['device_to_sweep2']
@@ -7175,7 +7175,7 @@ class Sweeper_write(threading.Thread):
                             getattr(device1, f'set_{parameter1}')(value = step)
                             time.sleep(0.1)
                     
-                elif len(manual_sweep_flag) == 3:
+                elif len(manual_sweep_flags) == 3:
                     device1 = globals()['device_to_sweep1']
                     parameter1 = globals()['parameter_to_sweep1']
                     device2 = globals()['device_to_sweep2']
@@ -7885,7 +7885,7 @@ class Sweeper_write(threading.Thread):
             setget_write()
         
         globals()['Sweeper_object'].start_sweep_flag = False
-        for i in range(1, len(manual_sweep_flag) + 1):
+        for i in range(1, len(manual_sweep_flags) + 1):
             globals()['Sweeper_object'].__dict__['cur_walk{i}'] = 1
         
         self.sweepable1 = False
