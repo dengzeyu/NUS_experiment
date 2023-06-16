@@ -7630,10 +7630,11 @@ class Sweeper_write(threading.Thread):
                                 step(axis = 2, value = value)
                         elif i == walks and back_and_forth_slave_slave != 1 and manual_sweep_flags[1] == 1:
                             self.cur_manual_index2 += 1
-                    step(axis = len(manual_sweep_flags), back = True)
-                    if not getattr(self, f'sweepable{len(manual_sweep_flags)}') == True:
-                        step(axis = len(manual_sweep_flags), back = True)
                     back_and_forth_transposition(len(manual_sweep_flags))
+                    step(axis = len(manual_sweep_flags))
+                    if not getattr(self, f'sweepable{len(manual_sweep_flags)}') == True:
+                        step(axis = len(manual_sweep_flags))
+                    #back_and_forth_transposition(len(manual_sweep_flags))
                         
                 if walks % 2 == 1:
                     back_and_forth_transposition(len(manual_sweep_flags))
@@ -7750,10 +7751,11 @@ class Sweeper_write(threading.Thread):
                                 step(axis = 1, value = value)
                         elif i == walks and back_and_forth_slave != 1 and manual_sweep_flags[1] == 1:
                             self.cur_manual_index1 += 1
-                    step(axis = len(manual_sweep_flags) - 1, back = True)
-                    if not getattr(self, f'sweepable{len(manual_sweep_flags) - 1}') == True:
-                        step(axis = len(manual_sweep_flags) - 1, back = True)
                     back_and_forth_transposition(len(manual_sweep_flags) - 1)
+                    step(axis = len(manual_sweep_flags) - 1)
+                    if not getattr(self, f'sweepable{len(manual_sweep_flags) - 1}') == True:
+                        step(axis = len(manual_sweep_flags) - 1)
+                    #back_and_forth_transposition(len(manual_sweep_flags) - 1)
                     
                 if walks % 2 == 1:
                     back_and_forth_transposition(len(manual_sweep_flags) - 1)
@@ -7815,10 +7817,11 @@ class Sweeper_write(threading.Thread):
             elif walks > 1:
                 for i in range(1, walks + 1):
                     master_loop_single(round(2 * (i % 2) - 1))
-                    step(axis = 1, back = True)
-                    if not self.sweepable1 == True:
-                        step(axis = 1, back = True)
                     back_and_forth_transposition(1)
+                    step(axis = 1)
+                    if not self.sweepable1 == True:
+                        step(axis = 1)
+                    #back_and_forth_transposition(1)
                     
                 if back_and_forth_master % 2 == 1:
                     back_and_forth_transposition(1)
