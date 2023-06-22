@@ -2047,25 +2047,24 @@ class Sweeper1d(tk.Frame):
                 except ZeroDivisionError:
                     return '...'
             
-            if 'sweeper_write' in list(globals().keys()):
-                if globals()['sweeper_write'].started:
-                    if not hasattr(self, 'gif_label'):
-                        self.gif_label = ImageLabel(self)
-                        self.gif_label.place(relx = 0.75, rely = 0.5)
-                        if 'loading.gif' in os.listdir(os.path.join(core_dir, 'config')):
-                            self.gif_label.load(os.path.join(core_dir, 'config', 'loading.gif'))
-                    if not hasattr(self, 'time_label'):
-                        self.time_label = tk.Label(self, text = 'Time left: ...', font = LARGE_FONT)
-                        self.time_label.place(relx = 0.8, rely = 0.5)
-                    else:
-                        self.time_label.config(text = f'Time left: {get_time_remaining()}')
+            if self.start_sweep_flag:
+                if not hasattr(self, 'gif_label'):
+                    self.gif_label = ImageLabel(self)
+                    self.gif_label.place(relx = 0.75, rely = 0.5)
+                    if 'loading.gif' in os.listdir(os.path.join(core_dir, 'config')):
+                        self.gif_label.load(os.path.join(core_dir, 'config', 'loading.gif'))
+                if not hasattr(self, 'time_label'):
+                    self.time_label = tk.Label(self, text = 'Time left: ...', font = LARGE_FONT)
+                    self.time_label.place(relx = 0.8, rely = 0.5)
                 else:
-                    if hasattr(self, 'gif_label'):
-                        self.gif_label.place_forget()
-                        del self.gif_label
-                    if hasattr(self, 'time_label'):
-                        self.time_label.place_forget()
-                        del self.time_label
+                    self.time_label.config(text = f'Time left: {get_time_remaining()}')
+            else:
+                if hasattr(self, 'gif_label'):
+                    self.gif_label.place_forget()
+                    del self.gif_label
+                if hasattr(self, 'time_label'):
+                    self.time_label.place_forget()
+                    del self.time_label
             self.after(1000, animate)
             
         self.start_sweep_flag = False
@@ -3544,25 +3543,24 @@ class Sweeper2d(tk.Frame):
                     print(f'RuntimeWarning happened: {e}')
                     return '...'
             
-            if 'sweeper_write' in list(globals().keys()):
-                if globals()['sweeper_write'].started:
-                    if not hasattr(self, 'gif_label'):
-                        self.gif_label = ImageLabel(self)
-                        self.gif_label.place(relx = 0.75, rely = 0.5)
-                        if 'loading.gif' in os.listdir(os.path.join(core_dir, 'config')):
-                            self.gif_label.load(os.path.join(core_dir, 'config', 'loading.gif'))
-                    if not hasattr(self, 'time_label'):
-                        self.time_label = tk.Label(self, text = 'Time left: ...', font = LARGE_FONT)
-                        self.time_label.place(relx = 0.8, rely = 0.5)
-                    else:
-                        self.time_label.config(text = f'Time left: {get_time_remaining()}')
+            if self.start_sweep_flag:
+                if not hasattr(self, 'gif_label'):
+                    self.gif_label = ImageLabel(self)
+                    self.gif_label.place(relx = 0.75, rely = 0.5)
+                    if 'loading.gif' in os.listdir(os.path.join(core_dir, 'config')):
+                        self.gif_label.load(os.path.join(core_dir, 'config', 'loading.gif'))
+                if not hasattr(self, 'time_label'):
+                    self.time_label = tk.Label(self, text = 'Time left: ...', font = LARGE_FONT)
+                    self.time_label.place(relx = 0.8, rely = 0.5)
                 else:
-                    if hasattr(self, 'gif_label'):
-                        self.gif_label.place_forget()
-                        del self.gif_label
-                    if hasattr(self, 'time_label'):
-                        self.time_label.place_forget()
-                        del self.time_label
+                    self.time_label.config(text = f'Time left: {get_time_remaining()}')
+            else:
+                if hasattr(self, 'gif_label'):
+                    self.gif_label.place_forget()
+                    del self.gif_label
+                if hasattr(self, 'time_label'):
+                    self.time_label.place_forget()
+                    del self.time_label
             self.after(1000, animate)
             
         self.start_sweep_flag = False
@@ -4273,7 +4271,7 @@ class Sweeper2d(tk.Frame):
                 from_sweep2 = self.from_sweep2
             except:
                 messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from2.get()} to float')
-                self.start_sweep_flagg = False
+                self.start_sweep_flag = False
                 
             try:
                 self.to_sweep2 = float(self.entry_to2.get())
@@ -5523,25 +5521,24 @@ class Sweeper3d(tk.Frame):
                     print(f'RuntimeWarning happened: {e}')
                     return '...'
             
-            if 'sweeper_write' in list(globals().keys()):
-                if globals()['sweeper_write'].started:
-                    if not hasattr(self, 'gif_label'):
-                        self.gif_label = ImageLabel(self)
-                        self.gif_label.place(relx = 0.75, rely = 0.5)
-                        if 'loading.gif' in os.listdir(os.path.join(core_dir, 'config')):
-                            self.gif_label.load(os.path.join(core_dir, 'config', 'loading.gif'))
-                    if not hasattr(self, 'time_label'):
-                        self.time_label = tk.Label(self, text = 'Time left: ...', font = LARGE_FONT)
-                        self.time_label.place(relx = 0.8, rely = 0.5)
-                    else:
-                        self.time_label.config(text = f'Time left: {get_time_remaining()}')
+            if self.start_sweep_flag:
+                if not hasattr(self, 'gif_label'):
+                    self.gif_label = ImageLabel(self)
+                    self.gif_label.place(relx = 0.75, rely = 0.5)
+                    if 'loading.gif' in os.listdir(os.path.join(core_dir, 'config')):
+                        self.gif_label.load(os.path.join(core_dir, 'config', 'loading.gif'))
+                if not hasattr(self, 'time_label'):
+                    self.time_label = tk.Label(self, text = 'Time left: ...', font = LARGE_FONT)
+                    self.time_label.place(relx = 0.8, rely = 0.5)
                 else:
-                    if hasattr(self, 'gif_label'):
-                        self.gif_label.place_forget()
-                        del self.gif_label
-                    if hasattr(self, 'time_label'):
-                        self.time_label.place_forget()
-                        del self.time_label
+                    self.time_label.config(text = f'Time left: {get_time_remaining()}')
+            else:
+                if hasattr(self, 'gif_label'):
+                    self.gif_label.place_forget()
+                    del self.gif_label
+                if hasattr(self, 'time_label'):
+                    self.time_label.place_forget()
+                    del self.time_label
             self.after(1000, animate)
             
         self.start_sweep_flag = False
@@ -7152,7 +7149,7 @@ class Sweeper_write(threading.Thread):
                     else:
                         getattr(device1, f'set_{parameter1}')(value = 0)
                 
-                elif len(manual_sweep_flags) == 2:
+                elif len(manual_sweep_flag) == 2:
                     device1 = globals()['device_to_sweep1']
                     parameter1 = globals()['parameter_to_sweep1']
                     device2 = globals()['device_to_sweep2']
@@ -7178,7 +7175,7 @@ class Sweeper_write(threading.Thread):
                             getattr(device1, f'set_{parameter1}')(value = step)
                             time.sleep(0.1)
                     
-                elif len(manual_sweep_flags) == 3:
+                elif len(manual_sweep_flag) == 3:
                     device1 = globals()['device_to_sweep1']
                     parameter1 = globals()['parameter_to_sweep1']
                     device2 = globals()['device_to_sweep2']
@@ -7898,7 +7895,8 @@ class Sweeper_write(threading.Thread):
         self.sweepable2 = False
         self.sweepable3 = False
         
-        self.started = False
+        if globals()['dataframe'].empty:
+            os.remove(filename_sweep)
 
 class VerticalNavigationToolbar2Tk(NavigationToolbar2Tk):
     def __init__(self, canvas, window):
