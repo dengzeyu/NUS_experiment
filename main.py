@@ -606,7 +606,7 @@ def map_animation(i, n, filename):
         else:
             max_z = np.nanmax(z)
             min_z = np.nanmin(z)
-        colormap = ax.pcolor(z, cmap = globals()[f'cmap_{n}'], vmin=min_z, vmax=max_z, shading = 'flat')
+        colormap = ax.pcolormesh(z, cmap = globals()[f'cmap_{n}'], vmin=min_z, vmax=max_z, shading = 'flat')
         globals()[f'colorbar{n}'] = ax.get_figure().colorbar(colormap, ax = ax)
         globals()[f'colorbar{n}'].ax.tick_params(labelsize=5, which = 'both')
         
@@ -2443,7 +2443,7 @@ class Sweeper1d(tk.Frame):
             return
         else:
             answer = messagebox.askyesnocancel('Start warning', f'Current master value is {cur_value}. \nStarting position is {from_sweep}, go to start?')
-            if answer:
+            if answer == True:
                 if not sweepable:
                     getattr(device, f'set_{parameter}')(value = from_sweep)
                     sweeper_write = Sweeper_write()
@@ -2487,7 +2487,11 @@ class Sweeper1d(tk.Frame):
                             self.open_graph()
                     
                     update_position()
-            
+            elif answer == False:
+                sweeper_write = Sweeper_write()
+                self.open_graph()
+            else:
+                return
 
     def start_sweeping(self):
 
@@ -4098,6 +4102,10 @@ class Sweeper2d(tk.Frame):
                             self.pop1.destroy()
                     
                     update_position()
+            elif answer == False:
+                self.start_sweep_flag = True
+            else:
+                return
                 
     def pre_sweep2(self):
         global sweeper_write
@@ -4188,6 +4196,10 @@ class Sweeper2d(tk.Frame):
                             try_start()
                     
                     update_position()
+            elif answer == False:
+                try_start()
+            else:
+                return
 
     def start_sweeping(self):
 
@@ -6177,6 +6189,10 @@ class Sweeper3d(tk.Frame):
                             self.pop1.destroy()
                     
                     update_position()
+            elif answer == False:
+                self.start_sweep_flag = True
+            else:
+                return
                     
     def pre_sweep2(self):
         global sweeper_write
@@ -6257,6 +6273,10 @@ class Sweeper3d(tk.Frame):
                             self.pop2.destroy()
                     
                     update_position()
+            elif answer == False:
+                self.start_sweep_flag = True
+            else:
+                return
                 
     def pre_sweep3(self):
         
@@ -6347,6 +6367,11 @@ class Sweeper3d(tk.Frame):
                             try_start()
                     
                     update_position()
+                    
+            elif answer == False:
+                try_start()
+            else:
+                return
 
     def start_sweeping(self):
 
@@ -7629,9 +7654,6 @@ class Sweeper_write(threading.Thread):
                             self.cur_manual_index2 += 1
                     back_and_forth_transposition(len(manual_sweep_flags))
                     step(axis = len(manual_sweep_flags))
-                    if not getattr(self, f'sweepable{len(manual_sweep_flags)}') == True:
-                        step(axis = len(manual_sweep_flags))
-                    #back_and_forth_transposition(len(manual_sweep_flags))
                         
                 if walks % 2 == 1:
                     back_and_forth_transposition(len(manual_sweep_flags))
@@ -7750,9 +7772,6 @@ class Sweeper_write(threading.Thread):
                             self.cur_manual_index1 += 1
                     back_and_forth_transposition(len(manual_sweep_flags) - 1)
                     step(axis = len(manual_sweep_flags) - 1)
-                    if not getattr(self, f'sweepable{len(manual_sweep_flags) - 1}') == True:
-                        step(axis = len(manual_sweep_flags) - 1)
-                    #back_and_forth_transposition(len(manual_sweep_flags) - 1)
                     
                 if walks % 2 == 1:
                     back_and_forth_transposition(len(manual_sweep_flags) - 1)
@@ -7816,9 +7835,6 @@ class Sweeper_write(threading.Thread):
                     master_loop_single(round(2 * (i % 2) - 1))
                     back_and_forth_transposition(1)
                     step(axis = 1)
-                    if not self.sweepable1 == True:
-                        step(axis = 1)
-                    #back_and_forth_transposition(1)
                     
                 if back_and_forth_master % 2 == 1:
                     back_and_forth_transposition(1)
