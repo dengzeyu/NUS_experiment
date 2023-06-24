@@ -3231,7 +3231,7 @@ class Sweeper2d(tk.Frame):
         
         label_condition = tk.Label(self, text = 'Constraints:', font = LARGE_FONT)
         label_condition.place(relx = 0.12, rely = 0.66)
-        CreateToolTip(label_condition, 'Master sweep: x\nSlave sweep: y\nSet condition for a sweep map')
+        CreateToolTip(label_condition, 'Master sweep: x\nSlave sweep: y\nSet condition for a sweep map \nRight click to configure script')
         
         self.text_condition = tk.Text(self, width = 40, height = 7)
         self.text_condition.delete('1.0', tk.END)
@@ -3283,41 +3283,61 @@ class Sweeper2d(tk.Frame):
                 self.text_script.configure(font = LARGE_FONT)
                 self.text_script.bind("<Key>", ctrlEvent)
                 
+                def hide_toplevel():
+                    tw = self.script_toplevel
+                    self.script_toplevel = None
+        
+                    tw.destroy()
+                
                 def explore_script(interval = 1):
-                    script_filename = tk.filedialog.askopenfilename(initialdir=cur_dir,
-                                                                             title='Select a manual sweeper',
-                                                                             filetypes=('all files', '*.*'))
+                    
+                    if exists(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'scripts')):
+                        init = os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'scripts')
+                    else:
+                        init = os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}')
+                    
+                    script_filename = tk.filedialog.askopenfilename(initialdir=init,
+                                                                             title='Select a script')
                     with open(script_filename, 'r') as file:
                         try:
-                            file.open()
                             script = file.read()
-                        except:
+                        except Exception as e:
+                            print(f'Exception happened while exploring existing script: {e}')
                             file.close()
                         finally:
                             file.close()
                             
-                    self.text_script.delete(0, tk.END)
+                    self.text_script.delete(1.0, tk.END)
                     self.text_script.insert(tk.END, script)
                     self.text_script.after(interval)
+                    self.script_toplevel.deiconify() #show toplevel again
                     
                 def set_script():
                     self.parent.script = self.text_script.get(1.0, tk.END)[:-1]
+                    hide_toplevel()
                     
                 def save_script():
-                    self.script_filename = tk.filedialog.asksaveasfilename(title='Save the file',
-                                                                     initialfile=os.path.join(core_dir, 'config', f'script{datetime.today().strftime("%H_%M_%d_%m_%Y")}'),
-                                                                     defaultextension='.csv')
                     
-                    set_script()
+                    if not exists(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'scripts')):
+                        os.mkdir(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'scripts'))
+                    
+                    self.script_filename = tk.filedialog.asksaveasfilename(title='Save the file',
+                                            initialfile=os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}',
+                                            'scripts', f'script{datetime.today().strftime("%H_%M_%d_%m_%Y")}'),
+                                            defaultextension='.csv')
+                    
+                    self.parent.script = self.text_script.get(1.0, tk.END)[:-1]
                     
                     with open(self.script_filename, 'w') as file:
                         try:
-                            file.open()
                             file.write(self.parent.script)
-                        except:
+                        except Exception as e:
+                            print(f'Exception happened while saving the script: {e}')
                             file.close()
                         finally:
                             file.close()
+                    
+                    self.script_toplevel.deiconify() #show toplevel again
                 
                 button_explore_script = tk.Button(
                     tw, text='🔎', font = SUPER_LARGE, command = explore_script)
@@ -3334,12 +3354,6 @@ class Sweeper2d(tk.Frame):
                 button_set_script = tk.Button(
                     tw, text = 'Apply script', font = LARGE_FONT, command = set_script)
                 button_set_script.grid(row = 3, column = 1, pady = 2)
-
-                def hide_toplevel():
-                    tw = self.script_toplevel
-                    self.script_toplevel = None
-        
-                    tw.destroy()
                 
                 tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
             
@@ -5208,12 +5222,13 @@ class Sweeper3d(tk.Frame):
         
         label_condition = tk.Label(self, text = 'Constraints:', font = LARGE_FONT)
         label_condition.place(relx = 0.12, rely = 0.66)
-        CreateToolTip(label_condition, 'Master sweep: x\nSlave sweep: y\nSlave-slave sweep: z\nSet condition for a sweep map')
+        CreateToolTip(label_condition, 'Master sweep: x\nSlave sweep: y\nSlave-slave sweep: z\nSet condition for a sweep map \nRight click to configure the sweep')
         
         self.text_condition = tk.Text(self, width = 60, height = 7)
         self.text_condition.delete('1.0', tk.END)
         self.text_condition.insert(tk.END, self.condition)
         self.text_condition.place(relx = 0.12, rely = 0.7)
+        CreateToolTip(self.text_condition, 'Master sweep: x\nSlave sweep: y\nSlave-slave sweep: z\nSet condition for a sweep map \nRight click to configure the sweep')
 
         self.filename_textvariable = tk.StringVar(self, value = self.filename_sweep)
         width = int(len(self.filename_textvariable.get()) * 0.95)
@@ -5265,7 +5280,6 @@ class Sweeper3d(tk.Frame):
                                                                              filetypes=('all files', '*.*'))
                     with open(script_filename, 'r') as file:
                         try:
-                            file.open()
                             script = file.read()
                         except:
                             file.close()
@@ -5280,15 +5294,17 @@ class Sweeper3d(tk.Frame):
                     self.parent.script = self.text_script.get(1.0, tk.END)[:-1]
                     
                 def save_script():
+                    
+                    
+                    
                     self.script_filename = tk.filedialog.asksaveasfilename(title='Save the file',
                                                                      initialfile=os.path.join(core_dir, 'config', f'script{datetime.today().strftime("%H_%M_%d_%m_%Y")}'),
                                                                      defaultextension='.csv')
                     
-                    set_script()
+                    self.parent.script = self.text_script.get(1.0, tk.END)[:-1]
                     
                     with open(self.script_filename, 'w') as file:
                         try:
-                            file.open()
                             file.write(self.parent.script)
                         except:
                             file.close()
