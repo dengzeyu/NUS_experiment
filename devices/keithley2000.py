@@ -10,6 +10,14 @@ class keithley2000():
         self.get_options = ['Volt_DC', 'Volt_AC', 'Curr_DC', 'Curr_AC', 'Res_2W', 'Res_4W', 'Period',
                             'Frequency', 'Temperature']
         
+        self.loggable = ['Mode', 'Curr_DC_range', 'Curr_DC_reference', 'Curr_DC_NPLC',
+                         'Curr_AC_range', 'Curr_AC_reference', 'Curr_AC_NPLC', 'Curr_AC_bandwidth', 
+                         'Volt_DC_range', 'Volt_DC_reference', 'Volt_DC_NPLC',
+                         'Volt_AC_range', 'Volt_AC_reference', 'Volt_AC_NPLC', 'Volt_AC_bandwidth',
+                         'Res_2W_range', 'Res_2W_reference', 'Res_2W_NPLC',
+                         'Res_4W_range', 'Res_4W_reference', 'Res_4W_NPLC',
+                         'Trigger_count', 'Trigger_delay']
+        
     def Volt_DC(self):
         self.meter.mode = 'voltage'
         return self.meter.voltage
@@ -71,6 +79,75 @@ class keithley2000():
         "[0, 120e6]"
         
         self.meter.resistance_4W_range = round(float(value), 2)
+        
+    def Mode(self):
+        return self.meter.mode
+    
+    def Curr_DC_range(self):
+        return self.meter.current_range
+    
+    def Curr_DC_reference(self):
+        return self.meter.current_reference
+    
+    def Curr_DC_NPLC(self):
+        return self.meter.current_nplc
+    
+    def Curr_AC_range(self):
+        return self.meter.current_ac_range
+    
+    def Curr_AC_reference(self):
+        return self.meter.current_ac_reference
+    
+    def Curr_AC_NPLC(self):
+        return self.meter.current_ac_nplc
+    
+    def Curr_AC_bandwidth(self):
+        return self.meter.current_ac_bandwidth
+    
+    def Volt_DC_range(self):
+        return self.meter.voltage_range
+    
+    def Volt_DC_reference(self):
+        return self.meter.voltage_reference
+    
+    def Volt_DC_NPLC(self):
+        return self.meter.voltage_nplc
+    
+    def Volt_AC_range(self):
+        return self.meter.voltage_ac_range
+    
+    def Volt_AC_reference(self):
+        return self.meter.voltage_ac_reference
+    
+    def Volt_AC_NPLC(self):
+        return self.meter.voltage_ac_nplc
+    
+    def Volt_AC_bandwidth(self):
+        return self.meter.voltage_ac_bandwidth
+    
+    def Res_2W_range(self):
+        return self.meter.resistance_range
+    
+    def Res_2W_reference(self):
+        return self.meter.resistance_reference
+    
+    def Res_2W_NPLC(self):
+        return self.meter.resistance_nplc
+    
+    def Res_4W_range(self):
+        return self.meter.resistance_4w_range
+    
+    def Res_4W_reference(self):
+        return self.meter.resistance_4w_reference
+    
+    def Res_4W_NPLC(self):
+        return self.meter.resistance_4w_nplc
+    
+    def Trigger_count(self):
+        return self.meter.trigger_count
+    
+    def Trigger_delay(self):
+        return self.meter.trigger_delay
     
         
         

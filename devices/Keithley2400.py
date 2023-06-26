@@ -21,6 +21,8 @@ class keithley2400():
         
         self.get_options = ['Volt', 'Curr', 'Res', 'compl_curr', 'V_NPLC', 'I_NPLC', 'R_NPLC', 'line_freq', 'Sdelay', 'TDelay']
         
+        self.loggable = ['V_NPLC', 'I_NPLC', 'R_NPLC']
+        
     def IDN(self):
         return get(self.sm, '*IDN?')
     

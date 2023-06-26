@@ -17,6 +17,8 @@ class keithley_series_2600b():
         
         self.get_options = ['V', 'I', 'R', 'compl_curr', 'V_NPLC', 'I_NPLC', 'R_NPLC', 'line_freq', 'Sdelay', 'TDelay']
         
+        self.loggable = ['V_NPLC', 'I_NPLC', 'R_NPLC', 'SDelay', 'TDelay']
+        
     def IDN(self):
         return get(self.sm, '*IDN?')
     

@@ -133,6 +133,7 @@ class opticool():
         self._Field_rate = self.device.field.set_rate_per_sec
         self.set_options = ['T', 'Field', 'T_rate', 'Field_rate', 'T_approach', 'Field_approach', 'Field_driven', 'chamber_state']
         self.get_options = ['T', 'Field', 'T_rate', 'Field_rate', 'T_approach', 'Field_approach', 'Field_driven', 'chamber_state']
+        self.loggable = ['chamber_state']
         self.sweepable = [True, True, False, False, False, False, False, False]
         self.maxspeed = [5, self.max_Field_speed(), None, None, None, None, None, None]
         self.eps = [0.01, 50, None, None, None, None, None, None]

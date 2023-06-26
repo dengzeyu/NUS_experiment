@@ -29,6 +29,8 @@ class ami430():
         
         self.get_options = ['field', 'current', 'ramp_field_speed', 'ramp_current_speed', 'voltage_lim', 'coil_const', 'supply_current', 'state']
         
+        self.loggable = ['voltage_lim', 'coil_const', 'state']
+        
     def set_field(self, value, speed = None):
         if speed == None:
             self.ramp_to_field(value, self.maxspeed[self.set_options.index('field')])
