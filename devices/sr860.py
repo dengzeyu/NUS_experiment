@@ -29,8 +29,12 @@ class my_SR860(SR860):
     
     DC_bias = Instrument.control(
         "SOFF?", "SOFF %0.9e",
-        """A floating property that represents the internal lock-in frequency in Hz
+        """A floating property that represents the lock-in DC bias offset in Volts
         This property can be set.""")
+        
+    IDN = Instrument.measurement("IDN?",
+                               """ Reads the Identification """
+                               )
 
 class sr860():
 
@@ -46,13 +50,45 @@ class sr860():
                             'time_constant', 'input_range', 'low_pass_filter_slope', 'synchronous_filter_status',
                             'AUX1_input', 'AUX2_input', 'AUX3_input', 'AUX4_input', 
                             'amplitude', 'frequency', 'phase', 'dc_bias', 'Read']
+        
+        self.SENSITIVITIES = [
+            1e-9, 2e-9, 5e-9, 10e-9, 20e-9, 50e-9, 100e-9, 200e-9,
+            500e-9, 1e-6, 2e-6, 5e-6, 10e-6, 20e-6, 50e-6, 100e-6,
+            200e-6, 500e-6, 1e-3, 2e-3, 5e-3, 10e-3, 20e-3,
+            50e-3, 100e-3, 200e-3, 500e-3, 1
+        ]
+        self.TIME_CONSTANTS = [
+            1e-6, 3e-6, 10e-6, 30e-6, 100e-6, 300e-6, 1e-3, 3e-3, 10e-3,
+            30e-3, 100e-3, 300e-3, 1, 3, 10, 30, 100, 300, 1e3,
+            3e3, 10e3, 30e3
+        ]
+        self.ON_OFF_VALUES = ['0', '1']
+        self.SCREEN_LAYOUT_VALUES = ['0', '1', '2', '3', '4', '5']
+        self.EXPANSION_VALUES = ['0', '1', '2,']
+        self.CHANNEL_VALUES = ['OCH1', 'OCH2']
+        self.OUTPUT_VALUES = ['XY', 'RTH']
+        self.INPUT_TIMEBASE = ['AUTO', 'IN']
+        self.INPUT_DCMODE = ['COM', 'DIF', 'common', 'difference']
+        self.INPUT_REFERENCESOURCE = ['INT', 'EXT', 'DUAL', 'CHOP']
+        self.INPUT_REFERENCETRIGGERMODE = ['SIN', 'POS', 'NEG', 'POSTTL', 'NEGTTL']
+        self.INPUT_REFERENCEEXTERNALINPUT = ['50OHMS', '1MEG']
+        self.INPUT_SIGNAL_INPUT = ['VOLT', 'CURR', 'voltage', 'current']
+        self.INPUT_VOLTAGE_MODE = ['A', 'A-B']
+        self.INPUT_COUPLING = ['AC', 'DC']
+        self.INPUT_SHIELDS = ['Float', 'Ground']
+        self.INPUT_RANGE = ['1V', '300M', '100M', '30M', '10M']
+        self.INPUT_GAIN = ['1MEG', '100MEG']
+        self.INPUT_FILTER = ['Off', 'On']
+        
+        self.loggable = ['IDN', 'sensitivity', 'time_constant', 'frequency', 
+                         'low_pass_filter_slope', 'synchronous_filter_status', 'dcmode', 
+                         'reference_source', 'reference_triggermode', 'reference_externalinput',
+                         'input_signal', 'input_voltage_mode', 'input_coupling', 'input_shields',
+                         'input_range', 'input_current_gain', 'timebase', 'freq_ext', 
+                         'freq_detected', 'signal_strength_indicator', 'noise_bandwidth']
 
     def IDN(self):
-        device = rm.open_resource(
-            self.adress)
-        answer = get(device, '*IDN?')
-        device.close()
-        return answer
+        return self.sr860.IDN
     
     def Write(self):
         return self.Read()
@@ -168,6 +204,53 @@ class sr860():
         
     def set_dc_bias(self, value):
         self.sr860.DC_bias = value
+        
+    def screen_layout(self):
+        return self.sr860.screen_layout
+    
+    def dcmode(self):
+        return self.sr860.dcmode
+    
+    def reference_source(self):
+        return self.sr860.reference_source
+    
+    def reference_triggermode(self):
+        return self.sr860.reference_triggermode
+    
+    def reference_externalinput(self):
+        return self.sr860.reference_externalinput
+    
+    def input_signal(self):
+        return self.sr860.input_signal
+    
+    def input_voltage_mode(self):
+        return self.sr860.input_voltage_mode
+    
+    def input_coupling(self):
+        return self.sr860.input_coupling
+    
+    def input_shields(self):
+        return self.sr860.input_shields
+    
+    def input_current_gain(self):
+        return self.sr860.input_current_gain
+    
+    def timebase(self):
+        return self.sr860.gettimebase
+    
+    def freq_ext(self):
+        return self.sr860.extfreqency
+    
+    def freq_detected(self):
+        return self.sr860.detectedfrequency
+    
+    def signal_strength_indicator(self):
+        return self.sr860.get_signal_strength_indicator
+    
+    def noise_bandwidth(self):
+        return self.sr860.get_noise_bandwidth
+    
+    
         
 def main():
     device = sr860('GPIB0::2::INSTR')
