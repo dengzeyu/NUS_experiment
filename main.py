@@ -1556,14 +1556,14 @@ class Sweeper1d(tk.Frame):
         self.manual_filenames = [self.preset['manual_filename1'].values[0]]
         self.filename_sweep = self.preset['filename_sweep'][0]
 
-        index = get_filename_index()
+        self.filename_index = get_filename_index()
 
         try:
             name = os.path.basename(self.filename_sweep).split('.')[0]
             if int(name[:2]) in np.linspace(0, 99, 100, dtype = int) and int(name[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(name[4:6]) in np.linspace(1, 32, 32, dtype = int):
-                self.filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}-{index}.csv')
+                self.filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}-{self.filename_index}.csv')
         except:
-            self.filename_sweep = os.path.join(cur_dir, f'{name}-{index}.csv')
+            self.filename_sweep = os.path.join(cur_dir, f'{name}-{self.filename_index}.csv')
         
         globals()['setget_flag'] = False
         #globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
@@ -2397,6 +2397,49 @@ class Sweeper1d(tk.Frame):
         
         if answer:
             tozero_flag = True
+            
+    def start_logs(self):
+        global list_of_devices
+        global list_of_device_addresses
+        global types_of_devices
+        global device_to_sweep1
+        global parameters_to_read
+        
+        all_addresses = [list_of_devices_addresses[self.combo_to_sweep1.current()]]
+        
+        for parameter in parameters_to_read:
+            address = parameter[:len(parameter) - parameter[::-1].index('.') - 1]
+            all_addresses.append(address)
+            
+        all_addresses = np.unique(all_addresses)
+        
+        for address in all_addresses:
+            
+            device = list_of_devices[list_of_devices_addresses.index(address)]
+            if hasattr(device, 'loggable'):
+                if not exists(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'logs')):
+                    os.mkdir(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'logs'))
+                name = types_of_devices[list_of_devices_addresses.index(address)]
+                valid_address = "".join(x for x in address if x.isalnum())
+                log_filename = os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'logs', f'logs_{name}_{valid_address}_{self.filename_index}.csv')
+                t = time.localtime()
+                cur_time = time.strftime("%H:%M:%S", t)
+                
+                log = f'Name: {name}\nAddress: {address}\nTime: {cur_time}\n'
+                
+                for log_parameter in device.loggable:
+                    log += f'{log_parameter}: {getattr(device, log_parameter)}\n'
+                
+                log = log[:-1
+                          ]
+                with open(log_filename, 'w') as file:
+                    try:    
+                        file.write(log)
+                    except Exception as e:
+                        print(f'Exception happened while writing log for {name}, {address}: {e}')
+                        file.close()
+                    finally:
+                        file.close()
         
     def pre_sweep(self):
         global sweeper_write
@@ -2446,6 +2489,7 @@ class Sweeper1d(tk.Frame):
             if answer == True:
                 if not sweepable:
                     getattr(device, f'set_{parameter}')(value = from_sweep)
+                    self.start_logs()
                     sweeper_write = Sweeper_write()
                     self.open_graph()
                 else:
@@ -2483,11 +2527,13 @@ class Sweeper1d(tk.Frame):
                             self.label_position.after(100, update_position)
                         else:
                             self.pop.destroy()
+                            self.start_logs()
                             sweeper_write = Sweeper_write()
                             self.open_graph()
                     
                     update_position()
             elif answer == False:
+                self.start_logs()
                 sweeper_write = Sweeper_write()
                 self.open_graph()
             else:
@@ -2637,14 +2683,14 @@ class Sweeper2d(tk.Frame):
         self.interpolated = int(self.preset['interpolated'].values[0])
         self.uniform = int(self.preset['interpolated'].values[0])
         
-        index = get_filename_index()
+        self.filename_index = get_filename_index()
         
         try:
             name = os.path.basename(self.filename_sweep).split('.')[0]
             if int(name[:2]) in np.linspace(0, 99, 100, dtype = int) and int(name[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(name[4:6]) in np.linspace(1, 32, 32, dtype = int):
-                self.filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}-{index}.csv')
+                self.filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}-{self.filename_index}.csv')
         except:
-            self.filename_sweep = os.path.join(cur_dir, f'{name}-{index}.csv')
+            self.filename_sweep = os.path.join(cur_dir, f'{name}-{self.filename_index}.csv')
         
         globals()['setget_flag'] = False
         #globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
@@ -4036,6 +4082,51 @@ class Sweeper2d(tk.Frame):
         
         if answer:
             tozero_flag = True
+            
+    def start_logs(self):
+        global list_of_devices
+        global list_of_device_addresses
+        global types_of_devices
+        global device_to_sweep1
+        global device_to_sweep2
+        global parameters_to_read
+        
+        all_addresses = [list_of_devices_addresses[self.combo_to_sweep1.current()], 
+                         list_of_devices_addresses[self.combo_to_sweep2.current()]]
+        
+        for parameter in parameters_to_read:
+            address = parameter[:len(parameter) - parameter[::-1].index('.') - 1]
+            all_addresses.append(address)
+            
+        all_addresses = np.unique(all_addresses)
+        
+        for address in all_addresses:
+            
+            device = list_of_devices[list_of_devices_addresses.index(address)]
+            if hasattr(device, 'loggable'):
+                if not exists(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'logs')):
+                    os.mkdir(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'logs'))
+                name = types_of_devices[list_of_devices_addresses.index(address)]
+                valid_address = "".join(x for x in address if x.isalnum())
+                log_filename = os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'logs', f'logs_{name}_{valid_address}_{self.filename_index}.csv')
+                t = time.localtime()
+                cur_time = time.strftime("%H:%M:%S", t)
+                
+                log = f'Name: {name}\nAddress: {address}\nTime: {cur_time}\n'
+                
+                for log_parameter in device.loggable:
+                    log += f'{log_parameter}: {getattr(device, log_parameter)}\n'
+                
+                log = log[:-1]
+                
+                with open(log_filename, 'w') as file:
+                    try:    
+                        file.write(log)
+                    except Exception as e:
+                        print(f'Exception happened while writing log for {name}, {address}: {e}')
+                        file.close()
+                    finally:
+                        file.close()
         
     def pre_sweep1(self):
         global sweeper_write
@@ -4129,6 +4220,7 @@ class Sweeper2d(tk.Frame):
         def try_start():
             global sweeper_write
             if self.start_sweep_flag:
+                self.start_logs()
                 sweeper_write = Sweeper_write()
                 self.open_graph()
             else:
@@ -4435,14 +4527,14 @@ class Sweeper3d(tk.Frame):
         self.interpolated = int(self.preset['interpolated'].values[0])
         self.uniform = int(self.preset['uniform'].values[0])
         
-        index = get_filename_index()
+        self.filename_index = get_filename_index()
         
         try:
             name = os.path.basename(self.filename_sweep).split('.')[0]
             if int(name[:2]) in np.linspace(0, 99, 100, dtype = int) and int(name[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(name[4:6]) in np.linspace(1, 32, 32, dtype = int):
-                self.filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}-{index}.csv')
+                self.filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}-{self.filename_index}.csv')
         except:
-            self.filename_sweep = os.path.join(cur_dir, f'{name}-{index}.csv')
+            self.filename_sweep = os.path.join(cur_dir, f'{name}-{self.filename_index}.csv')
         
         globals()['setget_flag'] = False
         #globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
@@ -5274,42 +5366,61 @@ class Sweeper3d(tk.Frame):
                 self.text_script.configure(font = LARGE_FONT)
                 self.text_script.bind("<Key>", ctrlEvent)
                 
+                def hide_toplevel():
+                    tw = self.script_toplevel
+                    self.script_toplevel = None
+        
+                    tw.destroy()
+                
                 def explore_script(interval = 1):
-                    script_filename = tk.filedialog.askopenfilename(initialdir=cur_dir,
-                                                                             title='Select a manual sweeper',
-                                                                             filetypes=('all files', '*.*'))
+                    
+                    if exists(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'scripts')):
+                        init = os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'scripts')
+                    else:
+                        init = os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}')
+                    
+                    script_filename = tk.filedialog.askopenfilename(initialdir=init,
+                                                                             title='Select a script')
                     with open(script_filename, 'r') as file:
                         try:
                             script = file.read()
-                        except:
+                        except Exception as e:
+                            print(f'Exception happened while exploring existing script: {e}')
                             file.close()
                         finally:
                             file.close()
                             
-                    self.text_script.delete(0, tk.END)
+                    self.text_script.delete(1.0, tk.END)
                     self.text_script.insert(tk.END, script)
                     self.text_script.after(interval)
+                    self.script_toplevel.deiconify() #show toplevel again
                     
                 def set_script():
                     self.parent.script = self.text_script.get(1.0, tk.END)[:-1]
+                    hide_toplevel()
                     
                 def save_script():
                     
-                    
+                    if not exists(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'scripts')):
+                        os.mkdir(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'scripts'))
                     
                     self.script_filename = tk.filedialog.asksaveasfilename(title='Save the file',
-                                                                     initialfile=os.path.join(core_dir, 'config', f'script{datetime.today().strftime("%H_%M_%d_%m_%Y")}'),
-                                                                     defaultextension='.csv')
+                                            initialfile=os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}',
+                                            'scripts', f'script{datetime.today().strftime("%H_%M_%d_%m_%Y")}'),
+                                            defaultextension='.csv')
                     
                     self.parent.script = self.text_script.get(1.0, tk.END)[:-1]
                     
                     with open(self.script_filename, 'w') as file:
                         try:
                             file.write(self.parent.script)
-                        except:
+                        except Exception as e:
+                            print(f'Exception happened while saving the script: {e}')
                             file.close()
                         finally:
                             file.close()
+                    
+                    self.script_toplevel.deiconify() #show toplevel again
                 
                 button_explore_script = tk.Button(
                     tw, text='🔎', font = SUPER_LARGE, command = explore_script)
@@ -5326,12 +5437,6 @@ class Sweeper3d(tk.Frame):
                 button_set_script = tk.Button(
                     tw, text = 'Apply script', font = LARGE_FONT, command = set_script)
                 button_set_script.grid(row = 3, column = 1, pady = 2)
-
-                def hide_toplevel():
-                    tw = self.script_toplevel
-                    self.script_toplevel = None
-        
-                    tw.destroy()
                 
                 tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
             
@@ -6125,6 +6230,52 @@ class Sweeper3d(tk.Frame):
         
         if answer:
             tozero_flag = True
+            
+    def start_logs(self):
+        global list_of_devices
+        global list_of_device_addresses
+        global types_of_devices
+        global device_to_sweep1
+        global device_to_sweep2
+        global parameters_to_read
+        
+        all_addresses = [list_of_devices_addresses[self.combo_to_sweep1.current()], 
+                         list_of_devices_addresses[self.combo_to_sweep2.current()],
+                         list_of_devices_addresses[self.combo_to_sweep3.current()]]
+        
+        for parameter in parameters_to_read:
+            address = parameter[:len(parameter) - parameter[::-1].index('.') - 1]
+            all_addresses.append(address)
+            
+        all_addresses = np.unique(all_addresses)
+        
+        for address in all_addresses:
+            
+            device = list_of_devices[list_of_devices_addresses.index(address)]
+            if hasattr(device, 'loggable'):
+                if not exists(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'logs')):
+                    os.mkdir(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'logs'))
+                name = types_of_devices[list_of_devices_addresses.index(address)]
+                valid_address = "".join(x for x in address if x.isalnum())
+                log_filename = os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'logs', f'logs_{name}_{valid_address}_{self.filename_index}.csv')
+                t = time.localtime()
+                cur_time = time.strftime("%H:%M:%S", t)
+                
+                log = f'Name: {name}\nAddress: {address}\nTime: {cur_time}\n'
+                
+                for log_parameter in device.loggable:
+                    log += f'{log_parameter}: {getattr(device, log_parameter)}\n'
+                
+                log = log[:-1]
+                
+                with open(log_filename, 'w') as file:
+                    try:    
+                        file.write(log)
+                    except Exception as e:
+                        print(f'Exception happened while writing log for {name}, {address}: {e}')
+                        file.close()
+                    finally:
+                        file.close()
         
     def pre_sweep1(self):
         global sweeper_write
@@ -6299,6 +6450,7 @@ class Sweeper3d(tk.Frame):
         def try_start():
             global sweeper_write
             if self.start_sweep_flag:
+                self.start_logs()
                 sweeper_write = Sweeper_write()
                 self.open_graph()
             else:
@@ -7670,6 +7822,8 @@ class Sweeper_write(threading.Thread):
                             self.cur_manual_index2 += 1
                     back_and_forth_transposition(len(manual_sweep_flags))
                     step(axis = len(manual_sweep_flags))
+                    if not getattr(self, f'sweepable{len(manual_sweep_flags)}') == True:
+                        step(axis = len(manual_sweep_flags))
                         
                 if walks % 2 == 1:
                     back_and_forth_transposition(len(manual_sweep_flags))
@@ -7788,6 +7942,8 @@ class Sweeper_write(threading.Thread):
                             self.cur_manual_index1 += 1
                     back_and_forth_transposition(len(manual_sweep_flags) - 1)
                     step(axis = len(manual_sweep_flags) - 1)
+                    if not getattr(self, f'sweepable{len(manual_sweep_flags) - 1}') == True:
+                        step(axis = len(manual_sweep_flags) - 1)
                     
                 if walks % 2 == 1:
                     back_and_forth_transposition(len(manual_sweep_flags) - 1)
@@ -7851,6 +8007,8 @@ class Sweeper_write(threading.Thread):
                     master_loop_single(round(2 * (i % 2) - 1))
                     back_and_forth_transposition(1)
                     step(axis = 1)
+                    if not self.sweepable1 == True:
+                        step(axis = 1)
                     
                 if back_and_forth_master % 2 == 1:
                     back_and_forth_transposition(1)
