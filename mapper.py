@@ -6,9 +6,32 @@ from scipy import interpolate
 A classes that helps to collect data from 2D and 3D sweeps
 """
 
+int1, int2 = np.meshgrid(np.arange(0, 10), np.arange(0, 10))
+
+possibilities = []
+for i in range(0, 100):
+    possibilities.append(f'_{int1.flatten()[i]}.{int2.flatten()[i]}')
+
+def unify_filename(filename: str, possibilities = possibilities):
+    '''
+    A function that removes "_int1.int2_int3.int4" from filename
+    '''
+    if any((match1 := num) in filename for num in possibilities):
+        name = filename.replace(match1, '')
+    else:
+        name = filename
+    if any((match2 := num) in name for num in possibilities):
+        name = name.replace(match2, '')
+    return name
+
+def fix_unicode(filename: str):
+    if ':' in filename and ':\\' not in filename:
+        filename = filename.replace(':', ':\\')
+    return filename
+
 class mapper2D():
     def __init__(self, parameter_to_sweep1: str, parameter_to_sweep2: str, 
-                 parameters_to_read, cur_dir: str, _from: float, _to: float, 
+                 parameters_to_read, filename_sweep: str, _from: float, _to: float, 
                  nsteps: int, walks: int, index_filename: int,
                  interpolated = True, uniform = True):
         self.slave = np.array([])
@@ -16,7 +39,7 @@ class mapper2D():
         self.parameters_to_read = parameters_to_read
         self.parameter_to_sweep1 = parameter_to_sweep1
         self.parameter_to_sweep2 = parameter_to_sweep2
-        self.cur_dir = cur_dir
+        self.filename_sweep = filename_sweep
         self._from = _from
         self._to = _to
         self.nsteps = nsteps
@@ -39,15 +62,8 @@ class mapper2D():
         self.master = np.concatenate((self.master, [value]))
         
     def append_parameter(self, parameter: str, value):
-        
-        try:
-            value = float(value)
-            
-            if hasattr(self, parameter):
-                self.__dict__[parameter] = np.concatenate((self.__dict__[parameter], [value]))
-        except:
-            if hasattr(self, parameter):
-                self.__dict__[parameter] = np.concatenate((self.__dict__[parameter], [np.nan]))
+        if hasattr(self, parameter):
+            self.__dict__[parameter] = np.concatenate((self.__dict__[parameter], [value]))
             
     def add_sub_slave(self):
         self.cur_walk += 1
@@ -230,9 +246,18 @@ class mapper2D():
         def parameter_to_filename(parameter):
             
             parameter = parameter.replace(':', '')
+            path = os.path.normpath(self.filename_sweep).split(os.path.sep)
+            name = path[-1]
+            try:
+                name = name[:len(name) - name[::-1].index('.') - 1]
+            except ValueError:
+                pass
+            name = unify_filename(name)
+            cur_dir = os.path.join(*path[:path.index('data_files')])
+            cur_dir = fix_unicode(cur_dir)
             filename = f'{self.index_filename}_{parameter}_map.csv'
-            filename = os.path.join(os.path.dirname(self.cur_dir), '2d_maps', f'{filename}')
-            
+            filename = os.path.join(cur_dir, '2d_maps', 'tables', f'{name}_{self.index_filename}', f'{filename}')
+            filename = fix_unicode(filename)
             return filename
         
         filename = parameter_to_filename(parameter)
@@ -248,13 +273,24 @@ class mapper2D():
             
     def create_files(self):
         
-        if not os.path.exists(os.path.join(os.path.dirname(self.cur_dir), '2d_maps')):
-            os.mkdir(os.path.join(os.path.dirname(self.cur_dir), '2d_maps'))
+        path = os.path.normpath(self.filename_sweep).split(os.path.sep)
+        name = path[-1]
+        try:
+            name = name[:len(name) - name[::-1].index('.') - 1]
+        except ValueError:
+            pass
+        name = unify_filename(name)
+        cur_dir = os.path.join(*path[:path.index('data_files')])
+        cur_dir = fix_unicode(cur_dir)
+        to_make = os.path.join(cur_dir, '2d_maps', 'tables', f'{name}_{self.index_filename}')
+        
+        if not os.path.exists(to_make):
+            os.makedirs(to_make)
         for parameter in self.parameters_to_read:
             slave = np.concatenate(([f'{self.parameter_to_sweep1} / {self.parameter_to_sweep2}'], self.map_slave[0, :]))
             slave = ','.join(map(str, slave))
             parameter = parameter.replace(':', '')
-            filename = os.path.join(os.path.dirname(self.cur_dir), '2d_maps', f'{self.index_filename}_{parameter}_map.csv')
+            filename = os.path.join(to_make, f'{self.index_filename}_{parameter}_map.csv')
             
             with open(filename, 'w') as file:
                 try:
@@ -266,7 +302,7 @@ class mapper2D():
         
 class mapper3D():
     def __init__(self, parameter_to_sweep1: str, parameter_to_sweep2: str, parameter_to_sweep3: str, 
-                 parameters_to_read, cur_dir: str, _from: float, _to: float, 
+                 parameters_to_read, filename_sweep: str, _from: float, _to: float, 
                  nsteps: int, walks: int, index_filename: str, 
                  interpolated = True, uniform = True):
         self.slave_slave = np.array([])
@@ -276,7 +312,7 @@ class mapper3D():
         self.parameter_to_sweep1 = parameter_to_sweep1
         self.parameter_to_sweep2 = parameter_to_sweep2
         self.parameter_to_sweep3 = parameter_to_sweep3
-        self.cur_dir = cur_dir
+        self.filename_sweep = filename_sweep
         self._from = _from
         self._to = _to
         self.nsteps = nsteps
@@ -303,15 +339,8 @@ class mapper3D():
         self.master = np.concatenate((self.master, [value]))
         
     def append_parameter(self, parameter: str, value):
-        
-        try:
-            value = float(value)
-            
-            if hasattr(self, parameter):
-                self.__dict__[parameter] = np.concatenate((self.__dict__[parameter], [value]))
-        except:
-            if hasattr(self, parameter):
-                self.__dict__[parameter] = np.concatenate((self.__dict__[parameter], [np.nan]))
+        if hasattr(self, parameter):
+            self.__dict__[parameter] = np.concatenate((self.__dict__[parameter], [value]))
     
     def add_sub_slave_slave(self):
         self.cur_walk += 1
@@ -493,9 +522,20 @@ class mapper3D():
         def parameter_to_filename(parameter):
             
             parameter = parameter.replace(':', '')
+            path = os.path.normpath(self.filename_sweep).split(os.path.sep)
+            name = path[-1]
+            try:
+                name = name[:len(name) - name[::-1].index('.') - 1]
+            except ValueError:
+                pass
+            name = unify_filename(name)
+            cur_dir = os.path.join(*path[:path.index('data_files')])
+            cur_dir = fix_unicode(cur_dir)
             filename = f'{self.index_filename}_{parameter}_map_{self.iteration}.csv'
-            filename = os.path.join(os.path.dirname(self.cur_dir), '2d_maps', f'{filename}')
-            
+            filename = os.path.join(cur_dir, '2d_maps', 'tables', 
+                                    f'{self.parameter_to_sweep1}_{self.master[-1]}', 
+                                    f'{name}_{self.index_filename}', filename)
+            filename = fix_unicode(filename)
             return filename
         
         filename = parameter_to_filename(parameter)
@@ -511,13 +551,25 @@ class mapper3D():
             
     def create_files(self):
         
-        if not os.path.exists(os.path.join(os.path.dirname(self.cur_dir), '2d_maps')):
-            os.mkdir(os.path.join(os.path.dirname(self.cur_dir), '2d_maps'))
+        path = os.path.normpath(self.filename_sweep).split(os.path.sep)
+        name = path[-1]
+        try:
+            name = name[:len(name) - name[::-1].index('.') - 1]
+        except ValueError:
+            pass
+        name = unify_filename(name)
+        cur_dir = os.path.join(*path[:path.index('data_files')])
+        cur_dir = fix_unicode(cur_dir)
+        to_make = os.path.join(cur_dir, '2d_maps', 'tables', f'{name}_{self.index_filename}', 
+                               f'{self.parameter_to_sweep1}_{self.master[-1]}')
+        
+        if not os.path.exists(to_make):
+            os.makedirs(to_make)
         for parameter in self.parameters_to_read:
-            slave_slave = np.concatenate(([f'{self.parameter_to_sweep1} / {self.parameter_to_sweep2}'], self.map_slave_slave[0, :]))
+            slave_slave = np.concatenate(([f'{self.parameter_to_sweep2} / {self.parameter_to_sweep3}'], self.map_slave_slave[0, :]))
             slave_slave = ','.join(map(str, slave_slave))
             parameter = parameter.replace(':', '')
-            filename = os.path.join(os.path.dirname(self.cur_dir), '2d_maps', f'{self.index_filename}_{parameter}_map_{self.iteration}.csv')
+            filename = os.path.join(to_make, f'{self.index_filename}_{parameter}_map_{self.iteration}.csv')
             
             with open(filename, 'w') as file:
                 try:

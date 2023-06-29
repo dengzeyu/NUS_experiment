@@ -140,29 +140,23 @@ DAY = datetime.today().strftime('%d')
 MONTH = datetime.today().strftime('%m')
 YEAR = datetime.today().strftime('%Y')[-2:]
 
-cur_dir = os.getcwd()
+if not exists(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}')):
+    os.mkdir(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}'))
+    
+cur_dir = os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}')
 
-if not exists(os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}')):
-    os.mkdir(os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}'))
-    cur_dir = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}')
+if not exists(os.path.join(cur_dir, 'data_files')):
     os.mkdir(os.path.join(cur_dir, 'data_files'))
-    cur_dir = os.path.join(cur_dir, 'data_files')
-else:
-    if not exists(os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}', 'data_files')):
-        os.mkdir(os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}', 'data_files'))
-        cur_dir = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}', 'data_files')
-    else:
-        cur_dir = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}', 'data_files')
 
-filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}.csv')
+filename_sweep = os.path.join(cur_dir, 'data_files', f'{YEAR}{MONTH}{DAY}.csv')
 
 ind_setget = [0]
 
-for file in os.listdir(cur_dir):
+for file in os.listdir(os.path.join(cur_dir, 'data_files')):
     if f'setget_{YEAR}{MONTH}{DAY}' in file: 
         ind_setget.append(int(file[file.find('-') + 1 : -4]))
         
-filename_setget = os.path.join(cur_dir, f'setget_{YEAR}{MONTH}{DAY}-{np.max(ind_setget) + 1}.csv')
+filename_setget = os.path.join(cur_dir, 'data_files', f'setget_{YEAR}{MONTH}{DAY}-{np.max(ind_setget) + 1}.csv')
 
 sweeper_flag1 = False
 sweeper_flag2 = False
@@ -179,7 +173,7 @@ if not exists(os.path.join(core_dir, 'config')):
     os.mkdir(os.path.join(core_dir, 'config'))
 
 manual_sweep_flags = [0]
-manual_filenames = [os.path.join(cur_dir, 'manual' + datetime.today().strftime(
+manual_filenames = [os.path.join(cur_dir, 'data_files', 'manual' + datetime.today().strftime(
     '%H_%M_%d_%m_%Y') + '.csv')]
 
 master_lock = False
@@ -673,24 +667,62 @@ def my_animate(i, n, filename):
     else:
         raise Exception(f'Plot flag can only be "plot" or "map", not {plot_flag}')
 
+int1, int2 = np.meshgrid(np.arange(0, 10), np.arange(0, 10))
 
-def get_filename_index():
-    global filename_sweep
-    global cur_dir
+possibilities = []
+for i in range(0, 100):
+    possibilities.append(f'_{int1.flatten()[i]}.{int2.flatten()[i]}')
+
+def unify_filename(filename: str, possibilities = possibilities):
+    '''
+    A function that removes "_int1.int2_int3.int4" from filename
+    '''
+    if any((match1 := num) in filename for num in possibilities):
+        name = filename.replace(match1, '')
+    else:
+        name = filename
+    if any((match2 := num) in name for num in possibilities):
+        name = name.replace(match2, '')
+    return name
+
+def fix_unicode(filename: str):
+    if ':' in filename and ':\\' not in filename:
+        filename = filename.replace(':', ':\\')
+    return filename
+
+def get_filename_index(filename = globals()['filename_sweep'], dimension = 1):
+    '''
+    Function to return the index (+1) of max indexed filename 
+    '''
+    global core_dir
     
-    files = os.listdir(cur_dir)
+    files = []
+    path = os.path.normpath(filename).split(os.path.sep)
+    
+    if 'data_files' in path:
+        to_find = os.path.join(*path[:path.index('data_files') + 1]) #directory to search in
+        to_find = fix_unicode(to_find)
+    else:
+        try:
+            to_find = os.path.join(*path[:-1])
+        except:
+            to_find = os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}')
+        to_find = fix_unicode(to_find)
+    
+    for (_, _, file_names) in os.walk(to_find): #get all the files from subdirectories
+        files.extend(file_names)
     ind = [0]
-    basic_name = filename_sweep[len(cur_dir)+ 1:-4]
+    basic_name = os.path.normpath(filename).split(os.path.sep)[-1]
+    #example: my_name123_1.0_2.0-4.csv -> my_name123
+    if '.' in basic_name:
+        basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('.') - 1)] #all before last .
     if '-' in basic_name:
         basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('-') - 1)] #all before last -
-    if '_' in basic_name and len(manual_sweep_flags) != 1:
-        basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('_') - 1)] #all before last _
-    if '_' in basic_name and len(manual_sweep_flags) == 3:
-        basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('_') - 1)] #all before last _
+    basic_name = unify_filename(basic_name)
     for file in files:
         if basic_name in file and 'manual' not in file and 'setget' not in file:
             index_start = len(file) - file[::-1].find('-') - 1
-            index_stop = file.find('.csv')
+            index_stop = len(file) - file[::-1].find('.') - 1
             try:
                 ind.append(int(file[index_start + 1 : index_stop]))
             except:
@@ -1556,14 +1588,32 @@ class Sweeper1d(tk.Frame):
         self.manual_filenames = [self.preset['manual_filename1'].values[0]]
         self.filename_sweep = self.preset['filename_sweep'][0]
 
-        self.filename_index = get_filename_index()
+        self.filename_index = get_filename_index(filename = self.filename_sweep)
 
+        #updates filename with respect to date and current index
         try:
-            name = os.path.basename(self.filename_sweep).split('.')[0]
-            if int(name[:2]) in np.linspace(0, 99, 100, dtype = int) and int(name[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(name[4:6]) in np.linspace(1, 32, 32, dtype = int):
-                self.filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}-{self.filename_index}.csv')
+            path = os.path.normpath(self.filename_sweep)
+            path = path.split(os.sep)
+            name = path[-1]
+            if '.' in name: #if name has the extension, remove it
+                name = name[:len(name) - name[::-1].index('.') - 1]
+            if int(name[:2]) in np.linspace(0, 99, 100, dtype = int) \
+                and int(name[2:4]) in np.linspace(1, 12, 12, dtype = int) \
+                    and int(name[4:6]) in np.linspace(1, 32, 32, dtype = int): #If filename is in yy.mm.dd format, make it current day
+                self.filename_sweep = os.path.join(*path[:-1], f'{YEAR}{MONTH}{DAY}-{self.filename_index}.csv')
+                if ':' in self.filename_sweep and ':\\' not in self.filename_sweep:
+                    i = self.filename_sweep.index(':')
+                    self.filename_sweep = self.filename_sweep[:i+1] + '\\' + self.filename_sweep[i+1:]
         except:
-            self.filename_sweep = os.path.join(cur_dir, f'{name}-{self.filename_index}.csv')
+            path = os.path.normpath(self.filename_sweep)
+            path = path.split(os.sep)
+            name = path[-1]
+            if '.' in name: #if name has the extension, remove it
+                name = name[:len(name) - name[::-1].index('.') - 1] 
+            self.filename_sweep = os.path.join(*path[:-1], f'{name}-{self.filename_index}.csv')
+            if ':' in self.filename_sweep and ':\\' not in self.filename_sweep:
+                i = self.filename_sweep.index(':')
+                self.filename_sweep = self.filename_sweep[:i+1] + '\\' + self.filename_sweep[i+1:]
         
         globals()['setget_flag'] = False
         #globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
@@ -2296,8 +2346,18 @@ class Sweeper1d(tk.Frame):
     def set_filename_sweep(self):
         global filename_sweep
 
+        path = os.path.normpath(self.filename_sweep).split(os.path.sep)
+        
+        if 'data_files' not in path:
+            to_make = os.path.join(*path[:-1], f'{YEAR}{MONTH}{DAY}', 'data_files')
+            to_make = fix_unicode(to_make)
+            if not exists(to_make):
+                os.makedirs(to_make)
+        else:
+            to_make = os.path.join(*path[:-1])
+
         filename_sweep = tk.filedialog.asksaveasfilename(title='Save the file',
-                                                         initialfile=cur_dir,
+                                                         initialfile=to_make,
                                                          defaultextension='.csv')
         
         self.entry_filename.delete(0, tk.END)
@@ -2397,13 +2457,85 @@ class Sweeper1d(tk.Frame):
         
         if answer:
             tozero_flag = True
+       
+    def determine_filename_sweep(self):
+        global filename_sweep
+        global cur_dir
+        global core_dir
+        
+        if self.entry_filename.get() != '':
+            filename_sweep = self.entry_filename.get()
+
+        filename_sweep = fix_unicode(filename_sweep)
+
+        self.filename_index = get_filename_index(filename = filename_sweep, dimension = 2)
+
+        core = os.path.normpath(filename_sweep)
+        core = core.split(os.sep)
+        name = core[-1]
+        name = name[:len(name) - name[::-1].index('.') - 1]
+        
+        if 'data_files' in core and len(core) >= 3:
+            cur_dir = os.path.join(*core[:core.index('data_files')])
+            cur_dir = fix_unicode(cur_dir)
             
+            to_make = os.path.join(cur_dir, 'data_files')
+            to_make = fix_unicode(to_make)
+            
+            if not exists(to_make):
+                os.makedirs(to_make)
+                
+            if '.' not in name:
+                name += '.csv'
+                
+            filename_sweep = os.path.join(cur_dir, 'data_files', name)
+            filename_sweep = fix_unicode(filename_sweep)
+            
+        elif ('data_files' in core and len(core) < 3) or ('data_files' not in core and len(core) < 2):
+            name = core[-1]
+            
+            cur_dir = os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}')
+            
+            to_make = os.path.join(cur_dir, 'data_files')
+            to_make = fix_unicode(to_make)
+            
+            if not exists(to_make):
+                os.makedirs(to_make)
+            
+            if '.' not in name:
+                name += '.csv'
+                
+            filename_sweep = os.path.join(cur_dir, 'data_files', name)
+            filename_sweep = fix_unicode(filename_sweep)
+            
+        elif 'data_files' not in core and len(core) >= 2:
+            name = core[-1]
+            
+            cur_dir = os.path.join(*core[:-1], f'{YEAR}{MONTH}{DAY}')
+            cur_dir = fix_unicode(cur_dir)
+            
+            to_make = os.path.join(cur_dir, 'data_files')
+            to_make = fix_unicode(to_make)
+            
+            if not exists(to_make):
+                os.makedirs(to_make)
+                
+            if '.' not in name:
+                name += '.csv'
+                
+            filename_sweep = os.path.join(*core[:-1], f'{YEAR}{MONTH}{DAY}', 'data_files', name)
+            filename_sweep = fix_unicode(filename_sweep)
+            
+        self.filename_sweep = filename_sweep
+        
     def start_logs(self):
         global list_of_devices
         global list_of_device_addresses
         global types_of_devices
         global device_to_sweep1
         global parameters_to_read
+        global cur_dir
+        global filename_sweep
         
         all_addresses = [list_of_devices_addresses[self.combo_to_sweep1.current()]]
         
@@ -2413,22 +2545,40 @@ class Sweeper1d(tk.Frame):
             
         all_addresses = np.unique(all_addresses)
         
+        self.filename_index = get_filename_index(filename = filename_sweep)
+        
+        core = os.path.normpath(filename_sweep)
+        core = core.split(os.sep)
+        _name = core[-1]
+        try:
+            folder_name = _name[:len(_name) - _name[::-1].index('.') - 1]
+        except ValueError:
+            pass
+        try:
+            folder_name = folder_name[:len(folder_name) - folder_name[::-1].index('-') - 1]
+        except ValueError:
+            pass
+        folder_name = unify_filename(folder_name)
+        
         for address in all_addresses:
             
             device = list_of_devices[list_of_devices_addresses.index(address)]
             if hasattr(device, 'loggable'):
-                if not exists(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'logs')):
-                    os.mkdir(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'logs'))
+                to_make = os.path.join(cur_dir, 'logs', f'{folder_name}_{self.filename_index}')
+                to_make = fix_unicode(to_make)
+                if not exists(to_make):
+                    os.mkdir(to_make)
                 name = types_of_devices[list_of_devices_addresses.index(address)]
                 valid_address = "".join(x for x in address if x.isalnum())
-                log_filename = os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'logs', f'logs_{name}_{valid_address}_{self.filename_index}.csv')
+                log_filename = os.path.join(to_make, f'logs_{name}_{valid_address}_{self.filename_index}.csv')
+                log_filename = fix_unicode(log_filename)
                 t = time.localtime()
                 cur_time = time.strftime("%H:%M:%S", t)
                 
                 log = f'Name: {name}\nAddress: {address}\nTime: {cur_time}\n'
                 
                 for log_parameter in device.loggable:
-                    log += f'{log_parameter}: {getattr(device, log_parameter)}\n'
+                    log += f'{log_parameter}: {getattr(device, log_parameter)()}\n'
                 
                 log = log[:-1
                           ]
@@ -2476,11 +2626,13 @@ class Sweeper1d(tk.Frame):
             cur_value = float(getattr(device, parameter)())
         except Exception as e:
             print(f'Exception happened in pre-sweep 1: {e}')
+            self.start_logs()
             sweeper_write = Sweeper_write()
             self.open_graph()
             return
 
         if abs(cur_value - from_sweep) <= eps:
+            self.start_logs()
             sweeper_write = Sweeper_write()
             self.open_graph()
             return
@@ -2551,7 +2703,6 @@ class Sweeper1d(tk.Frame):
         global delay_factor1
         global parameters_to_read
         global parameters_to_read_dict
-        global filename_sweep
         global sweeper_flag1
         global sweeper_flag2
         global sweeper_flag3
@@ -2624,11 +2775,9 @@ class Sweeper1d(tk.Frame):
         columns = ['time', columns_device + '.' + columns_parameters + '_sweep']
         for option in parameters_to_read:
             columns.append(parameters_to_read_dict[option])
-
-        if self.entry_filename.get() != '':
-            filename_sweep = self.entry_filename.get()
             
-        print(filename_sweep)
+        self.determine_filename_sweep()
+
         sweeper_flag1 = True
         sweeper_flag2 = False
         sweeper_flag3 = False
@@ -2680,18 +2829,33 @@ class Sweeper2d(tk.Frame):
         self.status_manual2 = tk.IntVar(value = int(self.preset['status_manual2'].values[0]))
         self.condition = str(self.preset['condition'].values[0])
         self.filename_sweep = self.preset['filename_sweep'].values[0]
+        self.filename_sweep = fix_unicode(self.filename_sweep)
         self.interpolated = int(self.preset['interpolated'].values[0])
         self.uniform = int(self.preset['interpolated'].values[0])
         
-        self.filename_index = get_filename_index()
+        self.filename_index = get_filename_index(filename = self.filename_sweep, dimension = 2)
         
+        #updates filename with respect to date and current index
         try:
-            name = os.path.basename(self.filename_sweep).split('.')[0]
-            if int(name[:2]) in np.linspace(0, 99, 100, dtype = int) and int(name[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(name[4:6]) in np.linspace(1, 32, 32, dtype = int):
-                self.filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}-{self.filename_index}.csv')
+            path = os.path.normpath(self.filename_sweep)
+            path = path.split(os.sep)
+            name = path[-1]
+            if '.' in name: #if name has the extension, remove it
+                name = name[:len(name) - name[::-1].index('.') - 1]
+            if int(name[:2]) in np.linspace(0, 99, 100, dtype = int) \
+                and int(name[2:4]) in np.linspace(1, 12, 12, dtype = int) \
+                    and int(name[4:6]) in np.linspace(1, 32, 32, dtype = int): #If filename is in yy.mm.dd format, make it current day
+                self.filename_sweep = os.path.join(*path[:-1], f'{YEAR}{MONTH}{DAY}-{self.filename_index}.csv')
+                fix_unicode(self.filename_sweep)
         except:
-            self.filename_sweep = os.path.join(cur_dir, f'{name}-{self.filename_index}.csv')
-        
+            path = os.path.normpath(self.filename_sweep)
+            path = path.split(os.sep)
+            name = path[-1]
+            if '.' in name: #if name has the extension, remove it
+                name = name[:len(name) - name[::-1].index('.') - 1] 
+            self.filename_sweep = os.path.join(*path[:-1], f'{name}-{self.filename_index}.csv')
+            fix_unicode(filename_sweep)
+    
         globals()['setget_flag'] = False
         #globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
 
@@ -3768,9 +3932,25 @@ class Sweeper2d(tk.Frame):
                 
                 return f'{filename}{ext}'
             
-        current_filename = basename(self.entry_filename.get())
+            return filename
             
-        if current_filename != basename(self.filename_sweep):
+        path = os.path.normpath(self.entry_filename.get())
+        path = path.split(os.sep)
+        
+        if len(path) > 1:
+            current_filename = os.path.join(*path[:-1], basename(path[-1]))
+        else:
+            current_filename = path[0]
+        
+        filename_path = os.path.normpath(self.filename_sweep)
+        filename_path = filename_path.split(os.sep)
+        
+        if len(path) > 1:
+            memory_filename = os.path.join(*filename_path[:-1], basename(filename_path[-1]))
+        else:
+            memory_filename = filename_path[0]
+            
+        if current_filename != memory_filename:
             self.preset.loc[0, 'filename_sweep'] = current_filename
             self.preset.to_csv(globals()['sweeper2d_path'], index = False)
         
@@ -3988,8 +4168,18 @@ class Sweeper2d(tk.Frame):
     def set_filename_sweep(self):
         global filename_sweep
 
+        path = os.path.normpath(self.filename_sweep).split(os.path.sep)
+        
+        if 'data_files' not in path:
+            to_make = os.path.join(*path[:-1], f'{YEAR}{MONTH}{DAY}', 'data_files')
+            to_make = fix_unicode(to_make)
+            if not exists(to_make):
+                os.makedirs(to_make)
+        else:
+            to_make = os.path.join(*path[:-1])
+
         filename_sweep = tk.filedialog.asksaveasfilename(title='Save the file',
-                                                         initialfile=cur_dir,
+                                                         initialfile=to_make,
                                                          defaultextension='.csv')
         
         self.entry_filename.delete(0, tk.END)
@@ -4083,15 +4273,85 @@ class Sweeper2d(tk.Frame):
         if answer:
             tozero_flag = True
             
+    def determine_filename_sweep(self):
+        global filename_sweep
+        global cur_dir
+        global core_dir
+        
+        if self.entry_filename.get() != '':
+            filename_sweep = self.entry_filename.get()
+
+        filename_sweep = fix_unicode(filename_sweep)
+
+        self.filename_index = get_filename_index(filename = filename_sweep, dimension = 2)
+
+        core = os.path.normpath(filename_sweep)
+        core = core.split(os.sep)
+        name = core[-1]
+        try:
+            folder_name = name[:len(name) - name[::-1].index('.') - 1]
+        except ValueError:
+            pass
+        try:
+            folder_name = folder_name[:len(folder_name) - folder_name[::-1].index('-') - 1]
+        except ValueError:
+            pass
+        folder_name = unify_filename(folder_name)
+        
+        if 'data_files' in core and len(core) >= 3:
+            cur_dir = os.path.join(*core[:core.index('data_files')])
+            cur_dir = fix_unicode(cur_dir)
+            
+            to_make = os.path.join(cur_dir, 'data_files', f'{folder_name}_{self.filename_index}')
+            to_make = fix_unicode(to_make)
+            
+            if not exists(to_make):
+                os.makedirs(to_make)
+                
+            filename_sweep = os.path.join(cur_dir, 'data_files', f'{folder_name}_{self.filename_index}', f'{name}')
+            filename_sweep = fix_unicode(filename_sweep)
+            
+        elif ('data_files' in core and len(core) < 3) or ('data_files' not in core and len(core) < 2):
+            name = core[-1]
+            
+            cur_dir = os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}')
+            
+            to_make = os.path.join(cur_dir, 'data_files', f'{folder_name}_{self.filename_index}')
+            to_make = fix_unicode(to_make)
+            
+            if not exists(to_make):
+                os.makedirs(to_make)
+                
+            filename_sweep = os.path.join(cur_dir, 'data_files', f'{name}_{self.filename_index}', f'{name}')
+            filename_sweep = fix_unicode(filename_sweep)
+            
+        elif 'data_files' not in core and len(core) >= 2:
+            name = core[-1]
+            
+            cur_dir = os.path.join(*core[:-1], f'{YEAR}{MONTH}{DAY}')
+            cur_dir = fix_unicode(cur_dir)
+            
+            to_make = os.path.join(cur_dir, 'data_files', f'{folder_name}_{self.filename_index}')
+            to_make = fix_unicode(to_make)
+            
+            if not exists(to_make):
+                os.makedirs(to_make)
+            
+            filename_sweep = os.path.join(*core[:-1], f'{YEAR}{MONTH}{DAY}', 'data_files', f'{folder_name}_{self.filename_index}', f'{name}')
+            filename_sweep = fix_unicode(filename_sweep)
+        
+        self.filename_sweep = filename_sweep
+        
     def start_logs(self):
         global list_of_devices
         global list_of_device_addresses
         global types_of_devices
         global device_to_sweep1
-        global device_to_sweep2
         global parameters_to_read
+        global cur_dir
+        global filename_sweep
         
-        all_addresses = [list_of_devices_addresses[self.combo_to_sweep1.current()], 
+        all_addresses = [list_of_devices_addresses[self.combo_to_sweep1.current()],
                          list_of_devices_addresses[self.combo_to_sweep2.current()]]
         
         for parameter in parameters_to_read:
@@ -4100,25 +4360,43 @@ class Sweeper2d(tk.Frame):
             
         all_addresses = np.unique(all_addresses)
         
+        self.filename_index = get_filename_index(filename = filename_sweep)
+        
+        core = os.path.normpath(filename_sweep)
+        core = core.split(os.sep)
+        _name = core[-1]
+        try:
+            folder_name = _name[:len(_name) - _name[::-1].index('.') - 1]
+        except ValueError:
+            pass
+        try:
+            folder_name = folder_name[:len(folder_name) - folder_name[::-1].index('-') - 1]
+        except ValueError:
+            pass
+        folder_name = unify_filename(folder_name)
+        
         for address in all_addresses:
             
             device = list_of_devices[list_of_devices_addresses.index(address)]
             if hasattr(device, 'loggable'):
-                if not exists(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'logs')):
-                    os.mkdir(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'logs'))
+                to_make = os.path.join(cur_dir, 'logs', f'{folder_name}_{self.filename_index}')
+                to_make = fix_unicode(to_make)
+                if not exists(to_make):
+                    os.mkdir(to_make)
                 name = types_of_devices[list_of_devices_addresses.index(address)]
                 valid_address = "".join(x for x in address if x.isalnum())
-                log_filename = os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'logs', f'logs_{name}_{valid_address}_{self.filename_index}.csv')
+                log_filename = os.path.join(to_make, f'logs_{name}_{valid_address}_{self.filename_index}.csv')
+                log_filename = fix_unicode(log_filename)
                 t = time.localtime()
                 cur_time = time.strftime("%H:%M:%S", t)
                 
                 log = f'Name: {name}\nAddress: {address}\nTime: {cur_time}\n'
                 
                 for log_parameter in device.loggable:
-                    log += f'{log_parameter}: {getattr(device, log_parameter)}\n'
+                    log += f'{log_parameter}: {getattr(device, log_parameter)()}\n'
                 
-                log = log[:-1]
-                
+                log = log[:-1
+                          ]
                 with open(log_filename, 'w') as file:
                     try:    
                         file.write(log)
@@ -4325,7 +4603,6 @@ class Sweeper2d(tk.Frame):
         global delay_factor2
         global parameters_to_read
         global parameter_to_read_dict
-        global filename_sweep
         global sweeper_flag1
         global sweeper_flag2
         global sweeper_flag3
@@ -4455,8 +4732,8 @@ class Sweeper2d(tk.Frame):
 
         # fixing sweeper parmeters
         
-        if self.entry_filename.get() != '':
-            filename_sweep = self.entry_filename.get()
+        self.determine_filename_sweep()
+        
         interpolated2D = self.interpolated
         uniform2D = self.uniform
         
@@ -4523,18 +4800,37 @@ class Sweeper3d(tk.Frame):
         self.status_snakemode_slave = tk.IntVar(value = int(self.preset['status_snakemode3'].values[0]))
         self.status_manual3 = tk.IntVar(value = int(self.preset['status_manual3'].values[0]))
         self.filename_sweep = self.preset['filename_sweep'].values[0]
+        self.filename_sweep = fix_unicode(self.filename_sweep)
         self.condition = str(self.preset['condition'].values[0])
         self.interpolated = int(self.preset['interpolated'].values[0])
         self.uniform = int(self.preset['uniform'].values[0])
         
-        self.filename_index = get_filename_index()
+        self.filename_index = get_filename_index(filename = self.filename_sweep, dimension = 3)
         
+        #updates filename with respect to date and current index
         try:
-            name = os.path.basename(self.filename_sweep).split('.')[0]
-            if int(name[:2]) in np.linspace(0, 99, 100, dtype = int) and int(name[2:4]) in np.linspace(1, 12, 12, dtype = int) and int(name[4:6]) in np.linspace(1, 32, 32, dtype = int):
-                self.filename_sweep = os.path.join(cur_dir, f'{YEAR}{MONTH}{DAY}-{self.filename_index}.csv')
+            path = os.path.normpath(self.filename_sweep)
+            path = path.split(os.sep)
+            name = path[-1]
+            if '.' in name: #if name has the extension, remove it
+                name = name[:len(name) - name[::-1].index('.') - 1]
+            if int(name[:2]) in np.linspace(0, 99, 100, dtype = int) \
+                and int(name[2:4]) in np.linspace(1, 12, 12, dtype = int) \
+                    and int(name[4:6]) in np.linspace(1, 32, 32, dtype = int): #If filename is in yy.mm.dd format, make it current day
+                self.filename_sweep = os.path.join(*path[:-1], f'{YEAR}{MONTH}{DAY}-{self.filename_index}.csv')
+                if ':' in self.filename_sweep and ':\\' not in self.filename_sweep:
+                    i = self.filename_sweep.index(':')
+                    self.filename_sweep = self.filename_sweep[:i+1] + '\\' + self.filename_sweep[i+1:]
         except:
-            self.filename_sweep = os.path.join(cur_dir, f'{name}-{self.filename_index}.csv')
+            path = os.path.normpath(self.filename_sweep)
+            path = path.split(os.sep)
+            name = path[-1]
+            if '.' in name: #if name has the extension, remove it
+                name = name[:len(name) - name[::-1].index('.') - 1] 
+            self.filename_sweep = os.path.join(*path[:-1], f'{name}-{self.filename_index}.csv')
+            if ':' in self.filename_sweep and ':\\' not in self.filename_sweep:
+                i = self.filename_sweep.index(':')
+                self.filename_sweep = self.filename_sweep[:i+1] + '\\' + self.filename_sweep[i+1:]
         
         globals()['setget_flag'] = False
         #globals()['parameters_to_read'] = globals()['parameters_to_read_copy']
@@ -6136,8 +6432,18 @@ class Sweeper3d(tk.Frame):
     def set_filename_sweep(self):
         global filename_sweep
 
+        path = os.path.normpath(self.filename_sweep).split(os.path.sep)
+        
+        if 'data_files' not in path:
+            to_make = os.path.join(*path[:-1], f'{YEAR}{MONTH}{DAY}', 'data_files')
+            to_make = fix_unicode(to_make)
+            if not exists(to_make):
+                os.makedirs(to_make)
+        else:
+            to_make = os.path.join(*path[:-1])
+
         filename_sweep = tk.filedialog.asksaveasfilename(title='Save the file',
-                                                         initialfile=cur_dir,
+                                                         initialfile=to_make,
                                                          defaultextension='.csv')
         
         self.entry_filename.delete(0, tk.END)
@@ -6231,15 +6537,85 @@ class Sweeper3d(tk.Frame):
         if answer:
             tozero_flag = True
             
+    def determine_filename_sweep(self):
+        global filename_sweep
+        global cur_dir
+        global core_dir
+        
+        if self.entry_filename.get() != '':
+            filename_sweep = self.entry_filename.get()
+
+        filename_sweep = fix_unicode(filename_sweep)
+
+        self.filename_index = get_filename_index(filename = filename_sweep, dimension = 2)
+
+        core = os.path.normpath(filename_sweep)
+        core = core.split(os.sep)
+        name = core[-1]
+        try:
+            folder_name = name[:len(name) - name[::-1].index('.') - 1]
+        except ValueError:
+            pass
+        try:
+            folder_name = folder_name[:len(folder_name) - folder_name[::-1].index('-') - 1]
+        except ValueError:
+            pass
+        folder_name = unify_filename(folder_name)
+        
+        if 'data_files' in core and len(core) >= 3:
+            cur_dir = os.path.join(*core[:core.index('data_files')])
+            cur_dir = fix_unicode(cur_dir)
+            
+            to_make = os.path.join(cur_dir, 'data_files', f'{folder_name}_{self.filename_index}')
+            to_make = fix_unicode(to_make)
+            
+            if not exists(to_make):
+                os.makedirs(to_make)
+                
+            filename_sweep = os.path.join(cur_dir, 'data_files', f'{folder_name}_{self.filename_index}', f'{name}')
+            filename_sweep = fix_unicode(filename_sweep)
+            
+        elif ('data_files' in core and len(core) < 3) or ('data_files' not in core and len(core) < 2):
+            name = core[-1]
+            
+            cur_dir = os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}')
+            
+            to_make = os.path.join(cur_dir, 'data_files', f'{folder_name}_{self.filename_index}')
+            to_make = fix_unicode(to_make)
+            
+            if not exists(to_make):
+                os.makedirs(to_make)
+                
+            filename_sweep = os.path.join(cur_dir, 'data_files', f'{folder_name}_{self.filename_index}', f'{name}')
+            filename_sweep = fix_unicode(filename_sweep)
+            
+        elif 'data_files' not in core and len(core) >= 2:
+            name = core[-1]
+            
+            cur_dir = os.path.join(*core[:-1], f'{YEAR}{MONTH}{DAY}')
+            cur_dir = fix_unicode(cur_dir)
+            
+            to_make = os.path.join(cur_dir, 'data_files', f'{folder_name}_{self.filename_index}')
+            to_make = fix_unicode(to_make)
+            
+            if not exists(to_make):
+                os.makedirs(to_make)
+            
+            filename_sweep = os.path.join(*core[:-1], f'{YEAR}{MONTH}{DAY}', 'data_files', f'{folder_name}_{self.filename_index}', f'{name}')
+            filename_sweep = fix_unicode(filename_sweep)
+        
+        self.filename_sweep = filename_sweep
+            
     def start_logs(self):
         global list_of_devices
         global list_of_device_addresses
         global types_of_devices
         global device_to_sweep1
-        global device_to_sweep2
         global parameters_to_read
+        global cur_dir
+        global filename_sweep
         
-        all_addresses = [list_of_devices_addresses[self.combo_to_sweep1.current()], 
+        all_addresses = [list_of_devices_addresses[self.combo_to_sweep1.current()],
                          list_of_devices_addresses[self.combo_to_sweep2.current()],
                          list_of_devices_addresses[self.combo_to_sweep3.current()]]
         
@@ -6249,25 +6625,43 @@ class Sweeper3d(tk.Frame):
             
         all_addresses = np.unique(all_addresses)
         
+        self.filename_index = get_filename_index(filename = filename_sweep)
+        
+        core = os.path.normpath(filename_sweep)
+        core = core.split(os.sep)
+        _name = core[-1]
+        try:
+            folder_name = _name[:len(_name) - _name[::-1].index('.') - 1]
+        except ValueError:
+            pass
+        try:
+            folder_name = folder_name[:len(folder_name) - folder_name[::-1].index('-') - 1]
+        except ValueError:
+            pass
+        folder_name = unify_filename(folder_name)
+        
         for address in all_addresses:
             
             device = list_of_devices[list_of_devices_addresses.index(address)]
             if hasattr(device, 'loggable'):
-                if not exists(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'logs')):
-                    os.mkdir(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'logs'))
+                to_make = os.path.join(cur_dir, 'logs', f'{folder_name}_{self.filename_index}')
+                to_make = fix_unicode(to_make)
+                if not exists(to_make):
+                    os.mkdir(to_make)
                 name = types_of_devices[list_of_devices_addresses.index(address)]
                 valid_address = "".join(x for x in address if x.isalnum())
-                log_filename = os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'logs', f'logs_{name}_{valid_address}_{self.filename_index}.csv')
+                log_filename = os.path.join(to_make, f'logs_{name}_{valid_address}_{self.filename_index}.csv')
+                log_filename = fix_unicode(log_filename)
                 t = time.localtime()
                 cur_time = time.strftime("%H:%M:%S", t)
                 
                 log = f'Name: {name}\nAddress: {address}\nTime: {cur_time}\n'
                 
                 for log_parameter in device.loggable:
-                    log += f'{log_parameter}: {getattr(device, log_parameter)}\n'
+                    log += f'{log_parameter}: {getattr(device, log_parameter)()}\n'
                 
-                log = log[:-1]
-                
+                log = log[:-1
+                          ]
                 with open(log_filename, 'w') as file:
                     try:    
                         file.write(log)
@@ -6565,7 +6959,6 @@ class Sweeper3d(tk.Frame):
         global delay_factor3
         global parameters_to_read_dict
         global parameters_to_read
-        global filename_sweep
         global sweeper_flag1
         global sweeper_flag2
         global sweeper_flag3
@@ -6745,8 +7138,7 @@ class Sweeper3d(tk.Frame):
 
         # fixing sweeper parmeters
         
-        if self.entry_filename.get() != '':
-            filename_sweep = self.entry_filename.get()
+        self.determine_filename_sweep()
         
         interpolated3D = self.interpolated
         uniform3D = self.uniform
@@ -6860,9 +7252,9 @@ class Sweeper_write(threading.Thread):
                 self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
                 self.nstep2 = int(abs(self.nstep2))
                 
-                index = get_filename_index()
+                index = get_filename_index(dimension = 2)
                 self.mapper2D = mapper2D(self.parameter_to_sweep1, self.parameter_to_sweep2, 
-                                         self.parameters_to_read, cur_dir, interpolated = interpolated2D,
+                                         self.parameters_to_read, filename_sweep, interpolated = interpolated2D,
                                          uniform = uniform2D, _from = self.from_sweep2, _to = self.to_sweep2,
                                          nsteps = self.nstep2, walks = globals()['back_and_forth_slave'], 
                                          index_filename = index)
@@ -6942,9 +7334,9 @@ class Sweeper_write(threading.Thread):
                 self.nstep3 = (float(to_sweep3) - float(from_sweep3)) / self.ratio_sweep3 / self.delay_factor3
                 self.nstep3 = int(abs(self.nstep3))
                 
-                index = get_filename_index()
+                index = get_filename_index(dimension = 3)
                 self.mapper3D = mapper3D(self.parameter_to_sweep1, self.parameter_to_sweep2, self.parameter_to_sweep3, 
-                                         self.parameters_to_read, cur_dir, interpolated = interpolated3D,
+                                         self.parameters_to_read, filename_sweep, interpolated = interpolated3D,
                                          uniform = uniform3D, _from = self.from_sweep3, _to = self.to_sweep3,
                                          nsteps = self.nstep3, walks = globals()['back_and_forth_slave_slave'],
                                          index_filename = index)
@@ -7511,20 +7903,22 @@ class Sweeper_write(threading.Thread):
             global sweeper_flag2
             global sweeper_flag3
             
-            files = os.listdir(cur_dir)
+            files = []
+            for (_, _, file_names) in os.walk(os.path.join(cur_dir, 'data_files')): #get all the files from subdirectories
+                files.extend(file_names)
             ind = [0]
-            basic_name = filename_sweep[len(cur_dir)+ 1:-4]
+            path = os.path.normpath(filename_sweep).split(os.path.sep)
+            basic_name = path[-1]
+            if '.' in basic_name:
+                basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('.') - 1)] #all before last -
             if '-' in basic_name:
                 basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('-') - 1)] #all before last -
-            if '_' in basic_name and len(manual_sweep_flags) != 1:
-                basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('_') - 1)] #all before last _
-            if '_' in basic_name and len(manual_sweep_flags) == 3:
-                basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('_') - 1)] #all before last _
+            basic_name = unify_filename(basic_name)
             print(f'Basic name is {basic_name}')
             for file in files:
                 if basic_name in file and 'manual' not in file and 'setget' not in file:
                     index_start = len(file) - file[::-1].find('-') - 1
-                    index_stop = file.find('.csv')
+                    index_stop = len(file) - file[::-1].find('.') - 1
                     try:
                         ind.append(int(file[index_start + 1 : index_stop]))
                     except:
@@ -7534,13 +7928,13 @@ class Sweeper_write(threading.Thread):
                 previous_ind = 0
             print(f'Previous index is {previous_ind}')
             if sweeper_flag1 == True:
-                filename_sweep = os.path.join(f'{cur_dir}', f'{basic_name}-{previous_ind + 1}.csv')
+                filename_sweep = os.path.join(*path[:-1], f'{basic_name}-{previous_ind + 1}.csv')
             elif sweeper_flag2 == True:
                 value1 = self.value1
                 integer1, fractional1 = divmod(value1, 1)
                 integer1 = round(integer1)
                 fractional1 = round(10 * fractional1)
-                filename_sweep = os.path.join(f'{cur_dir}', f'{basic_name}_{integer1}.{fractional1}-{previous_ind + 1}.csv')
+                filename_sweep = os.path.join(*path[:-1], f'{basic_name}_{integer1}.{fractional1}-{previous_ind + 1}.csv')
             elif sweeper_flag3 == True:
                 value1 = self.value1
                 value2 = self.value2
@@ -7550,8 +7944,9 @@ class Sweeper_write(threading.Thread):
                 integer2, fractional2 = divmod(value2, 1)
                 integer2 = round(integer2)
                 fractional2 = round(10 * fractional2)
-                filename_sweep = os.path.join(f'{cur_dir}', f'{basic_name}_{integer1}.{fractional1}_{integer2}.{fractional2}-{previous_ind + 1}.csv')
+                filename_sweep = os.path.join(*path[:-1], f'{basic_name}_{integer1}.{fractional1}_{integer2}.{fractional2}-{previous_ind + 1}.csv')
                 
+            filename_sweep = fix_unicode(filename_sweep)
             sweeper = globals()['Sweeper_object']
             
             sweeper.entry_filename.delete(0, tk.END)
@@ -7580,6 +7975,8 @@ class Sweeper_write(threading.Thread):
             
             globals()['dataframe'] = pd.DataFrame(columns=self.columns)
             globals()['dataframe'].to_csv(filename_sweep, index=False)
+            
+            print(filename_sweep)
             
             print('Filename updated')
         
