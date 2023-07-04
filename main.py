@@ -670,19 +670,23 @@ def my_animate(i, n, filename):
 int1, int2 = np.meshgrid(np.arange(0, 10), np.arange(0, 10))
 
 possibilities = []
-for i in range(0, 100):
-    possibilities.append(f'_{int1.flatten()[i]}.{int2.flatten()[i]}')
+for i in range(0, int1.flatten().shape[0]):
+    possibilities.append(f'{int1.flatten()[i]}.{int2.flatten()[i]}')
 
 def unify_filename(filename: str, possibilities = possibilities):
     '''
-    A function that removes "_int1.int2_int3.int4" from filename
+    A function that removes "_......int1.int2_........int3.int4" from filename
     '''
     if any((match1 := num) in filename for num in possibilities):
-        name = filename.replace(match1, '')
+        filename = (filename[:filename.index(match1)], filename[filename.index(match1) + 3:])
+        idx_ = len(filename[0]) - filename[0][::-1].index('_') - 1
+        name = filename[0][:idx_] + filename[1]
     else:
         name = filename
     if any((match2 := num) in name for num in possibilities):
-        name = name.replace(match2, '')
+        filename = (filename[:filename.index(match2)], filename[filename.index(match2) + 3:])
+        idx_ = len(filename[0]) - filename[0][::-1].index('_') - 1
+        name = filename[0][:idx_] + filename[1]
     return name
 
 def fix_unicode(filename: str):
@@ -2477,6 +2481,11 @@ class Sweeper1d(tk.Frame):
         
         if 'data_files' in core and len(core) >= 3:
             cur_dir = os.path.join(*core[:core.index('data_files')])
+            path = os.path.normpath(cur_dir).split(os.path.sep)
+            date = path[-1]
+            if date != f'{YEAR}{MONTH}{DAY}':
+                cur_dir = os.path.join(*path[:-1], f'{YEAR}{MONTH}{DAY}')
+                self.filename_index = 1
             cur_dir = fix_unicode(cur_dir)
             
             to_make = os.path.join(cur_dir, 'data_files')
@@ -2567,7 +2576,7 @@ class Sweeper1d(tk.Frame):
                 to_make = os.path.join(cur_dir, 'logs', f'{folder_name}_{self.filename_index}')
                 to_make = fix_unicode(to_make)
                 if not exists(to_make):
-                    os.mkdir(to_make)
+                    os.makedirs(to_make)
                 name = types_of_devices[list_of_devices_addresses.index(address)]
                 valid_address = "".join(x for x in address if x.isalnum())
                 log_filename = os.path.join(to_make, f'logs_{name}_{valid_address}_{self.filename_index}.csv')
@@ -4300,7 +4309,13 @@ class Sweeper2d(tk.Frame):
         
         if 'data_files' in core and len(core) >= 3:
             cur_dir = os.path.join(*core[:core.index('data_files')])
+            path = os.path.normpath(cur_dir).split(os.path.sep)
+            date = path[-1]
+            if date != f'{YEAR}{MONTH}{DAY}':
+                cur_dir = os.path.join(*path[:-1], f'{YEAR}{MONTH}{DAY}')
+                self.filename_index = 1
             cur_dir = fix_unicode(cur_dir)
+            print(cur_dir)
             
             to_make = os.path.join(cur_dir, 'data_files', f'{folder_name}_{self.filename_index}')
             to_make = fix_unicode(to_make)
@@ -4382,7 +4397,7 @@ class Sweeper2d(tk.Frame):
                 to_make = os.path.join(cur_dir, 'logs', f'{folder_name}_{self.filename_index}')
                 to_make = fix_unicode(to_make)
                 if not exists(to_make):
-                    os.mkdir(to_make)
+                    os.makedirs(to_make)
                 name = types_of_devices[list_of_devices_addresses.index(address)]
                 valid_address = "".join(x for x in address if x.isalnum())
                 log_filename = os.path.join(to_make, f'logs_{name}_{valid_address}_{self.filename_index}.csv')
@@ -6564,6 +6579,11 @@ class Sweeper3d(tk.Frame):
         
         if 'data_files' in core and len(core) >= 3:
             cur_dir = os.path.join(*core[:core.index('data_files')])
+            path = os.path.normpath(cur_dir).split(os.path.sep)
+            date = path[-1]
+            if date != f'{YEAR}{MONTH}{DAY}':
+                cur_dir = os.path.join(*path[:-1], f'{YEAR}{MONTH}{DAY}')
+                self.filename_index = 1
             cur_dir = fix_unicode(cur_dir)
             
             to_make = os.path.join(cur_dir, 'data_files', f'{folder_name}_{self.filename_index}')
@@ -6647,7 +6667,7 @@ class Sweeper3d(tk.Frame):
                 to_make = os.path.join(cur_dir, 'logs', f'{folder_name}_{self.filename_index}')
                 to_make = fix_unicode(to_make)
                 if not exists(to_make):
-                    os.mkdir(to_make)
+                    os.makedirs(to_make)
                 name = types_of_devices[list_of_devices_addresses.index(address)]
                 valid_address = "".join(x for x in address if x.isalnum())
                 log_filename = os.path.join(to_make, f'logs_{name}_{valid_address}_{self.filename_index}.csv')
@@ -7630,6 +7650,9 @@ class Sweeper_write(threading.Thread):
                 try:
                     parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
                                               option)()
+                    if str(parameter_value) == '':
+                        parameter_value = np.nan
+                        
                     if len(manual_sweep_flags) == 2:
                         self.mapper2D.append_parameter(str(parameter), parameter_value)
                     if len(manual_sweep_flags) == 3:
@@ -9363,7 +9386,7 @@ class Graph():
         
         if not globals()['setget_flag']:
             
-            self.label_filename = tk.Label(self.tw, text = globals()['filename_sweep'], font = LARGE_FONT)
+            self.label_filename = tk.Label(self.tw, text = globals()['filename_sweep'], font = LARGE_FONT, justify = tk.RIGHT)
             self.label_filename.place(relx = 0.6, rely = 0.82)
             
         else:

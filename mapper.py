@@ -9,19 +9,23 @@ A classes that helps to collect data from 2D and 3D sweeps
 int1, int2 = np.meshgrid(np.arange(0, 10), np.arange(0, 10))
 
 possibilities = []
-for i in range(0, 100):
-    possibilities.append(f'_{int1.flatten()[i]}.{int2.flatten()[i]}')
+for i in range(0, int1.flatten().shape[0]):
+    possibilities.append(f'{int1.flatten()[i]}.{int2.flatten()[i]}')
 
 def unify_filename(filename: str, possibilities = possibilities):
     '''
-    A function that removes "_int1.int2_int3.int4" from filename
+    A function that removes "_......int1.int2_........int3.int4" from filename
     '''
     if any((match1 := num) in filename for num in possibilities):
-        name = filename.replace(match1, '')
+        filename = (filename[:filename.index(match1)], filename[filename.index(match1) + 3:])
+        idx_ = len(filename[0]) - filename[0][::-1].index('_') - 1
+        name = filename[0][:idx_] + filename[1]
     else:
         name = filename
     if any((match2 := num) in name for num in possibilities):
-        name = name.replace(match2, '')
+        filename = (filename[:filename.index(match2)], filename[filename.index(match2) + 3:])
+        idx_ = len(filename[0]) - filename[0][::-1].index('_') - 1
+        name = filename[0][:idx_] + filename[1]
     return name
 
 def fix_unicode(filename: str):
@@ -533,8 +537,8 @@ class mapper3D():
             cur_dir = fix_unicode(cur_dir)
             filename = f'{self.index_filename}_{parameter}_map_{self.iteration}.csv'
             filename = os.path.join(cur_dir, '2d_maps', 'tables', 
-                                    f'{self.parameter_to_sweep1}_{self.master[-1]}', 
-                                    f'{name}_{self.index_filename}', filename)
+                                    f'{name}_{self.index_filename}',
+                                    f'{self.parameter_to_sweep1}_{self.master[-1]}', filename)
             filename = fix_unicode(filename)
             return filename
         
