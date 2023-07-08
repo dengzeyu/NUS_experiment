@@ -1,6 +1,10 @@
 import numpy as np
 import os
 from scipy import interpolate
+import matplotlib.pyplot as plt
+import pandas as pd
+plt.rcParams.update({'figure.max_open_warning': 0})
+import imageio
 
 """
 A classes that helps to collect data from 2D and 3D sweeps
@@ -23,15 +27,124 @@ def unify_filename(filename: str, possibilities = possibilities):
     else:
         name = filename
     if any((match2 := num) in name for num in possibilities):
-        filename = (filename[:filename.index(match2)], filename[filename.index(match2) + 3:])
-        idx_ = len(filename[0]) - filename[0][::-1].index('_') - 1
-        name = filename[0][:idx_] + filename[1]
+        name = (name[:name.index(match2)], name[name.index(match2) + 3:])
+        idx_ = len(name[0]) - name[0][::-1].index('_') - 1
+        name = name[0][:idx_] + name[1]
     return name
 
 def fix_unicode(filename: str):
     if ':' in filename and ':\\' not in filename:
         filename = filename.replace(':', ':\\')
     return filename
+
+def save_map(path, min_z = None, max_z = None):
+    
+    '''
+    Creates .png image from a table with filename 'path'
+    '''
+    
+    image_filename = os.path.normpath(path).split(os.path.sep)
+    image_filename[image_filename.index('tables')] = 'images'
+    image_filename[-1] = image_filename[-1].replace('csv', 'png')
+    filename = image_filename[-1]
+
+    def fix_unicode(filename: str):
+        if ':' in filename and ':\\' not in filename:
+            filename = filename.replace(':', ':\\')
+        return filename
+
+    to_make = os.path.join(*image_filename[:-1])
+    to_make = fix_unicode(to_make)
+    if not os.path.exists(to_make):
+        os.makedirs(to_make)
+
+    image_filename = os.path.join(to_make, filename)
+
+    parameter = os.path.normpath(path).split(os.path.sep)[-1]
+    parameter = parameter.split('_')[1]
+
+    data = pd.read_csv(path, sep = ',')
+
+    fig, ax = plt.subplots()
+
+    plt.ioff()
+
+    names = data.columns.tolist()[0].split(' / ')
+
+    y = data[data.columns.tolist()[0]]
+    x = data.columns.tolist()[1:]
+
+    z = [data[i].values for i in x]
+    z = np.array(z, dtype = float).T
+    z = np.ma.masked_invalid(z)
+    
+    if min_z == None and max_z == None:
+        min_z, max_z = np.nanmin(z), np.nanmax(z)
+
+    y = np.array(y, dtype = float)
+    x = np.array(x, dtype = float)
+
+    colormap = ax.pcolormesh(z, cmap = 'viridis', vmin = min_z, vmax = max_z, shading = 'flat')
+    colorbar = ax.get_figure().colorbar(colormap, ax = ax)
+    colorbar.ax.tick_params(labelsize=5, which = 'both')
+    colorbar.set_label(parameter)
+
+    title = f'Map {parameter}'
+    xlabel = names[0]
+    ylabel = names[1]
+
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+
+    #ticks and ticklabels
+    y_tick_labels = [round(i, 2) for i in y]
+
+    x_tick_labels = [round(i, 2) for i in x]
+
+    y_ticks = []
+
+    for ind, _ in enumerate(y_tick_labels):
+        if len(y_tick_labels) != 1 and ind != len(y_tick_labels) - 1:
+            y_ticks.append(round((abs((y_tick_labels[ind + 1] - y_tick_labels[ind])) / 2), 2))
+        elif len(y_tick_labels) == 1:
+            y_ticks.append(round((y_tick_labels[0] + 0.5), 2))
+
+    if len(y_tick_labels) != 1:
+        y_ticks.append(round((abs((y_tick_labels[-1] - y_tick_labels[-2])) / 2), 2))
+
+    x_ticks = []
+
+    for ind, _ in enumerate(x_tick_labels):
+        if len(x_tick_labels) != 1 and ind != len(x_tick_labels) - 1:
+            x_ticks.append(round((((x_tick_labels[ind + 1] - x_tick_labels[ind])) / 2), 2))
+        elif len(x_tick_labels) == 1:
+            x_ticks.append(round((x_tick_labels[0] + 0.5), 2))
+
+    if len(x_tick_labels) != 1:
+        x_ticks.append(round((abs((x_tick_labels[-1] - x_tick_labels[-2])) / 2), 2))
+
+    y_ticks = np.arange(len(y_ticks)) + 0.5
+
+    if len(y_ticks) > 6:
+        ax.set_yticks(y_ticks[::len(y_ticks) // 6])
+        ax.set_yticklabels(y_tick_labels[::len(y_tick_labels) // 6])
+    else:
+        ax.set_yticks(y_ticks)
+        ax.set_yticklabels(y_tick_labels)
+        
+    x_ticks = np.arange(len(x_ticks)) + 0.5
+        
+    if len(x_ticks) > 6:
+        ax.set_xticks(x_ticks[::len(x_ticks) // 6])
+        ax.set_xticklabels(x_tick_labels[::len(x_tick_labels) // 6], rotation=30)
+    else:
+        ax.set_xticks(x_ticks)
+        ax.set_xticklabels(x_tick_labels, rotation=30)
+        
+    fig.savefig(image_filename, dpi = 300, )
+
+    plt.close(fig)
 
 class mapper2D():
     def __init__(self, parameter_to_sweep1: str, parameter_to_sweep2: str, 
@@ -90,7 +203,6 @@ class mapper2D():
             
             if not hasattr(self, 'map_slave') and not hasattr(self, 'map_master'):  #first time
                 print('Mapper concatenated at first time')
-                print(self.slave)
                 self.map_slave = np.array([self.slave])
                 self.map_master = np.array([np.ones_like(self.slave) * self.master[-1]])
                 self.create_files()
@@ -158,6 +270,16 @@ class mapper2D():
                 elif hasattr(self, f'map_{parameter}'):
                     
                     if hasattr(self, parameter):
+                        diff = self.__dict__[f'map_{parameter}'].shape[1] - self.__dict__[parameter].shape[0]
+                        if diff < 0:
+                            for i in range(abs(diff)):
+                                self.__dict__[parameter] =  np.concatenate(self.__dict__[parameter], [np.nan])
+                        elif diff > 0:
+                            def stack(parameter):
+                                self.__dict__[f'map_{parameter}'] = np.hstack([self.__dict__[f'map_{parameter}'], np.array([np.nan * np.ones(self.__dict__[f'map_{parameter}'].shape[0])]).T])
+                            for i in range(diff):
+                                stack(parameter
+                                      )
                         self.__dict__[f'map_{parameter}'] = np.vstack([self.__dict__[f'map_{parameter}'], self.__dict__[parameter]])
                         self.append_line_to_file(parameter, self.__dict__[parameter])
                     else:
@@ -257,6 +379,7 @@ class mapper2D():
             except ValueError:
                 pass
             name = unify_filename(name)
+            name = name[:(len(name) - name[::-1].find('-') - 1)]
             cur_dir = os.path.join(*path[:path.index('data_files')])
             cur_dir = fix_unicode(cur_dir)
             filename = f'{self.index_filename}_{parameter}_map.csv'
@@ -274,6 +397,8 @@ class mapper2D():
                 file.close()
             finally:
                 file.close()
+                
+        save_map(filename)
             
     def create_files(self):
         
@@ -284,6 +409,7 @@ class mapper2D():
         except ValueError:
             pass
         name = unify_filename(name)
+        name = name[:(len(name) - name[::-1].find('-') - 1)]
         cur_dir = os.path.join(*path[:path.index('data_files')])
         cur_dir = fix_unicode(cur_dir)
         to_make = os.path.join(cur_dir, '2d_maps', 'tables', f'{name}_{self.index_filename}')
@@ -295,6 +421,7 @@ class mapper2D():
             slave = ','.join(map(str, slave))
             parameter = parameter.replace(':', '')
             filename = os.path.join(to_make, f'{self.index_filename}_{parameter}_map.csv')
+            fix_unicode(filename)
             
             with open(filename, 'w') as file:
                 try:
@@ -533,6 +660,7 @@ class mapper3D():
             except ValueError:
                 pass
             name = unify_filename(name)
+            name = name[:(len(name) - name[::-1].find('-') - 1)]
             cur_dir = os.path.join(*path[:path.index('data_files')])
             cur_dir = fix_unicode(cur_dir)
             filename = f'{self.index_filename}_{parameter}_map_{self.iteration}.csv'
@@ -552,7 +680,12 @@ class mapper3D():
                 file.close()
             finally:
                 file.close()
-            
+                
+        if hasattr(self, f'min_{parameter}') and hasattr(self, f'max_{parameter}'):
+            save_map(filename, min_z = self.__dict__[f'min_{parameter}'], max_z = self.__dict__[f'max_{parameter}'])
+        else:
+            save_map(filename)
+        
     def create_files(self):
         
         path = os.path.normpath(self.filename_sweep).split(os.path.sep)
@@ -562,6 +695,7 @@ class mapper3D():
         except ValueError:
             pass
         name = unify_filename(name)
+        name = name[:(len(name) - name[::-1].find('-') - 1)]
         cur_dir = os.path.join(*path[:path.index('data_files')])
         cur_dir = fix_unicode(cur_dir)
         to_make = os.path.join(cur_dir, '2d_maps', 'tables', f'{name}_{self.index_filename}', 
@@ -582,6 +716,53 @@ class mapper3D():
                     file.close()
                 finally:
                     file.close()
+    
+    def create_gif(self):
+        
+        path = os.path.normpath(self.filename_sweep).split(os.path.sep)
+        name = path[-1]
+        try:
+            name = name[:len(name) - name[::-1].index('.') - 1]
+        except ValueError:
+            pass
+        name = unify_filename(name)
+        name = name[:(len(name) - name[::-1].find('-') - 1)]
+        cur_dir = os.path.join(*path[:path.index('data_files')])
+        cur_dir = fix_unicode(cur_dir)
+        tomake_gif = os.path.join(cur_dir, '2d_maps', 'images', f'{name}_{self.index_filename}', 
+                               'gifs')
+
+        tomake_gif = fix_unicode(tomake_gif)
+
+        if not os.path.exists(tomake_gif):
+            os.makedirs(tomake_gif)
+
+        path_files = os.path.join(cur_dir, '2d_maps', 'images', f'{name}_{self.index_filename}')
+        path_files = fix_unicode(path_files)
+
+        image_files = []
+        for (root, dir_names, file_names) in os.walk(path_files):
+            for i in file_names:
+                if '.png' in i:
+                    file = os.path.join(root, i)
+                    image_files.append(fix_unicode(file))
+            
+        for parameter in self.parameters_to_read:
+            parameter_files = []
+            parameter_idx = []
+            for filename in image_files:
+                if parameter in filename:
+                    parameter_files.append(filename)
+                    name = os.path.normpath(filename).split(os.path.sep)[-1]
+                    parameter_idx.append(name[:name.index('_')])
+            dat = zip(parameter_idx, parameter_files)
+            parameter_files = sorted(dat, key = lambda tup: tup[0])
+            parameter_files = [i[1] for i in parameter_files]
+            parameter_images = [imageio.imread(i, format = 'PNG') for i in parameter_files]
+            gif_name = os.path.join(tomake_gif, f'{self.index_filename}_{parameter}_gif.gif')
+            gif_name = fix_unicode(gif_name)
+            imageio.mimsave(gif_name, parameter_images, fps = 3, loop = 0)
+            
            
     def stack_iteration(self):
         for parameter in self.parameters_to_read:

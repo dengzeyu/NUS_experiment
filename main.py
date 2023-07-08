@@ -684,9 +684,9 @@ def unify_filename(filename: str, possibilities = possibilities):
     else:
         name = filename
     if any((match2 := num) in name for num in possibilities):
-        filename = (filename[:filename.index(match2)], filename[filename.index(match2) + 3:])
-        idx_ = len(filename[0]) - filename[0][::-1].index('_') - 1
-        name = filename[0][:idx_] + filename[1]
+        name = (name[:name.index(match2)], name[name.index(match2) + 3:])
+        idx_ = len(name[0]) - name[0][::-1].index('_') - 1
+        name = name[0][:idx_] + name[1]
     return name
 
 def fix_unicode(filename: str):
@@ -694,11 +694,15 @@ def fix_unicode(filename: str):
         filename = filename.replace(':', ':\\')
     return filename
 
-def get_filename_index(filename = globals()['filename_sweep'], dimension = 1):
+def get_filename_index(filename = None, dimension = 1):
     '''
     Function to return the index (+1) of max indexed filename 
     '''
     global core_dir
+    global filename_sweep
+
+    if filename == None:
+        filename = filename_sweep
     
     files = []
     path = os.path.normpath(filename).split(os.path.sep)
@@ -2535,7 +2539,9 @@ class Sweeper1d(tk.Frame):
             filename_sweep = os.path.join(*core[:-1], f'{YEAR}{MONTH}{DAY}', 'data_files', name)
             filename_sweep = fix_unicode(filename_sweep)
             
-        self.filename_sweep = filename_sweep
+        self.entry_filename.delete(0, tk.END)
+        self.entry_filename.insert(0, filename_sweep)
+        self.entry_filename.after(1)
         
     def start_logs(self):
         global list_of_devices
@@ -3951,6 +3957,8 @@ class Sweeper2d(tk.Frame):
         else:
             current_filename = path[0]
         
+        current_filename = fix_unicode(current_filename) #what was in self.enty_filename
+        
         filename_path = os.path.normpath(self.filename_sweep)
         filename_path = filename_path.split(os.sep)
         
@@ -3958,6 +3966,8 @@ class Sweeper2d(tk.Frame):
             memory_filename = os.path.join(*filename_path[:-1], basename(filename_path[-1]))
         else:
             memory_filename = filename_path[0]
+            
+        memory_filename = fix_unicode(memory_filename) #what was in self.filename
             
         if current_filename != memory_filename:
             self.preset.loc[0, 'filename_sweep'] = current_filename
@@ -4315,7 +4325,6 @@ class Sweeper2d(tk.Frame):
                 cur_dir = os.path.join(*path[:-1], f'{YEAR}{MONTH}{DAY}')
                 self.filename_index = 1
             cur_dir = fix_unicode(cur_dir)
-            print(cur_dir)
             
             to_make = os.path.join(cur_dir, 'data_files', f'{folder_name}_{self.filename_index}')
             to_make = fix_unicode(to_make)
@@ -4354,8 +4363,10 @@ class Sweeper2d(tk.Frame):
             
             filename_sweep = os.path.join(*core[:-1], f'{YEAR}{MONTH}{DAY}', 'data_files', f'{folder_name}_{self.filename_index}', f'{name}')
             filename_sweep = fix_unicode(filename_sweep)
-        
-        self.filename_sweep = filename_sweep
+            
+        self.entry_filename.delete(0, tk.END)
+        self.entry_filename.insert(0, filename_sweep)
+        self.entry_filename.after(1)
         
     def start_logs(self):
         global list_of_devices
@@ -6624,7 +6635,9 @@ class Sweeper3d(tk.Frame):
             filename_sweep = os.path.join(*core[:-1], f'{YEAR}{MONTH}{DAY}', 'data_files', f'{folder_name}_{self.filename_index}', f'{name}')
             filename_sweep = fix_unicode(filename_sweep)
         
-        self.filename_sweep = filename_sweep
+        self.entry_filename.delete(0, tk.END)
+        self.entry_filename.insert(0, filename_sweep)
+        self.entry_filename.after(1)
             
     def start_logs(self):
         global list_of_devices
@@ -7937,7 +7950,6 @@ class Sweeper_write(threading.Thread):
             if '-' in basic_name:
                 basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('-') - 1)] #all before last -
             basic_name = unify_filename(basic_name)
-            print(f'Basic name is {basic_name}')
             for file in files:
                 if basic_name in file and 'manual' not in file and 'setget' not in file:
                     index_start = len(file) - file[::-1].find('-') - 1
@@ -7949,7 +7961,6 @@ class Sweeper_write(threading.Thread):
             previous_ind = int(np.nanmax(ind))
             if np.isnan(previous_ind):
                 previous_ind = 0
-            print(f'Previous index is {previous_ind}')
             if sweeper_flag1 == True:
                 filename_sweep = os.path.join(*path[:-1], f'{basic_name}-{previous_ind + 1}.csv')
             elif sweeper_flag2 == True:
@@ -7998,8 +8009,6 @@ class Sweeper_write(threading.Thread):
             
             globals()['dataframe'] = pd.DataFrame(columns=self.columns)
             globals()['dataframe'].to_csv(filename_sweep, index=False)
-            
-            print(filename_sweep)
             
             print('Filename updated')
         
@@ -8343,6 +8352,7 @@ class Sweeper_write(threading.Thread):
                     if globals()['snakemode_master_flag'] == True and len(manual_sweep_flags) == 3:
                         if i != walks and back_and_forth_slave != 1:
                             self.mapper3D.walks = 1
+                            self.mapper3D.create_gif()
                             self.mapper3D.clear_slave_slave()
                             self.mapper3D.clear_slave()
                             self.mapper3D.clear_parameters()
@@ -8373,6 +8383,7 @@ class Sweeper_write(threading.Thread):
                 raise Exception(f'{flags_dict[len(manual_sweep_flags)]} is not correct, needs > 1, but got ', walks)
     
             if len(manual_sweep_flags) == 3:
+                self.mapper3D.create_gif()
                 self.mapper3D.clear_slave_slave()
                 self.mapper3D.clear_slave()
                 self.mapper3D.clear_parameters()
