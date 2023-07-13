@@ -7118,6 +7118,7 @@ class Sweeper_write(threading.Thread):
         self.columns = columns
         self.sweepable1 = False
         self.started = False
+        self.inner_count = 0
         
         if hasattr(device_to_sweep1, 'sweepable') and len(manual_sweep_flags) == 1:
             if device_to_sweep1.sweepable[device_to_sweep1.set_options.index(parameter_to_sweep1)]:
@@ -7769,7 +7770,9 @@ class Sweeper_write(threading.Thread):
                             else:
                                 speed = float(globals()['ratio_sweep' + str(axis)])
                                 
-                            getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
+                            if self.inner_count <= 2:
+                                getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
+                                self.inner_count += 1
                             delay_factor = globals()['delay_factor' + str(axis)]
                             time.sleep(delay_factor)
                             dataframe.append("{:.3e}".format(getattr(self, f'value{str(axis)}')))
@@ -7782,7 +7785,9 @@ class Sweeper_write(threading.Thread):
                         else:
                             value = getattr(self, f'value{str(axis)}')
                             speed = float(globals()['ratio_sweep' + str(axis)])
-                            getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
+                            if self.inner_count <= 2:
+                                getattr(device_to_sweep, 'set_' + str(parameter_to_sweep))(value=value, speed = speed)
+                                self.inner_count += 1
                             delay_factor = globals()['delay_factor' + str(axis)]
                             time.sleep(delay_factor)
                             dataframe.append("{:.3e}".format(value))
@@ -8069,12 +8074,14 @@ class Sweeper_write(threading.Thread):
             flags_dict = {1: 'back_and_forth_master', 2: 'back_and_forth_slave', 3: 'back_and_forth_slave_slave'}
             walks = globals()[flags_dict[len(manual_sweep_flags)]]
             if walks == 1:
+                self.inner_count = 1
                 inner_loop_single()
                 globals()['Sweeper_object'].__dict__[f'cur_walk{len(manual_sweep_flags)}'] += 1
                 back_and_forth_transposition(len(manual_sweep_flags), False)
             
             elif walks > 1:
                 for i in range(1, walks + 1):
+                    self.inner_count = 1
                     inner_loop_single(direction = round(2 * (i % 2) - 1))
                     globals()['Sweeper_object'].__dict__[f'cur_walk{len(manual_sweep_flags)}'] += 1
                     if globals()['snakemode_master_flag'] == True and len(manual_sweep_flags) == 2:
