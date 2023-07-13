@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 plt.rcParams.update({'figure.max_open_warning': 0})
 from mapper.filename_utils import unify_filename, fix_unicode
 from mapper.data2map import save_map
+from mapper.data2gif import create_gif
+from multiprocessing.pool import ThreadPool
 
 class mapper3D():
     def __init__(self, parameter_to_sweep1: str, parameter_to_sweep2: str, parameter_to_sweep3: str, 
@@ -29,6 +31,7 @@ class mapper3D():
         self.cur_walk = 0
         self.index_filename = index_filename
         self.grid = np.linspace(_from, _to, nsteps)
+        self.maps_to_save = []
         for parameter in self.parameters_to_read:
             self.__dict__[parameter] = np.array([])
 
@@ -118,6 +121,9 @@ class mapper3D():
                 raise Exception(f'Map_slave_slave status {hasattr(self, "map_slave_slave")}, Map_slave status {hasattr(self, "map_slave")}')
         
             self.concatenate_parameters()
+            proc = len(self.maps_to_save)
+            with ThreadPool(proc) as p:
+                p.map(save_map, self.maps_to_save)
     
     def concatenate_parameters(self):
         
@@ -214,6 +220,7 @@ class mapper3D():
                     self.__dict__[parameter] = np.concatenate((self.__dict__[parameter], [np.nan]))
     
     def clear_slave_slave(self):
+        create_gif(self.filename_sweep, self.index_filename, self.parameters_to_read)
         self.slave_slave = np.array([])
         
     def clear_slave(self):
@@ -257,9 +264,10 @@ class mapper3D():
                 file.close()
                 
         if hasattr(self, f'min_{parameter}') and hasattr(self, f'max_{parameter}'):
-            save_map(filename, min_z = self.__dict__[f'min_{parameter}'], max_z = self.__dict__[f'max_{parameter}'])
+            self.maps_to_save.append(tuple([filename, self.__dict__[f'min_{parameter}'], 
+                                            self.__dict__[f'max_{parameter}']]))
         else:
-            save_map(filename)
+            self.maps_to_save.append(tuple([filename, None, None]))
         
     def create_files(self):
         

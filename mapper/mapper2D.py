@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 plt.rcParams.update({'figure.max_open_warning': 0})
 from mapper.filename_utils import unify_filename, fix_unicode
 from mapper.data2map import save_map
+from multiprocessing.pool import ThreadPool
 
 class mapper2D():
     def __init__(self, parameter_to_sweep1: str, parameter_to_sweep2: str, 
@@ -28,6 +29,7 @@ class mapper2D():
         self.index_filename = index_filename
         for parameter in self.parameters_to_read:
             self.__dict__[parameter] = np.array([])
+        self.maps_to_save = []
 
     def append_slave(self, value):
         if not hasattr(self, f'slave{self.cur_walk}'):
@@ -113,6 +115,9 @@ class mapper2D():
                 raise Exception(f'Map_slave status {hasattr(self, "map_slave")}, Map_master status {hasattr(self, "map_master")}')
         
             self.concatenate_parameters()
+            proc = len(self.maps_to_save)
+            with ThreadPool(proc) as p:    
+                p.map(save_map, self.maps_to_save)
     
     def concatenate_parameters(self):
         
@@ -258,7 +263,7 @@ class mapper2D():
             finally:
                 file.close()
                 
-        save_map(filename)
+        self.maps_to_save.append(tuple([filename, None, None]))
             
     def create_files(self):
         

@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 plt.rcParams.update({'figure.max_open_warning': 0})
 import imageio
 from filename_utils import unify_filename, fix_unicode
+from functools import partial
+from multiprocessing.pool import ThreadPool
 
 def create_gif(filename, idx, parameters_to_read):
     
@@ -34,6 +36,8 @@ def create_gif(filename, idx, parameters_to_read):
                 file = os.path.join(root, i)
                 image_files.append(fix_unicode(file))
         
+    gif_names = []
+    images_set = []
     for parameter in parameters_to_read:
         parameter_files = []
         parameter_idx = []
@@ -43,10 +47,18 @@ def create_gif(filename, idx, parameters_to_read):
                 name = os.path.normpath(filename).split(os.path.sep)[-1]
                 parameter_idx.append(name[:name.index('_')])
         dat = zip(parameter_idx, parameter_files)
-        parameter_files = sorted(dat, key = lambda tup: tup[0])
-        parameter_files = [i[1] for i in parameter_files]
-        parameter_images = [imageio.imread(i, format = 'PNG') for i in parameter_files]
         gif_name = os.path.join(tomake_gif, f'{idx}_{parameter}_gif.gif')
         gif_name = fix_unicode(gif_name)
-        imageio.mimsave(gif_name, parameter_images, fps = 3, loop = 0)
+        gif_names.append(gif_name)
+        parameter_files = sorted(dat, key = lambda tup: tup[0])
+        parameter_files = [i[1] for i in parameter_files]
+        with ThreadPool(len(parameter_files)) as p:
+            parameter_images = p.map(partial(imageio.imread, format = 'PNG'), parameter_files)
+        images_set.append(parameter_images)
+    _args = zip(gif_names, images_set)
+    args = []
+    for i, j in _args:
+        args.append((i, j))
+    with ThreadPool(len(parameters_to_read)) as p:
+        p.starmap(partial(imageio.mimsave, fps = 3, loop = 0), args)
         

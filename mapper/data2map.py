@@ -5,13 +5,19 @@ import pandas as pd
 plt.rcParams.update({'figure.max_open_warning': 0})
 from mapper.add_ticks import add_ticks
 
-def save_map(path, min_z = None, max_z = None):
+def save_map(args):
     
     '''
     Creates .png image from a table with filename 'path'
     
+    args: iterable; path, min_z = None, max_z = None
+    
     Path should contain 'tables'
     '''
+    
+    path = args[0]
+    min_z = args[1]
+    max_z = args[2] 
     
     image_filename = os.path.normpath(path).split(os.path.sep)
     image_filename[image_filename.index('tables')] = 'images'
