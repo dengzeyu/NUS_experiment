@@ -12,7 +12,6 @@ from tkinter import messagebox
 from addons.ToolTip import CreateToolTip
 from mapper.mapper2D import mapper2D
 from mapper.mapper3D import mapper3D
-from mapper.data2gif import create_gif
 from mapper.add_ticks import add_ticks
 import matplotlib.animation as animation
 from matplotlib.figure import Figure
@@ -6054,13 +6053,17 @@ class Sweeper3d(tk.Frame):
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
             
         current_filename = self.entry_filename.get()
-        path_current = os.path.normpath(current_filename).split(os.path.sep)   
-        current_filename = basename(current_filename)
+        path_current = os.path.normpath(current_filename).split(os.path.sep)
+        name = path_current[-1]
+        path_current = path_current[:-1]
+        current_filename = basename(name)
         current_filename = os.path.join(*path_current, current_filename)
         current_filename = fix_unicode(current_filename)
         
         memory_filename = self.filename_sweep
-        path_memory = os.path.normpath(memory_filename).split(os.path.sep)[:-1]
+        path_memory = os.path.normpath(memory_filename).split(os.path.sep)
+        memory_filename = path_memory[-1]
+        path_memory = path_memory[:-1]
         memory_filename = basename(memory_filename)
         memory_filename = os.path.join(*path_memory, memory_filename)
         memory_filename = fix_unicode(memory_filename)  
@@ -6369,17 +6372,21 @@ class Sweeper3d(tk.Frame):
         self.entry_filename.insert(0, filename_sweep)
         self.entry_filename.after(1)
         
-        current_filename = filename_sweep
-        path_current = os.path.normpath(current_filename).split(os.path.sep)[:-1] 
-        current_filename = basename(current_filename)
+        current_filename = self.entry_filename.get()
+        path_current = os.path.normpath(current_filename).split(os.path.sep)
+        name = path_current[-1]
+        path_current = path_current[:-1]
+        current_filename = basename(name)
         current_filename = os.path.join(*path_current, current_filename)
         current_filename = fix_unicode(current_filename)
         
         memory_filename = self.filename_sweep
-        path_memory = os.path.normpath(memory_filename).split(os.path.sep)[:-1]
+        path_memory = os.path.normpath(memory_filename).split(os.path.sep)
+        memory_filename = path_memory[-1]
+        path_memory = path_memory[:-1]
         memory_filename = basename(memory_filename)
         memory_filename = os.path.join(*path_memory, memory_filename)
-        memory_filename = fix_unicode(memory_filename)
+        memory_filename = fix_unicode(memory_filename)  
         
         if current_filename != memory_filename:
             self.preset.loc[0, 'filename_sweep'] = current_filename
@@ -6451,6 +6458,7 @@ class Sweeper3d(tk.Frame):
         
         if self.entry_filename.get() != '':
             filename_sweep = self.entry_filename.get()
+        else:
             return
 
         filename_sweep = fix_unicode(filename_sweep)
@@ -6485,7 +6493,7 @@ class Sweeper3d(tk.Frame):
             if not exists(to_make):
                 os.makedirs(to_make)
                 
-            filename_sweep = os.path.join(cur_dir, 'data_files', f'{folder_name}_{self.filename_index}', f'{name}')
+            filename_sweep = os.path.join(to_make, f'{name}')
             filename_sweep = fix_unicode(filename_sweep)
             
         elif ('data_files' in core and len(core) < 3) or ('data_files' not in core and len(core) < 2):
@@ -8233,8 +8241,6 @@ class Sweeper_write(threading.Thread):
                     if globals()['snakemode_master_flag'] == True and len(manual_sweep_flags) == 3:
                         if i != walks and back_and_forth_slave != 1:
                             self.mapper3D.walks = 1
-                            idx = get_filename_index(filename_sweep)
-                            create_gif(filename_sweep, idx, self.parameters_to_read)
                             self.mapper3D.clear_slave_slave()
                             self.mapper3D.clear_slave()
                             self.mapper3D.clear_parameters()
@@ -8265,7 +8271,6 @@ class Sweeper_write(threading.Thread):
                 raise Exception(f'{flags_dict[len(manual_sweep_flags)]} is not correct, needs > 1, but got ', walks)
     
             if len(manual_sweep_flags) == 3:
-                self.mapper3D.create_gif()
                 self.mapper3D.clear_slave_slave()
                 self.mapper3D.clear_slave()
                 self.mapper3D.clear_parameters()
