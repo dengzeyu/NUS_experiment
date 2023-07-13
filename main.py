@@ -2125,16 +2125,20 @@ class Sweeper1d(tk.Frame):
             self.preset.to_csv(globals()['sweeper1d_path'], index = False)
             
         current_filename = self.entry_filename.get()
-        path_current = os.path.normpath(current_filename).split(os.path.sep)[:-1]
-        current_filename = basename(current_filename)
+        path_current = os.path.normpath(current_filename).split(os.path.sep)
+        name = path_current[-1]
+        path_current = path_current[:-1]
+        current_filename = basename(name)
         current_filename = os.path.join(*path_current, current_filename)
         current_filename = fix_unicode(current_filename)
         
         memory_filename = self.filename_sweep
-        path_memory = os.path.normpath(memory_filename).split(os.path.sep)[:-1]
+        path_memory = os.path.normpath(memory_filename).split(os.path.sep)
+        memory_filename = path_memory[-1]
+        path_memory = path_memory[:-1]
         memory_filename = basename(memory_filename)
         memory_filename = os.path.join(*path_memory, memory_filename)
-        memory_filename = fix_unicode(memory_filename)
+        memory_filename = fix_unicode(memory_filename) 
             
         if current_filename != basename(self.filename_sweep):
             self.preset.loc[0, 'filename_sweep'] = current_filename
@@ -2308,17 +2312,21 @@ class Sweeper1d(tk.Frame):
         self.entry_filename.insert(0, filename_sweep)
         self.entry_filename.after(1)
         
-        current_filename = filename_sweep
-        path_current = os.path.normpath(current_filename).split(os.path.sep)[:-1] 
-        current_filename = basename(current_filename)
+        current_filename = self.entry_filename.get()
+        path_current = os.path.normpath(current_filename).split(os.path.sep)
+        name = path_current[-1]
+        path_current = path_current[:-1]
+        current_filename = basename(name)
         current_filename = os.path.join(*path_current, current_filename)
         current_filename = fix_unicode(current_filename)
         
         memory_filename = self.filename_sweep
-        path_memory = os.path.normpath(memory_filename).split(os.path.sep)[:-1]
+        path_memory = os.path.normpath(memory_filename).split(os.path.sep)
+        memory_filename = path_memory[-1]
+        path_memory = path_memory[:-1]
         memory_filename = basename(memory_filename)
         memory_filename = os.path.join(*path_memory, memory_filename)
-        memory_filename = fix_unicode(memory_filename)
+        memory_filename = fix_unicode(memory_filename) 
         
         if current_filename != memory_filename:
             self.preset.loc[0, 'filename_sweep'] = current_filename
@@ -3848,16 +3856,20 @@ class Sweeper2d(tk.Frame):
             self.preset.to_csv(globals()['sweeper2d_path'], index = False)
             
         current_filename = self.entry_filename.get()
-        path_current = os.path.normpath(current_filename).split(os.path.sep)[:-1]  
-        current_filename = basename(current_filename)
+        path_current = os.path.normpath(current_filename).split(os.path.sep)
+        name = path_current[-1]
+        path_current = path_current[:-1]
+        current_filename = basename(name)
         current_filename = os.path.join(*path_current, current_filename)
         current_filename = fix_unicode(current_filename)
         
         memory_filename = self.filename_sweep
-        path_memory = os.path.normpath(memory_filename).split(os.path.sep)[:-1]
+        path_memory = os.path.normpath(memory_filename).split(os.path.sep)
+        memory_filename = path_memory[-1]
+        path_memory = path_memory[:-1]
         memory_filename = basename(memory_filename)
         memory_filename = os.path.join(*path_memory, memory_filename)
-        memory_filename = fix_unicode(memory_filename)
+        memory_filename = fix_unicode(memory_filename) 
             
         if current_filename != memory_filename:
             self.preset.loc[0, 'filename_sweep'] = current_filename
@@ -4108,17 +4120,21 @@ class Sweeper2d(tk.Frame):
         self.entry_filename.insert(0, filename_sweep)
         self.entry_filename.after(1)
         
-        current_filename = filename_sweep
-        path_current = os.path.normpath(current_filename).split(os.path.sep)[:-1]
-        current_filename = basename(current_filename)
+        current_filename = self.entry_filename.get()
+        path_current = os.path.normpath(current_filename).split(os.path.sep)
+        name = path_current[-1]
+        path_current = path_current[:-1]
+        current_filename = basename(name)
         current_filename = os.path.join(*path_current, current_filename)
         current_filename = fix_unicode(current_filename)
         
         memory_filename = self.filename_sweep
-        path_memory = os.path.normpath(memory_filename).split(os.path.sep)[:-1]
+        path_memory = os.path.normpath(memory_filename).split(os.path.sep)
+        memory_filename = path_memory[-1]
+        path_memory = path_memory[:-1]
         memory_filename = basename(memory_filename)
         memory_filename = os.path.join(*path_memory, memory_filename)
-        memory_filename = fix_unicode(memory_filename)
+        memory_filename = fix_unicode(memory_filename) 
         
         if current_filename != memory_filename:
             self.preset.loc[0, 'filename_sweep'] = current_filename
