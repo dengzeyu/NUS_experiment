@@ -1,6 +1,7 @@
 import os
 from os.path import exists
 core_dir = os.getcwd() 
+from filename_utils import cut, basename, unify_filename, fix_unicode
 import sys
 import json
 from csv import writer
@@ -8,12 +9,15 @@ import threading
 from tkinter import ttk
 import tkinter as tk
 from tkinter import messagebox
-from ToolTip import CreateToolTip
-from mapper import mapper2D, mapper3D
+from addons.ToolTip import CreateToolTip
+from mapper.mapper2D import mapper2D
+from mapper.mapper3D import mapper3D
+from mapper.data2gif import create_gif
+from mapper.add_ticks import add_ticks
 import matplotlib.animation as animation
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, 
-                                               NavigationToolbar2Tk)
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from addons.VertNavigationToolbar import VerticalNavigationToolbar2Tk
 import matplotlib.pyplot as plt
 from matplotlib import style
 import pyvisa as visa
@@ -154,7 +158,8 @@ ind_setget = [0]
 
 for file in os.listdir(os.path.join(cur_dir, 'data_files')):
     if f'setget_{YEAR}{MONTH}{DAY}' in file: 
-        ind_setget.append(int(file[file.find('-') + 1 : -4]))
+        
+        ind_setget.append(int(file[len(file) - file[::-1].find('-') - 1 : -4]))
         
 filename_setget = os.path.join(cur_dir, 'data_files', f'setget_{YEAR}{MONTH}{DAY}-{np.max(ind_setget) + 1}.csv')
 
@@ -609,49 +614,7 @@ def map_animation(i, n, filename):
         except:
             pass
         
-        y_tick_labels = [round(i, 2) for i in y[:, 0]]
-
-        x_tick_labels = [round(i, 2) for i in x[0, :]]
-
-        y_ticks = []
-
-        for ind, _ in enumerate(y_tick_labels):
-            if len(y_tick_labels) != 1 and ind != len(y_tick_labels) - 1:
-                y_ticks.append(round((abs((y_tick_labels[ind + 1] - y_tick_labels[ind])) / 2), 2))
-            elif len(y_tick_labels) == 1:
-                y_ticks.append(round((y_tick_labels[0] + 0.5), 2))
-
-        if len(y_tick_labels) != 1:
-            y_ticks.append(round((abs((y_tick_labels[-1] - y_tick_labels[-2])) / 2), 2))
-
-        x_ticks = []
-
-        for ind, _ in enumerate(x_tick_labels):
-            if len(x_tick_labels) != 1 and ind != len(x_tick_labels) - 1:
-                x_ticks.append(round((((x_tick_labels[ind + 1] - x_tick_labels[ind])) / 2), 2))
-            elif len(x_tick_labels) == 1:
-                x_ticks.append(round((x_tick_labels[0] + 0.5), 2))
-
-        if len(x_tick_labels) != 1:
-            x_ticks.append(round((abs((x_tick_labels[-1] - x_tick_labels[-2])) / 2), 2))
-        
-        y_ticks = np.arange(len(y_ticks)) + 0.5
-        
-        if len(y_ticks) > 6:
-            ax.set_yticks(y_ticks[::len(y_ticks) // 6])
-            ax.set_yticklabels(y_tick_labels[::len(y_tick_labels) // 6])
-        else:
-            ax.set_yticks(y_ticks)
-            ax.set_yticklabels(y_tick_labels)
-            
-        x_ticks = np.arange(len(x_ticks)) + 0.5
-            
-        if len(x_ticks) > 6:
-            ax.set_xticks(x_ticks[::len(x_ticks) // 6])
-            ax.set_xticklabels(x_tick_labels[::len(x_tick_labels) // 6], rotation=30)
-        else:
-            ax.set_xticks(x_ticks)
-            ax.set_xticklabels(x_tick_labels, rotation=30)
+        add_ticks(ax, x[0, :], y[:, 0])
 
 def my_animate(i, n, filename):
     # function to animate graph on each step
@@ -666,33 +629,6 @@ def my_animate(i, n, filename):
         map_animation(i, n, filename)
     else:
         raise Exception(f'Plot flag can only be "plot" or "map", not {plot_flag}')
-
-int1, int2 = np.meshgrid(np.arange(0, 10), np.arange(0, 10))
-
-possibilities = []
-for i in range(0, int1.flatten().shape[0]):
-    possibilities.append(f'{int1.flatten()[i]}.{int2.flatten()[i]}')
-
-def unify_filename(filename: str, possibilities = possibilities):
-    '''
-    A function that removes "_......int1.int2_........int3.int4" from filename
-    '''
-    if any((match1 := num) in filename for num in possibilities):
-        filename = (filename[:filename.index(match1)], filename[filename.index(match1) + 3:])
-        idx_ = len(filename[0]) - filename[0][::-1].index('_') - 1
-        name = filename[0][:idx_] + filename[1]
-    else:
-        name = filename
-    if any((match2 := num) in name for num in possibilities):
-        name = (name[:name.index(match2)], name[name.index(match2) + 3:])
-        idx_ = len(name[0]) - name[0][::-1].index('_') - 1
-        name = name[0][:idx_] + name[1]
-    return name
-
-def fix_unicode(filename: str):
-    if ':' in filename and ':\\' not in filename:
-        filename = filename.replace(':', ':\\')
-    return filename
 
 def get_filename_index(filename = None, dimension = 1):
     '''
@@ -2189,29 +2125,17 @@ class Sweeper1d(tk.Frame):
             self.preset.loc[0, 'delay_factor1'] = self.entry_delay_factor.get()
             self.preset.to_csv(globals()['sweeper1d_path'], index = False)
             
-        def basename(filename, ext = '.csv'):
-            """
-            Example: removes '-123' from 'my-name-123.csv'
-            returns 'my-name.csv'
-            """
-            
-            if '-' in filename:
-                filename = filename[:-len(ext)]
-                ind = len(filename) - filename[::-1].index('-') - 1
-                flag = True
-                s = 0
-                for letter in filename[ind + 1:]:
-                    if not letter.isdigit():
-                        flag = False
-                        break
-                    else:
-                        s += 1
-                if flag:
-                    filename = filename[:-(s + 1)]
-                
-                return f'{filename}{ext}'
-            
-        current_filename = basename(self.entry_filename.get())
+        current_filename = self.entry_filename.get()
+        path_current = os.path.normpath(current_filename).split(os.path.sep)[:-1]
+        current_filename = basename(current_filename)
+        current_filename = os.path.join(*path_current, current_filename)
+        current_filename = fix_unicode(current_filename)
+        
+        memory_filename = self.filename_sweep
+        path_memory = os.path.normpath(memory_filename).split(os.path.sep)[:-1]
+        memory_filename = basename(memory_filename)
+        memory_filename = os.path.join(*path_memory, memory_filename)
+        memory_filename = fix_unicode(memory_filename)
             
         if current_filename != basename(self.filename_sweep):
             self.preset.loc[0, 'filename_sweep'] = current_filename
@@ -2330,7 +2254,20 @@ class Sweeper1d(tk.Frame):
         self.preset.to_csv(globals()['sweeper1d_path'], index = False)
 
     def open_blank(self):
-        filename = str(self.entry_filename.get())[:-4] + '_manual.csv'
+        filename = str(self.entry_filename.get())
+        tomake = os.path.normpath(filename).split(os.path.sep)
+        name = tomake[-1]
+        tomake = tomake[:-1]
+        tomake = os.path.join(*tomake)
+        tomake = fix_unicode(tomake)
+        if not exists(tomake):
+            os.makedirs(tomake)
+        filename = os.path.join(tomake, filename)
+        filename = fix_unicode(filename)
+        idx = get_filename_index(filename)
+        name = name[:len(name) - name[::-1].index('-') - 1]
+        filename =  os.path.join(tomake, f'{name}_manual{i+1}d{idx}.csv')
+        filename = fix_unicode(filename)
         df = pd.DataFrame(columns=['steps'])
         df.to_csv(filename, index=False)
         self.manual_filenames[0] = filename
@@ -2372,33 +2309,19 @@ class Sweeper1d(tk.Frame):
         self.entry_filename.insert(0, filename_sweep)
         self.entry_filename.after(1)
         
-        current_filename = self.entry_filename.get()
-        
-        def basename(filename, ext = '.csv'):
-            """
-            Example: removes '-123' from 'my-name-123.csv'
-            returns 'my-name.csv'
-            """
-            
-            if '-' in filename:
-                filename = filename[:-len(ext)]
-                ind = len(filename) - filename[::-1].index('-') - 1
-                flag = True
-                s = 0
-                for letter in filename[ind + 1:]:
-                    if not letter.isdigit():
-                        flag = False
-                        break
-                    else:
-                        s += 1
-                if flag:
-                    filename = filename[:-(s + 1)]
-                
-                return f'{filename}{ext}'
-            
+        current_filename = filename_sweep
+        path_current = os.path.normpath(current_filename).split(os.path.sep)[:-1] 
         current_filename = basename(current_filename)
+        current_filename = os.path.join(*path_current, current_filename)
+        current_filename = fix_unicode(current_filename)
         
-        if current_filename != basename(self.filename_sweep):
+        memory_filename = self.filename_sweep
+        path_memory = os.path.normpath(memory_filename).split(os.path.sep)[:-1]
+        memory_filename = basename(memory_filename)
+        memory_filename = os.path.join(*path_memory, memory_filename)
+        memory_filename = fix_unicode(memory_filename)
+        
+        if current_filename != memory_filename:
             self.preset.loc[0, 'filename_sweep'] = current_filename
             self.preset.to_csv(globals()['sweeper1d_path'], index = False)
             
@@ -3925,49 +3848,17 @@ class Sweeper2d(tk.Frame):
             self.preset.loc[0, 'delay_factor2'] = self.entry_delay_factor2.get()
             self.preset.to_csv(globals()['sweeper2d_path'], index = False)
             
-        def basename(filename, ext = '.csv'):
-            """
-            Example: removes '-123' from 'my-name-123.csv'
-            returns 'my-name.csv'
-            """
-            
-            if '-' in filename:
-                filename = filename[:-len(ext)]
-                ind = len(filename) - filename[::-1].index('-') - 1
-                flag = True
-                s = 0
-                for letter in filename[ind + 1:]:
-                    if not letter.isdigit():
-                        flag = False
-                        break
-                    else:
-                        s += 1
-                if flag:
-                    filename = filename[:-(s + 1)]
-                
-                return f'{filename}{ext}'
-            
-            return filename
-            
-        path = os.path.normpath(self.entry_filename.get())
-        path = path.split(os.sep)
+        current_filename = self.entry_filename.get()
+        path_current = os.path.normpath(current_filename).split(os.path.sep)[:-1]  
+        current_filename = basename(current_filename)
+        current_filename = os.path.join(*path_current, current_filename)
+        current_filename = fix_unicode(current_filename)
         
-        if len(path) > 1:
-            current_filename = os.path.join(*path[:-1], basename(path[-1]))
-        else:
-            current_filename = path[0]
-        
-        current_filename = fix_unicode(current_filename) #what was in self.enty_filename
-        
-        filename_path = os.path.normpath(self.filename_sweep)
-        filename_path = filename_path.split(os.sep)
-        
-        if len(path) > 1:
-            memory_filename = os.path.join(*filename_path[:-1], basename(filename_path[-1]))
-        else:
-            memory_filename = filename_path[0]
-            
-        memory_filename = fix_unicode(memory_filename) #what was in self.filename
+        memory_filename = self.filename_sweep
+        path_memory = os.path.normpath(memory_filename).split(os.path.sep)[:-1]
+        memory_filename = basename(memory_filename)
+        memory_filename = os.path.join(*path_memory, memory_filename)
+        memory_filename = fix_unicode(memory_filename)
             
         if current_filename != memory_filename:
             self.preset.loc[0, 'filename_sweep'] = current_filename
@@ -4161,7 +4052,20 @@ class Sweeper2d(tk.Frame):
         self.preset.to_csv(globals()['sweeper2d_path'], index = False)
     
     def open_blank(self, i):
-        filename = str(self.entry_filename.get())[:-4] + f'_manual{i}.csv'
+        filename = str(self.entry_filename.get())
+        tomake = os.path.normpath(filename).split(os.path.sep)
+        name = tomake[-1]
+        tomake = tomake[:-1]
+        tomake = os.path.join(*tomake)
+        tomake = fix_unicode(tomake)
+        if not exists(tomake):
+            os.makedirs(tomake)
+        filename = os.path.join(tomake, filename)
+        filename = fix_unicode(filename)
+        idx = get_filename_index(filename)
+        name = name[:len(name) - name[::-1].index('-') - 1]
+        filename =  os.path.join(tomake, f'{name}_manual{i+1}d{idx}.csv')
+        filename = fix_unicode(filename)
         df = pd.DataFrame(columns=['steps'])
         df.to_csv(filename, index=False)
         self.manual_filenames[i] = filename
@@ -4205,31 +4109,19 @@ class Sweeper2d(tk.Frame):
         self.entry_filename.insert(0, filename_sweep)
         self.entry_filename.after(1)
         
-        def basename(filename, ext = '.csv'):
-            """
-            Example: removes '-123' from 'my-name-123.csv'
-            returns 'my-name.csv'
-            """
-            
-            if '-' in filename:
-                filename = filename[:-len(ext)]
-                ind = len(filename) - filename[::-1].index('-') - 1
-                flag = True
-                s = 0
-                for letter in filename[ind + 1:]:
-                    if not letter.isdigit():
-                        flag = False
-                        break
-                    else:
-                        s += 1
-                if flag:
-                    filename = filename[:-(s + 1)]
-                
-                return f'{filename}{ext}'
+        current_filename = filename_sweep
+        path_current = os.path.normpath(current_filename).split(os.path.sep)[:-1]
+        current_filename = basename(current_filename)
+        current_filename = os.path.join(*path_current, current_filename)
+        current_filename = fix_unicode(current_filename)
         
-        current_filename = basename(self.entry_filename.get())
+        memory_filename = self.filename_sweep
+        path_memory = os.path.normpath(memory_filename).split(os.path.sep)[:-1]
+        memory_filename = basename(memory_filename)
+        memory_filename = os.path.join(*path_memory, memory_filename)
+        memory_filename = fix_unicode(memory_filename)
         
-        if current_filename != basename(self.filename_sweep):
+        if current_filename != memory_filename:
             self.preset.loc[0, 'filename_sweep'] = current_filename
             self.preset.to_csv(globals()['sweeper2d_path'], index = False)
 
@@ -6161,31 +6053,19 @@ class Sweeper3d(tk.Frame):
             self.preset.loc[0, 'delay_factor3'] = self.entry_delay_factor3.get()
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
             
-        def basename(filename, ext = '.csv'):
-            """
-            Example: removes '-123' from 'my-name-123.csv'
-            returns 'my-name.csv'
-            """
-            
-            if '-' in filename:
-                filename = filename[:-len(ext)]
-                ind = len(filename) - filename[::-1].index('-') - 1
-                flag = True
-                s = 0
-                for letter in filename[ind + 1:]:
-                    if not letter.isdigit():
-                        flag = False
-                        break
-                    else:
-                        s += 1
-                if flag:
-                    filename = filename[:-(s + 1)]
-                
-                return f'{filename}{ext}'
-            
-        current_filename = basename(self.entry_filename.get())
-            
-        if current_filename != basename(self.filename_sweep):
+        current_filename = self.entry_filename.get()
+        path_current = os.path.normpath(current_filename).split(os.path.sep)   
+        current_filename = basename(current_filename)
+        current_filename = os.path.join(*path_current, current_filename)
+        current_filename = fix_unicode(current_filename)
+        
+        memory_filename = self.filename_sweep
+        path_memory = os.path.normpath(memory_filename).split(os.path.sep)[:-1]
+        memory_filename = basename(memory_filename)
+        memory_filename = os.path.join(*path_memory, memory_filename)
+        memory_filename = fix_unicode(memory_filename)  
+        
+        if current_filename != memory_filename:
             self.preset.loc[0, 'filename_sweep'] = current_filename
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
         self.preset.loc[0, 'condition'] = self.text_condition.get(1.0, tk.END)[:-1]
@@ -6430,7 +6310,20 @@ class Sweeper3d(tk.Frame):
         self.preset.to_csv(globals()['sweeper3d_path'], index = False)
     
     def open_blank(self, i):
-        filename = str(self.entry_filename.get())[:-4] + f'_manual{i}.csv'
+        filename = str(self.entry_filename.get())
+        tomake = os.path.normpath(filename).split(os.path.sep)
+        name = tomake[-1]
+        tomake = tomake[:-1]
+        tomake = os.path.join(*tomake)
+        tomake = fix_unicode(tomake)
+        if not exists(tomake):
+            os.makedirs(tomake)
+        filename = os.path.join(tomake, filename)
+        filename = fix_unicode(filename)
+        idx = get_filename_index(filename)
+        name = name[:len(name) - name[::-1].index('-') - 1]
+        filename =  os.path.join(tomake, f'{name}_manual{i+1}d{idx}.csv')
+        filename = fix_unicode(filename)
         df = pd.DataFrame(columns=['steps'])
         df.to_csv(filename, index=False)
         self.manual_filenames[i] = filename
@@ -6476,31 +6369,19 @@ class Sweeper3d(tk.Frame):
         self.entry_filename.insert(0, filename_sweep)
         self.entry_filename.after(1)
         
-        def basename(filename, ext = '.csv'):
-            """
-            Example: removes '-123' from 'my-name-123.csv'
-            returns 'my-name.csv'
-            """
-            
-            if '-' in filename:
-                filename = filename[:-len(ext)]
-                ind = len(filename) - filename[::-1].index('-') - 1
-                flag = True
-                s = 0
-                for letter in filename[ind + 1:]:
-                    if not letter.isdigit():
-                        flag = False
-                        break
-                    else:
-                        s += 1
-                if flag:
-                    filename = filename[:-(s + 1)]
-                
-                return f'{filename}{ext}'
-            
-        current_filename = self.entry_filename.get()
+        current_filename = filename_sweep
+        path_current = os.path.normpath(current_filename).split(os.path.sep)[:-1] 
+        current_filename = basename(current_filename)
+        current_filename = os.path.join(*path_current, current_filename)
+        current_filename = fix_unicode(current_filename)
         
-        if current_filename != basename(self.filename_sweep):
+        memory_filename = self.filename_sweep
+        path_memory = os.path.normpath(memory_filename).split(os.path.sep)[:-1]
+        memory_filename = basename(memory_filename)
+        memory_filename = os.path.join(*path_memory, memory_filename)
+        memory_filename = fix_unicode(memory_filename)
+        
+        if current_filename != memory_filename:
             self.preset.loc[0, 'filename_sweep'] = current_filename
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
 
@@ -6570,6 +6451,7 @@ class Sweeper3d(tk.Frame):
         
         if self.entry_filename.get() != '':
             filename_sweep = self.entry_filename.get()
+            return
 
         filename_sweep = fix_unicode(filename_sweep)
 
@@ -6693,8 +6575,8 @@ class Sweeper3d(tk.Frame):
                 for log_parameter in device.loggable:
                     log += f'{log_parameter}: {getattr(device, log_parameter)()}\n'
                 
-                log = log[:-1
-                          ]
+                log = log[:-1]
+                
                 with open(log_filename, 'w') as file:
                     try:    
                         file.write(log)
@@ -7965,20 +7847,11 @@ class Sweeper_write(threading.Thread):
                 filename_sweep = os.path.join(*path[:-1], f'{basic_name}-{previous_ind + 1}.csv')
             elif sweeper_flag2 == True:
                 value1 = self.value1
-                integer1, fractional1 = divmod(value1, 1)
-                integer1 = round(integer1)
-                fractional1 = round(10 * fractional1)
-                filename_sweep = os.path.join(*path[:-1], f'{basic_name}_{integer1}.{fractional1}-{previous_ind + 1}.csv')
+                filename_sweep = os.path.join(*path[:-1], f'{basic_name}_{cut(value1)}-{previous_ind + 1}.csv')
             elif sweeper_flag3 == True:
                 value1 = self.value1
                 value2 = self.value2
-                integer1, fractional1 = divmod(value1, 1)
-                integer1 = round(integer1)
-                fractional1 = round(10 * fractional1)
-                integer2, fractional2 = divmod(value2, 1)
-                integer2 = round(integer2)
-                fractional2 = round(10 * fractional2)
-                filename_sweep = os.path.join(*path[:-1], f'{basic_name}_{integer1}.{fractional1}_{integer2}.{fractional2}-{previous_ind + 1}.csv')
+                filename_sweep = os.path.join(*path[:-1], f'{basic_name}_{cut(value1)}_{cut(value2)}-{previous_ind + 1}.csv')
                 
             filename_sweep = fix_unicode(filename_sweep)
             sweeper = globals()['Sweeper_object']
@@ -8339,6 +8212,7 @@ class Sweeper_write(threading.Thread):
             '''travels through a slave axis back and forth as many times, as was given'''
             global back_and_forth_master
             global back_and_forth_slave
+            global filename_sweep
             
             flags_dict = {2: 'back_and_forth_master', 3: 'back_and_forth_slave'}
             walks = globals()[flags_dict[len(manual_sweep_flags)]]
@@ -8352,7 +8226,8 @@ class Sweeper_write(threading.Thread):
                     if globals()['snakemode_master_flag'] == True and len(manual_sweep_flags) == 3:
                         if i != walks and back_and_forth_slave != 1:
                             self.mapper3D.walks = 1
-                            self.mapper3D.create_gif()
+                            idx = get_filename_index(filename_sweep)
+                            create_gif(filename_sweep, idx, self.parameters_to_read)
                             self.mapper3D.clear_slave_slave()
                             self.mapper3D.clear_slave()
                             self.mapper3D.clear_parameters()
@@ -8518,134 +8393,6 @@ class Sweeper_write(threading.Thread):
         
         if globals()['dataframe'].empty:
             os.remove(filename_sweep)
-
-class VerticalNavigationToolbar2Tk(NavigationToolbar2Tk):
-    def __init__(self, canvas, window):
-        super().__init__(canvas, window, pack_toolbar=True)
-
-    #Override pan function so it would return to original autoscale after releasing the button
-    def pan(self, *args):
-        
-        from enum import Enum
-        
-        class _Mode(str, Enum):
-            NONE = ""
-            PAN = "pan/zoom"
-            ZOOM = "zoom rect"
-            
-            def __init__(self, NONE):
-                self.N = NONE
-
-            def __str__(self):
-                return self.value
-
-            @property
-            def _navigate_mode(self):
-                return self.name if self is not self.N else None
-        
-        """
-        Toggle the pan/zoom tool.
-
-        Pan with left button, zoom with right.
-        """
-        if self.mode == _Mode.PAN:
-            self.mode = _Mode.NONE
-            self.canvas.widgetlock.release(self)
-            n = globals()['cur_animation_num'] - 3
-            autoscale_x = bool(globals()[f'x{n}_autoscale'])
-            autoscale_y = bool(globals()[f'y{n}_autoscale'])
-            ax = globals()[f'ax{n}']
-            ax.autoscale(enable = autoscale_x, axis = 'x')
-            ax.autoscale(enable = autoscale_y, axis = 'y')
-        else:
-            self.mode = _Mode.PAN
-            self.canvas.widgetlock(self)
-        for a in self.canvas.figure.get_axes():
-            a.set_navigate_mode(self.mode._navigate_mode)
-        self.set_message(self.mode)
-
-    #Override zoom function so it would return to original autoscale after releasing the button
-    def zoom(self, *args):
-        
-        from enum import Enum
-        
-        class _Mode(str, Enum):
-            NONE = ""
-            PAN = "pan/zoom"
-            ZOOM = "zoom rect"
-            
-            def __init__(self, NONE):
-                self.N = NONE
-
-            def __str__(self):
-                return self.value
-
-            @property
-            def _navigate_mode(self):
-                return self.name if self is not self.N else None
-        
-        """Toggle zoom to rect mode."""
-        if self.mode == _Mode.ZOOM:
-            self.mode = _Mode.NONE
-            self.canvas.widgetlock.release(self)
-            n = globals()['cur_animation_num'] - 3
-            autoscale_x = bool(globals()[f'x{n}_autoscale'])
-            autoscale_y = bool(globals()[f'y{n}_autoscale'])
-            ax = globals()[f'ax{n}']
-            ax.autoscale(enable = autoscale_x, axis = 'x')
-            ax.autoscale(enable = autoscale_y, axis = 'y')
-        else:
-            self.mode = _Mode.ZOOM
-            self.canvas.widgetlock(self)
-        for a in self.canvas.figure.get_axes():
-            a.set_navigate_mode(self.mode._navigate_mode)
-        self.set_message(self.mode)
-
-    def drag_pan(self, event):
-        """Callback for dragging in pan/zoom mode."""
-        for ax in self._pan_info.axes:
-            # Using the recorded button at the press is safer than the current
-            # button, as multiple buttons can get pressed during motion.
-            ax.drag_pan(self._pan_info.button, event.key, event.x, event.y)
-            ax.autoscale(enable = False, axis = 'x')
-            ax.autoscale(enable = False, axis = 'y')
-        self.canvas.draw_idle()
-        
-    def drag_zoom(self, event):
-        """Callback for dragging in zoom mode."""
-        start_xy = self._zoom_info.start_xy
-        self._zoom_info.axes[0].autoscale(enable = False, axis = 'x')
-        self._zoom_info.axes[0].autoscale(enable = False, axis = 'y')
-        (x1, y1), (x2, y2) = np.clip(
-            [start_xy, [event.x, event.y]], self._zoom_info.axes[0].bbox.min, self._zoom_info.axes[0].bbox.max)
-        key = event.key
-        # Force the key on colorbars to extend the short-axis bbox
-        if self._zoom_info.cbar == "horizontal":
-            key = "x"
-        elif self._zoom_info.cbar == "vertical":
-            key = "y"
-        if key == "x":
-            y1, y2 = self._zoom_info.axes[0].bbox.intervaly
-        elif key == "y":
-            x1, x2 = self._zoom_info.axes[0].bbox.intervalx
-
-        self.draw_rubberband(event, x1, y1, x2, y2)
-
-    # override _Button() to re-pack the toolbar button in vertical direction
-    def _Button(self, text, image_file, toggle, command):
-        b = super()._Button(text, image_file, toggle, command)
-        b.pack(side=tk.TOP)  # re-pack button in vertical direction
-        return b
-
-    # override _Spacer() to create vertical separator
-    def _Spacer(self):
-        s = tk.Frame(self, width=26, relief=tk.RIDGE, bg="White", padx=2)
-        s.pack(side=tk.TOP, pady = 5, fill="both", expand=True)  # pack in vertical direction
-        return s
-
-    # disable showing mouse position in toolbar
-    def set_message(self, s):
-        pass
 
 class FigureSettings(object):
     
