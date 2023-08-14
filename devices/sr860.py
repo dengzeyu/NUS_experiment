@@ -1,4 +1,6 @@
 from pymeasure.instruments.srs import SR860
+from pymeasure.instruments.validators import strict_discrete_set, \
+    truncated_discrete_set, truncated_range
 
 import pyvisa as visa
 
@@ -32,10 +34,38 @@ class my_SR860(SR860):
         """A floating property that represents the lock-in DC bias offset in Volts
         This property can be set.""")
         
-    IDN = Instrument.measurement("IDN?",
+    IDN = Instrument.measurement("*IDN?",
                                """ Reads the Identification """
                                )
 
+    SENSITIVITIES = [
+        1e-9, 2e-9, 5e-9, 10e-9, 20e-9, 50e-9, 100e-9, 200e-9,
+        500e-9, 1e-6, 2e-6, 5e-6, 10e-6, 20e-6, 50e-6, 100e-6,
+        200e-6, 500e-6, 1e-3, 2e-3, 5e-3, 10e-3, 20e-3,
+        50e-3, 100e-3, 200e-3, 500e-3, 1
+    ]
+
+    sensitivity = Instrument.control(
+        "SCAL?", "SCAL %d",
+        """ A floating point property that controls the sensitivity in Volts,
+        which can take discrete values from 2 nV to 1 V. Values are truncated
+        to the next highest level if they are not exact. """,
+        validator=truncated_discrete_set,
+        values=SENSITIVITIES,
+        map_values=True
+    )
+    
+    INPUT_FILTER = ['Off', 'On']
+    
+    filter_synchronous = Instrument.control(
+        "SYNC?", "SYNC %d",
+        """A string property that represents the synchronous filter.
+        This property can be set. Allowed values are:{}""".format(INPUT_FILTER),
+        validator=strict_discrete_set,
+        values=INPUT_FILTER,
+        map_values=True
+    )
+    
 class sr860():
 
     def __init__(self, adress='GPIB0::3::INSTR'):
@@ -80,7 +110,7 @@ class sr860():
         self.INPUT_GAIN = ['1MEG', '100MEG']
         self.INPUT_FILTER = ['Off', 'On']
         
-        self.loggable = ['IDN', 'sensitivity', 'time_constant', 'frequency', 
+        self.loggable = ['IDN', 'sensitivity', 'time_constant', 'frequency', 'phase',
                          'low_pass_filter_slope', 'synchronous_filter_status', 'dcmode', 
                          'reference_source', 'reference_triggermode', 'reference_externalinput',
                          'input_signal', 'input_voltage_mode', 'input_coupling', 'input_shields',
@@ -254,7 +284,10 @@ class sr860():
         
 def main():
     device = sr860('GPIB0::2::INSTR')
-    print(device.dc_bias())
+    print(device.frequency())
+    loggable = device.loggable
+    for param in loggable:
+        print(f'{param} = {getattr(device, param)()}')
     
 if __name__ == '__main__':
     main()

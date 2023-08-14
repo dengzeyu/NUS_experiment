@@ -15,7 +15,7 @@ class my_SR830(SR830):
     
     from pymeasure.instruments import Instrument
     
-    IDN = Instrument.measurement("IDN?",
+    IDN = Instrument.measurement("*IDN?",
                                """ Reads the Identification """
                                )
 
@@ -34,11 +34,12 @@ class sr830():
                             'AUX1_input', 'AUX2_input', 'AUX3_input', 'AUX4_input', 
                             'amplitude', 'frequency', 'phase', 'Read']
         
-        self.loggable = ['IDN', 'sample_frequency', 'sensitivity', 'time_constant', 
-                         'frequency', 'low_pass_filter_slope',
-                         'synchronous_filter_status', 'offset_percent', 'expansion_value', 'reserve_value',
-                         'amplifier_status', 'error_status', 'input_config', 'input_grounding', 'input_coupling', 
-                         'input_notch_config', 'ref_source', 'ref_source_trig']
+        self.loggable = ['IDN', 'sample_frequency', 'Θ', 'sensitivity', 'time_constant', 
+                         'frequency', 'low_pass_filter_slope', 'X_offset_percent', 'X_expansion_value', 
+                         'Y_offset_percent', 'Y_expansion_value', 'synchronous_filter_status', 
+                         'amplifier_status', 'error_status', 'input_config', 
+                         'input_grounding', 'input_coupling', 'input_notch_config', 'ref_source', 
+                         'ref_source_trig']
         
     def IDN(self):
         return self.sr830.IDN
@@ -138,13 +139,19 @@ class sr830():
         self.sr830.aux_out_4 = value
         
     def sample_frequency(self):
-        return self.sr830.sample_frequency()
+        return self.sr830.sample_frequency
     
-    def offcet_percent(self):
-        return self.sr830.get_scaling()[0]
+    def X_offset_percent(self):
+        return self.sr830.get_scaling('X')[0]
     
-    def expansion_value(self):
-        return self.sr830.get_scaling()[1]
+    def X_expansion_value(self):
+        return self.sr830.get_scaling('X')[1]
+    
+    def Y_offset_percent(self):
+        return self.sr830.get_scaling('Y')[0]
+    
+    def Y_expansion_value(self):
+        return self.sr830.get_scaling('Y')[1]
     
     def amplifier_status(self):
         return self.sr830.lia_status
@@ -171,15 +178,11 @@ class sr830():
         return self.sr830.reference_source_trigger
         
 def main():
-    device = sr830()
-    print(device.x())
+    device = sr830('GPIB0::3::INSTR')
+    loggable = device.loggable
+    for param in loggable:
+        print(f'{param} = {getattr(device, param)()}')
     
 if __name__ == '__main__':
     main()        
         
-def main():
-    device = sr830()
-    print(device.IDN())
-    
-if __name__ == '__main__':
-    main()

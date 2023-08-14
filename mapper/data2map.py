@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 plt.rcParams.update({'figure.max_open_warning': 0})
 from mapper.add_ticks import add_ticks
+from mapper.filename_utils import fix_unicode
 
 def save_map(args):
     
@@ -26,15 +27,13 @@ def save_map(args):
                         + '.png'
     filename = image_filename[-1]
 
-    def fix_unicode(filename: str):
-        if ':' in filename and ':\\' not in filename:
-            filename = filename.replace(':', ':\\')
-        return filename
-
     to_make = os.path.join(*image_filename[:-1])
     to_make = fix_unicode(to_make)
     if not os.path.exists(to_make):
-        os.makedirs(to_make)
+        try:
+            os.makedirs(to_make)
+        except FileExistsError:
+            pass
 
     image_filename = os.path.join(to_make, filename)
 
@@ -57,7 +56,7 @@ def save_map(args):
             i = float(str(i)[:-2] + '0')
         x.append(i)
 
-    z = [data[i].values for i in x]
+    z = [data[i].values for i in _x]
     z = np.array(z, dtype = float).T
     z = np.ma.masked_invalid(z)
     
@@ -82,6 +81,9 @@ def save_map(args):
 
     add_ticks(ax, x, y)
         
-    fig.savefig(image_filename, dpi = 300, )
+    try:
+        fig.savefig(image_filename, dpi = 300)
+    except:
+        pass
 
     plt.close(fig)

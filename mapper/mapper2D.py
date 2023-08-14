@@ -115,9 +115,9 @@ class mapper2D():
                 raise Exception(f'Map_slave status {hasattr(self, "map_slave")}, Map_master status {hasattr(self, "map_master")}')
         
             self.concatenate_parameters()
-            proc = len(self.maps_to_save)
-            with ThreadPool(proc) as p:    
+            with ThreadPool() as p:    
                 p.map(save_map, self.maps_to_save)
+            self.maps_to_save = []
     
     def concatenate_parameters(self):
         

@@ -1,7 +1,6 @@
 import os
 from os.path import exists
 core_dir = os.getcwd() 
-from filename_utils import cut, basename, unify_filename, fix_unicode
 import sys
 import json
 from csv import writer
@@ -13,10 +12,10 @@ from addons.ToolTip import CreateToolTip
 from mapper.mapper2D import mapper2D
 from mapper.mapper3D import mapper3D
 from mapper.add_ticks import add_ticks
+from mapper.filename_utils import cut, basename, unify_filename, fix_unicode, get_filename_index
 import matplotlib.animation as animation
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from addons.VertNavigationToolbar import VerticalNavigationToolbar2Tk
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import matplotlib.pyplot as plt
 from matplotlib import style
 import pyvisa as visa
@@ -84,7 +83,7 @@ for ind, device in enumerate(device_classes):
               
 print('Devices import succes')
 
-matplotlib.use("TkAgg")
+matplotlib.use("Agg")
 plt.rcParams['animation.html'] = 'jshtml'
 LARGE_FONT = ('Verdana', 12)
 SUPER_LARGE = ('Verdana', 16)
@@ -117,14 +116,14 @@ from_sweep1 = 0
 to_sweep1 = 1
 ratio_sweep1 = 1
 delay_factor1 = 1
-from_sweep2 = float
-to_sweep2 = float
-ratio_sweep2 = float
-delay_factor2 = float
-from_sweep3 = float
-to_sweep3 = float
-ratio_sweep3 = float
-delay_factor3 = float
+from_sweep2 = 0
+to_sweep2 = 1
+ratio_sweep2 = 1
+delay_factor2 = 1
+from_sweep3 = 0
+to_sweep3 = 1
+ratio_sweep3 = 1
+delay_factor3 = 1
 stepper_flag = False
 #fastmode_slave_flag = False
 #fastmode_master_flag = False
@@ -154,13 +153,15 @@ if not exists(os.path.join(cur_dir, 'data_files')):
 filename_sweep = os.path.join(cur_dir, 'data_files', f'{YEAR}{MONTH}{DAY}.csv')
 
 ind_setget = [0]
+path = os.path.join(cur_dir, 'data_files')
+path = fix_unicode(path)
 
-for file in os.listdir(os.path.join(cur_dir, 'data_files')):
+for file in os.listdir(path):
     if f'setget_{YEAR}{MONTH}{DAY}' in file: 
-        
-        ind_setget.append(int(file[len(file) - file[::-1].find('-') - 1 : -4]))
+        ind_setget.append(int(file[len(file) - file[::-1].find('-') : -4]))
         
 filename_setget = os.path.join(cur_dir, 'data_files', f'setget_{YEAR}{MONTH}{DAY}-{np.max(ind_setget) + 1}.csv')
+filename_setget = fix_unicode(filename_setget)
 
 sweeper_flag1 = False
 sweeper_flag2 = False
@@ -325,6 +326,9 @@ for address in list(address_dict.keys()):
             types_of_devices.append('Not a class')
         except ValueError:
             pass
+    if address.startswith('cDAQ'):
+        list_of_devices.append(address)
+        types_of_devices.append('Not a class')
         
 for ind_, type_ in enumerate(types_of_devices):
     if type_ == 'Not a class':
@@ -398,10 +402,10 @@ def plot_animation(i, n, filename):
         data = pd.read_csv(filename)
         globals()[f'x{n}'] = data[columns[globals()[f'x{n}_status']]].values
         globals()[f'y{n}'] = data[columns[globals()[f'y{n}_status']]].values
-    except:
-        pass
-    x = globals()[f'x{n}']
-    y = globals()[f'y{n}']
+    except Exception as e:
+        print(f'Exception happened in graph plot extracting data: {e}')
+    x = np.array(globals()[f'x{n}'])
+    y = np.array(globals()[f'y{n}'])
     
     if not y.shape[0] == 0 and not x.shape[0] == 0:
         if type(y[0]) == str and ',' in y[0] and type(x[0]) == str and ',' in x[0]:
@@ -410,6 +414,7 @@ def plot_animation(i, n, filename):
                 x = np.array([float(i) for i in x[-1].split(',')])
             except:
                 pass
+            
         elif type(y[0]) == str and ',' in y[0]:
             return
         elif type(x[0]) == str and ',' in x[0]:
@@ -428,8 +433,8 @@ def plot_animation(i, n, filename):
     
     xscale_status = ax.get_xscale()
     yscale_status = ax.get_yscale()
-    autoscale_x = ax.__dict__['_autoscaleXon']
-    autoscale_y = ax.__dict__['_autoscaleYon']
+    autoscale_x = ax.get_autoscalex_on()
+    autoscale_y = ax.get_autoscaley_on()
     title = ax.get_title()
     xlabel = ax.get_xlabel()
     ylabel = ax.get_ylabel()
@@ -462,6 +467,11 @@ def map_animation(i, n, filename):
     global sweeper_write
     global parameters_to_read
     global manual_sweep_flags
+    
+    import numpy as np
+    log = lambda x: np.log(x)
+    exp = lambda x: np.exp(x)
+    sqrt = lambda x: x ** 0.5
     
     ax = globals()[f'ax{n}']
     
@@ -628,52 +638,6 @@ def my_animate(i, n, filename):
         map_animation(i, n, filename)
     else:
         raise Exception(f'Plot flag can only be "plot" or "map", not {plot_flag}')
-
-def get_filename_index(filename = None, dimension = 1):
-    '''
-    Function to return the index (+1) of max indexed filename 
-    '''
-    global core_dir
-    global filename_sweep
-
-    if filename == None:
-        filename = filename_sweep
-    
-    files = []
-    path = os.path.normpath(filename).split(os.path.sep)
-    
-    if 'data_files' in path:
-        to_find = os.path.join(*path[:path.index('data_files') + 1]) #directory to search in
-        to_find = fix_unicode(to_find)
-    else:
-        try:
-            to_find = os.path.join(*path[:-1])
-        except:
-            to_find = os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}')
-        to_find = fix_unicode(to_find)
-    
-    for (_, _, file_names) in os.walk(to_find): #get all the files from subdirectories
-        files.extend(file_names)
-    ind = [0]
-    basic_name = os.path.normpath(filename).split(os.path.sep)[-1]
-    #example: my_name123_1.0_2.0-4.csv -> my_name123
-    if '.' in basic_name:
-        basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('.') - 1)] #all before last .
-    if '-' in basic_name:
-        basic_name = basic_name[:(len(basic_name) - basic_name[::-1].find('-') - 1)] #all before last -
-    basic_name = unify_filename(basic_name)
-    for file in files:
-        if basic_name in file and 'manual' not in file and 'setget' not in file:
-            index_start = len(file) - file[::-1].find('-') - 1
-            index_stop = len(file) - file[::-1].find('.') - 1
-            try:
-                ind.append(int(file[index_start + 1 : index_stop]))
-            except:
-                ind.append(np.nan)
-    previous_ind = int(np.nanmax(ind))
-    if np.isnan(previous_ind):
-        previous_ind = 0
-    return previous_ind + 1
 
 zero_time = time.perf_counter()
 
@@ -919,7 +883,8 @@ class SetGet(tk.Frame):
         button_get = tk.Button(self, text = 'Get!', command = self.get_read_parameters)
         button_get.place(relx = 0.9, rely = 0.45)
         
-        self.ind_setget = int(filename_setget[filename_setget.find('-') + 1:-4])
+        idx = len(filename_setget) - filename_setget[::-1].index('-') - 1
+        self.ind_setget = int(filename_setget[idx + 1:-4])
         
         self.thread_n = 0
         
@@ -1415,7 +1380,7 @@ class SetGet(tk.Frame):
         
         if self.ind_setget not in ind_setget:
             ind_setget.append(self.ind_setget)
-            filename_setget = os.path.join(cur_dir, f'setget_{YEAR}{MONTH}{DAY}-{self.ind_setget}.csv')
+            filename_setget = os.path.join(cur_dir, 'data_files', f'setget_{YEAR}{MONTH}{DAY}-{self.ind_setget}.csv')
             self.ind_setget += 1
 
         def get_key(val, my_dict):
@@ -1531,19 +1496,20 @@ class Sweeper1d(tk.Frame):
         self.manual_filenames = [self.preset['manual_filename1'].values[0]]
         self.filename_sweep = self.preset['filename_sweep'][0]
 
-        self.filename_index = get_filename_index(filename = self.filename_sweep)
+        self.filename_index = get_filename_index(filename = self.filename_sweep, core_dir = core_dir, YMD = f'{YEAR}{MONTH}{DAY}')
 
         #updates filename with respect to date and current index
         try:
             path = os.path.normpath(self.filename_sweep)
             path = path.split(os.sep)
             name = path[-1]
-            if '.' in name: #if name has the extension, remove it
+            if '.csv' in name or '.txt' in name: #if name has the extension, remove it
                 name = name[:len(name) - name[::-1].index('.') - 1]
             if int(name[:2]) in np.linspace(0, 99, 100, dtype = int) \
                 and int(name[2:4]) in np.linspace(1, 12, 12, dtype = int) \
                     and int(name[4:6]) in np.linspace(1, 32, 32, dtype = int): #If filename is in yy.mm.dd format, make it current day
                 self.filename_sweep = os.path.join(*path[:-1], f'{YEAR}{MONTH}{DAY}-{self.filename_index}.csv')
+                self.filename_sweep = fix_unicode(self.filename_sweep)
                 if ':' in self.filename_sweep and ':\\' not in self.filename_sweep:
                     i = self.filename_sweep.index(':')
                     self.filename_sweep = self.filename_sweep[:i+1] + '\\' + self.filename_sweep[i+1:]
@@ -1551,9 +1517,10 @@ class Sweeper1d(tk.Frame):
             path = os.path.normpath(self.filename_sweep)
             path = path.split(os.sep)
             name = path[-1]
-            if '.' in name: #if name has the extension, remove it
+            if '.csv' in name or '.txt' in name: #if name has the extension, remove it
                 name = name[:len(name) - name[::-1].index('.') - 1] 
             self.filename_sweep = os.path.join(*path[:-1], f'{name}-{self.filename_index}.csv')
+            self.filename_sweep = fix_unicode(self.filename_sweep)
             if ':' in self.filename_sweep and ':\\' not in self.filename_sweep:
                 i = self.filename_sweep.index(':')
                 self.filename_sweep = self.filename_sweep[:i+1] + '\\' + self.filename_sweep[i+1:]
@@ -2267,7 +2234,7 @@ class Sweeper1d(tk.Frame):
             os.makedirs(tomake)
         filename = os.path.join(tomake, filename)
         filename = fix_unicode(filename)
-        idx = get_filename_index(filename)
+        idx = get_filename_index(filename, core_dir = core_dir, YMD = f'{YEAR}{MONTH}{DAY}')
         name = name[:len(name) - name[::-1].index('-') - 1]
         filename =  os.path.join(tomake, f'{name}_manual{i+1}d{idx}.csv')
         filename = fix_unicode(filename)
@@ -2311,6 +2278,9 @@ class Sweeper1d(tk.Frame):
         self.entry_filename.delete(0, tk.END)
         self.entry_filename.insert(0, filename_sweep)
         self.entry_filename.after(1)
+        
+        width = int(len(self.filename_textvariable.get()) * 0.95)
+        self.entry_filename.config(width = width)
         
         current_filename = self.entry_filename.get()
         path_current = os.path.normpath(current_filename).split(os.path.sep)
@@ -2406,12 +2376,11 @@ class Sweeper1d(tk.Frame):
 
         filename_sweep = fix_unicode(filename_sweep)
 
-        self.filename_index = get_filename_index(filename = filename_sweep, dimension = 2)
+        self.filename_index = get_filename_index(filename = filename_sweep, core_dir = core_dir, YMD = f'{YEAR}{MONTH}{DAY}')
 
         core = os.path.normpath(filename_sweep)
         core = core.split(os.sep)
         name = core[-1]
-        name = name[:len(name) - name[::-1].index('.') - 1]
         
         if 'data_files' in core and len(core) >= 3:
             cur_dir = os.path.join(*core[:core.index('data_files')])
@@ -2428,9 +2397,6 @@ class Sweeper1d(tk.Frame):
             if not exists(to_make):
                 os.makedirs(to_make)
                 
-            if '.' not in name:
-                name += '.csv'
-                
             filename_sweep = os.path.join(cur_dir, 'data_files', name)
             filename_sweep = fix_unicode(filename_sweep)
             
@@ -2444,9 +2410,6 @@ class Sweeper1d(tk.Frame):
             
             if not exists(to_make):
                 os.makedirs(to_make)
-            
-            if '.' not in name:
-                name += '.csv'
                 
             filename_sweep = os.path.join(cur_dir, 'data_files', name)
             filename_sweep = fix_unicode(filename_sweep)
@@ -2462,9 +2425,6 @@ class Sweeper1d(tk.Frame):
             
             if not exists(to_make):
                 os.makedirs(to_make)
-                
-            if '.' not in name:
-                name += '.csv'
                 
             filename_sweep = os.path.join(*core[:-1], f'{YEAR}{MONTH}{DAY}', 'data_files', name)
             filename_sweep = fix_unicode(filename_sweep)
@@ -2490,19 +2450,20 @@ class Sweeper1d(tk.Frame):
             
         all_addresses = np.unique(all_addresses)
         
-        self.filename_index = get_filename_index(filename = filename_sweep)
+        self.filename_index = get_filename_index(filename = filename_sweep, core_dir = core_dir, YMD = f'{YEAR}{MONTH}{DAY}')
         
         core = os.path.normpath(filename_sweep)
         core = core.split(os.sep)
         _name = core[-1]
+        
         try:
             folder_name = _name[:len(_name) - _name[::-1].index('.') - 1]
         except ValueError:
-            pass
+            folder_name = _name
         try:
             folder_name = folder_name[:len(folder_name) - folder_name[::-1].index('-') - 1]
         except ValueError:
-            pass
+            folder_name = _name
         folder_name = unify_filename(folder_name)
         
         for address in all_addresses:
@@ -2778,7 +2739,7 @@ class Sweeper2d(tk.Frame):
         self.interpolated = int(self.preset['interpolated'].values[0])
         self.uniform = int(self.preset['interpolated'].values[0])
         
-        self.filename_index = get_filename_index(filename = self.filename_sweep, dimension = 2)
+        self.filename_index = get_filename_index(filename = self.filename_sweep, core_dir = core_dir, YMD = f'{YEAR}{MONTH}{DAY}')
         
         #updates filename with respect to date and current index
         try:
@@ -4073,7 +4034,7 @@ class Sweeper2d(tk.Frame):
             os.makedirs(tomake)
         filename = os.path.join(tomake, filename)
         filename = fix_unicode(filename)
-        idx = get_filename_index(filename)
+        idx = get_filename_index(filename, core_dir = core_dir, YMD = f'{YEAR}{MONTH}{DAY}')
         name = name[:len(name) - name[::-1].index('-') - 1]
         filename =  os.path.join(tomake, f'{name}_manual{i+1}d{idx}.csv')
         filename = fix_unicode(filename)
@@ -4209,11 +4170,12 @@ class Sweeper2d(tk.Frame):
 
         filename_sweep = fix_unicode(filename_sweep)
 
-        self.filename_index = get_filename_index(filename = filename_sweep, dimension = 2)
+        self.filename_index = get_filename_index(filename = filename_sweep, core_dir = core_dir, YMD = f'{YEAR}{MONTH}{DAY}')
 
         core = os.path.normpath(filename_sweep)
         core = core.split(os.sep)
         name = core[-1]
+        
         try:
             folder_name = name[:len(name) - name[::-1].index('.') - 1]
         except ValueError:
@@ -4293,7 +4255,7 @@ class Sweeper2d(tk.Frame):
             
         all_addresses = np.unique(all_addresses)
         
-        self.filename_index = get_filename_index(filename = filename_sweep)
+        self.filename_index = get_filename_index(filename = filename_sweep, core_dir = core_dir, YMD = f'{YEAR}{MONTH}{DAY}')
         
         core = os.path.normpath(filename_sweep)
         core = core.split(os.sep)
@@ -4301,11 +4263,11 @@ class Sweeper2d(tk.Frame):
         try:
             folder_name = _name[:len(_name) - _name[::-1].index('.') - 1]
         except ValueError:
-            pass
+            folder_name = _name
         try:
             folder_name = folder_name[:len(folder_name) - folder_name[::-1].index('-') - 1]
         except ValueError:
-            pass
+            folder_name = _name
         folder_name = unify_filename(folder_name)
         
         for address in all_addresses:
@@ -4738,7 +4700,7 @@ class Sweeper3d(tk.Frame):
         self.interpolated = int(self.preset['interpolated'].values[0])
         self.uniform = int(self.preset['uniform'].values[0])
         
-        self.filename_index = get_filename_index(filename = self.filename_sweep, dimension = 3)
+        self.filename_index = get_filename_index(filename = self.filename_sweep, core_dir = core_dir, YMD = f'{YEAR}{MONTH}{DAY}')
         
         #updates filename with respect to date and current index
         try:
@@ -6339,7 +6301,7 @@ class Sweeper3d(tk.Frame):
             os.makedirs(tomake)
         filename = os.path.join(tomake, filename)
         filename = fix_unicode(filename)
-        idx = get_filename_index(filename)
+        idx = get_filename_index(filename, core_dir = core_dir, YMD = f'{YEAR}{MONTH}{DAY}')
         name = name[:len(name) - name[::-1].index('-') - 1]
         filename =  os.path.join(tomake, f'{name}_manual{i+1}d{idx}.csv')
         filename = fix_unicode(filename)
@@ -6479,7 +6441,7 @@ class Sweeper3d(tk.Frame):
 
         filename_sweep = fix_unicode(filename_sweep)
 
-        self.filename_index = get_filename_index(filename = filename_sweep, dimension = 2)
+        self.filename_index = get_filename_index(filename = filename_sweep, core_dir = core_dir, YMD = f'{YEAR}{MONTH}{DAY}')
 
         core = os.path.normpath(filename_sweep)
         core = core.split(os.sep)
@@ -6564,7 +6526,7 @@ class Sweeper3d(tk.Frame):
             
         all_addresses = np.unique(all_addresses)
         
-        self.filename_index = get_filename_index(filename = filename_sweep)
+        self.filename_index = get_filename_index(filename = filename_sweep, core_dir = core_dir, YMD = f'{YEAR}{MONTH}{DAY}')
         
         core = os.path.normpath(filename_sweep)
         core = core.split(os.sep)
@@ -6572,11 +6534,11 @@ class Sweeper3d(tk.Frame):
         try:
             folder_name = _name[:len(_name) - _name[::-1].index('.') - 1]
         except ValueError:
-            pass
+            folder_name = _name
         try:
             folder_name = folder_name[:len(folder_name) - folder_name[::-1].index('-') - 1]
         except ValueError:
-            pass
+            folder_name = _name
         folder_name = unify_filename(folder_name)
         
         for address in all_addresses:
@@ -7029,10 +6991,10 @@ class Sweeper3d(tk.Frame):
                 messagebox.showerror('Invalid value in "Ratio3" entrybox', f'Can not convert {self.entry_ratio3.get()} to float')
                 self.start_sweep_flag = False
             
-            def get_key(val, my_dict):
-                for key, value in my_dict.items():
-                    if val == value:
-                        return key
+        def get_key(val, my_dict):
+            for key, value in my_dict.items():
+                if val == value:
+                    return key
         
         self.list_to_read = []
         # asking multichoise to get parameters to read
@@ -7123,16 +7085,17 @@ class Sweeper_write(threading.Thread):
         self.parameters_to_read = parameters_to_read
         self.parameters_to_read_dict = parameters_to_read_dict
         print(f'Parameters to read are {self.parameters_to_read}')
-        self.from_sweep1 = float(from_sweep1)
-        self.to_sweep1 = float(to_sweep1)
         if manual_sweep_flags[0] == 1:
             data = pd.read_csv(manual_filenames[0])
             self.from_sweep1 = data['steps'].values[0]
             self.to_sweep1 = data['steps'].values[-1]
+        else:
+            self.from_sweep1 = float(from_sweep1)
+            self.to_sweep1 = float(to_sweep1)
         self.cur_manual_index1 = 0
         self.ratio_sweep1 = float(ratio_sweep1)
         self.delay_factor1 = float(delay_factor1)
-        self.value1 = float(from_sweep1)
+        self.value1 = float(self.from_sweep1)
         if parameter_to_sweep1 in device_to_sweep1.get_options:
             self.value1 = float(getattr(device_to_sweep1, parameter_to_sweep1)())
 
@@ -7144,7 +7107,7 @@ class Sweeper_write(threading.Thread):
         self.started = False
         self.inner_count = 0
         
-        if hasattr(device_to_sweep1, 'sweepable') and len(manual_sweep_flags) == 1:
+        if hasattr(device_to_sweep1, 'sweepable') and len(manual_sweep_flags) == 1 and stepper_flag == False:
             if device_to_sweep1.sweepable[device_to_sweep1.set_options.index(parameter_to_sweep1)]:
                 self.sweepable1 = True
                 self.upcoming_value1 = self.value1
@@ -7172,17 +7135,20 @@ class Sweeper_write(threading.Thread):
             self.device_to_sweep2 = device_to_sweep2
             self.parameter_to_sweep2 = parameter_to_sweep2
             print(f'Parameter to sweep 2 is {self.parameter_to_sweep2}')
-            self.from_sweep2 = float(from_sweep2)
-            self.to_sweep2 = float(to_sweep2)
             if manual_sweep_flags[1] == 1:
                 data = pd.read_csv(manual_filenames[1])
                 self.from_sweep2 = data['steps'].values[0]
                 self.to_sweep2 = data['steps'].values[-1]
+                globals()['from_sweep2'] = self.from_sweep2
+                globals()['to_sweep2'] = self.to_sweep2
+            else:
+                self.from_sweep2 = float(from_sweep2)
+                self.to_sweep2 = float(to_sweep2)
             self.cur_manual_index2 = 0
             self.ratio_sweep2 = float(ratio_sweep2)
             self.delay_factor2 = float(delay_factor2)
             self.filename_sweep = filename_sweep
-            self.value2 = float(from_sweep2)
+            self.value2 = float(self.from_sweep2)
             if parameter_to_sweep2 in device_to_sweep2.get_options:
                 self.value2 = float(getattr(device_to_sweep2, parameter_to_sweep2)())
             self.columns = columns
@@ -7192,7 +7158,8 @@ class Sweeper_write(threading.Thread):
                 self.nstep2 = (float(to_sweep2) - float(from_sweep2)) / self.ratio_sweep2 / self.delay_factor2
                 self.nstep2 = int(abs(self.nstep2))
                 
-                index = get_filename_index(dimension = 2)
+                filename = globals()['filename_sweep']
+                index = get_filename_index(filename = filename, core_dir = core_dir, YMD = f'{YEAR}{MONTH}{DAY}')
                 self.mapper2D = mapper2D(self.parameter_to_sweep1, self.parameter_to_sweep2, 
                                          self.parameters_to_read, filename_sweep, interpolated = interpolated2D,
                                          uniform = uniform2D, _from = self.from_sweep2, _to = self.to_sweep2,
@@ -7204,7 +7171,7 @@ class Sweeper_write(threading.Thread):
                 
             self.sweepable2 = False
                 
-            if hasattr(device_to_sweep2, 'sweepable') and len(manual_sweep_flags) == 2:
+            if hasattr(device_to_sweep2, 'sweepable') and len(manual_sweep_flags) == 2  and stepper_flag == False:
                 if device_to_sweep2.sweepable[device_to_sweep2.set_options.index(parameter_to_sweep2)]:
                             self.sweepable2 = True
                             self.upcoming_value2 = self.value2
@@ -7233,29 +7200,35 @@ class Sweeper_write(threading.Thread):
             self.device_to_sweep3 = device_to_sweep3
             self.parameter_to_sweep2 = parameter_to_sweep2
             self.parameter_to_sweep3 = parameter_to_sweep3
-            self.from_sweep2 = float(from_sweep2)
-            self.to_sweep2 = float(to_sweep2)
             if manual_sweep_flags[1] == 1:
                 data = pd.read_csv(manual_filenames[1])
                 self.from_sweep2 = data['steps'].values[0]
                 self.to_sweep2 = data['steps'].values[-1]
+                globals()['from_sweep2'] = self.from_sweep2
+                globals()['to_sweep2'] = self.to_sweep2
+            else:
+                self.from_sweep2 = float(from_sweep2)
+                self.to_sweep2 = float(to_sweep2)
             self.cur_manual_index2 = 0
             self.ratio_sweep2 = float(ratio_sweep2)
             self.delay_factor2 = float(delay_factor2)
-            self.from_sweep3 = float(from_sweep3)
-            self.to_sweep3 = float(to_sweep3)
             if manual_sweep_flags[2] == 1:
                 data = pd.read_csv(manual_filenames[2])
                 self.from_sweep3 = data['steps'].values[0]
                 self.to_sweep3 = data['steps'].values[-1]
+                globals()['from_sweep3'] = self.from_sweep3
+                globals()['to_sweep3'] = self.to_sweep3
+            else:
+                self.from_sweep3 = float(from_sweep3)
+                self.to_sweep3 = float(to_sweep3)
             self.cur_manual_index3 = 0
             self.ratio_sweep3 = float(ratio_sweep3)
             self.delay_factor3 = float(delay_factor3)
             self.filename_sweep = filename_sweep
-            self.value2 = float(from_sweep2)
+            self.value2 = float(self.from_sweep2)
             if parameter_to_sweep2 in device_to_sweep2.get_options:
                 self.value2 = float(getattr(device_to_sweep2, parameter_to_sweep2)())
-            self.value3 = float(from_sweep3)
+            self.value3 = float(self.from_sweep3)
             if parameter_to_sweep3 in device_to_sweep3.get_options:
                 self.value3 = float(getattr(device_to_sweep3, parameter_to_sweep3)())
             self.columns = columns
@@ -7274,7 +7247,8 @@ class Sweeper_write(threading.Thread):
                 self.nstep3 = (float(to_sweep3) - float(from_sweep3)) / self.ratio_sweep3 / self.delay_factor3
                 self.nstep3 = int(abs(self.nstep3))
                 
-                index = get_filename_index(dimension = 3)
+                filename = globals()['filename_sweep']
+                index = get_filename_index(filename = filename, core_dir = core_dir, YMD = f'{YEAR}{MONTH}{DAY}')
                 self.mapper3D = mapper3D(self.parameter_to_sweep1, self.parameter_to_sweep2, self.parameter_to_sweep3, 
                                          self.parameters_to_read, filename_sweep, interpolated = interpolated3D,
                                          uniform = uniform3D, _from = self.from_sweep3, _to = self.to_sweep3,
@@ -7288,7 +7262,7 @@ class Sweeper_write(threading.Thread):
             
             self.sweepable3 = False
 
-            if hasattr(device_to_sweep3, 'sweepable') and len(manual_sweep_flags) == 3:
+            if hasattr(device_to_sweep3, 'sweepable') and len(manual_sweep_flags) == 3  and stepper_flag == False:
                 if device_to_sweep3.sweepable[device_to_sweep3.set_options.index(parameter_to_sweep3)]:
                             self.sweepable3 = True
                             self.upcoming_value3 = self.value3
@@ -7312,7 +7286,7 @@ class Sweeper_write(threading.Thread):
             if self.sweepable3 == True and stepper_flag == False:
                 self.nstep3 = 1
             
-        print(f'Manual_sweep_flags are {manual_sweep_flags}\nrange1 = [{from_sweep1}:{to_sweep1}), ratio_sweep1 = {ratio_sweep1}\nrange2 = [{from_sweep2}:{to_sweep2}), ratio_sweep2 = {ratio_sweep2}\nrange3 = [{from_sweep3}:{to_sweep3}), ratio_sweep3 = {ratio_sweep3}')
+        #print(f'Manual_sweep_flags are {manual_sweep_flags}\nrange1 = [{from_sweep1}:{to_sweep1}), ratio_sweep1 = {ratio_sweep1}\nrange2 = [{from_sweep2}:{to_sweep2}), ratio_sweep2 = {ratio_sweep2}\nrange3 = [{from_sweep3}:{to_sweep3}), ratio_sweep3 = {ratio_sweep3}')
 
         print(f'Step1 is {self.step1}, nstep1 is {self.nstep1}')
         try: 
@@ -7961,12 +7935,12 @@ class Sweeper_write(threading.Thread):
             setattr(self, 'value' + axis, data[i])
             try:
                 setattr(self, 'step' + axis, abs(data[i+1] - data[i-1]) / 2)
-            except IndexError as i:
-                print(f'Index error: {i}')
+            except IndexError as ie:
+                print(f'Index error: {ie}')
                 try:
                     setattr(self, 'step' + axis, abs(data[i] - data[i-1]))
-                except IndexError as i:
-                    print(f'Index error 2: {i}')
+                except IndexError as ie2:
+                    print(f'Index error 2: {ie2}')
                     setattr(self, 'step' + axis, abs(data[i] - data[i+1]))
             except Exception as e:
                 print(f'Exception: {e}')
@@ -8099,13 +8073,16 @@ class Sweeper_write(threading.Thread):
             walks = globals()[flags_dict[len(manual_sweep_flags)]]
             if walks == 1:
                 self.inner_count = 1
+                self.__dict__[f'cur_manual_index{len(manual_sweep_flags)}'] = 0
                 inner_loop_single()
                 globals()['Sweeper_object'].__dict__[f'cur_walk{len(manual_sweep_flags)}'] += 1
-                back_and_forth_transposition(len(manual_sweep_flags), False)
+                if len(manual_sweep_flags) != 1:
+                    back_and_forth_transposition(len(manual_sweep_flags), False)
             
             elif walks > 1:
                 for i in range(1, walks + 1):
                     self.inner_count = 1
+                    self.__dict__[f'cur_manual_index{len(manual_sweep_flags)}'] = 0
                     inner_loop_single(direction = round(2 * (i % 2) - 1))
                     globals()['Sweeper_object'].__dict__[f'cur_walk{len(manual_sweep_flags)}'] += 1
                     if globals()['snakemode_master_flag'] == True and len(manual_sweep_flags) == 2:
@@ -8248,11 +8225,14 @@ class Sweeper_write(threading.Thread):
             flags_dict = {2: 'back_and_forth_master', 3: 'back_and_forth_slave'}
             walks = globals()[flags_dict[len(manual_sweep_flags)]]
             if walks == 1:
+                self.__dict__[f'cur_manual_index{len(manual_sweep_flags) - 1}'] = 0
                 external_loop_single()
-                back_and_forth_transposition(len(manual_sweep_flags) - 1, False)
+                if len(manual_sweep_flags) == 3:
+                    back_and_forth_transposition(len(manual_sweep_flags) - 1, False)
             
             elif walks > 1:
                 for i in range(1, walks + 1):
+                    self.__dict__[f'cur_manual_index{len(manual_sweep_flags) - 1}'] = 0
                     external_loop_single(round(2 * (i % 2) - 1))
                     if globals()['snakemode_master_flag'] == True and len(manual_sweep_flags) == 3:
                         if i != walks and back_and_forth_slave != 1:
@@ -8333,11 +8313,12 @@ class Sweeper_write(threading.Thread):
             
             walks = back_and_forth_master
             if walks == 1:
+                self.cur_manual_index1 = 0
                 master_loop_single()
-                back_and_forth_transposition(1, False)
             
             elif walks > 1:
                 for i in range(1, walks + 1):
+                    self.cur_manual_index1 = 0
                     master_loop_single(round(2 * (i % 2) - 1))
                     back_and_forth_transposition(1)
                     step(axis = 1)
@@ -8361,52 +8342,44 @@ class Sweeper_write(threading.Thread):
             if len(manual_sweep_flags) == 1:        
                 inner_loop_back_and_forth()
                 self.sweeper_flag1 == False
+                self.value1 = float(from_sweep1)
+                if parameter_to_sweep1 in device_to_sweep1.get_options:
+                    self.value1 = float(getattr(device_to_sweep1, parameter_to_sweep1)())
     
         if self.sweeper_flag2 == True:
             
             zero_time = time.perf_counter()
-    
-            '''
-            if self.time1 > self.time2 and master_lock == False:
-                self.transposition(1, 2)
-                manual_sweep_flags = manual_sweep_flags[::-1]
-                manual_filenames = manual_filenames[::-1]
-                columns[1:3] = columns[1:3][:-1]
-            '''
             
             update_filename()
     
             if len(manual_sweep_flags) == 2:        
                 external_loop_back_and_forth()
                 self.sweeper_flag2 == False
+                self.value1 = float(from_sweep1)
+                if parameter_to_sweep1 in device_to_sweep1.get_options:
+                    self.value1 = float(getattr(device_to_sweep1, parameter_to_sweep1)())
+                self.value2 = float(from_sweep2)
+                if parameter_to_sweep2 in device_to_sweep2.get_options:
+                    self.value2 = float(getattr(device_to_sweep2, parameter_to_sweep2)())
     
-            self.sweeper_flag2 == False
+    
     
         if self.sweeper_flag3 == True:
-    
-            '''
-            if self.time1 > self.time2 and master_lock == False:
-                self.transposition(1, 2)
-                manual_sweep_flags[0:2] = manual_sweep_flags[0:2][::-1]
-                manual_filenames[0:2] = manual_filenames[0:2][::-1]
-                columns[1:3] = columns[1:3][:-1]
-            if self.time1 > self.time3 and master_lock == False:
-                self.transposition(1, 3)
-                manual_sweep_flags = manual_sweep_flags[::-1]
-                manual_filenames = manual_filenames[::-1]
-                columns[1:4] = columns[1:4][:-1]
-            if self.time2 > self.time3 and master_lock == False:
-                self.transposition(2, 3)
-                manual_sweep_flags[1:3] = manual_sweep_flags[1:3][::-1]
-                manual_filenames[1:3] = manual_filenames[1:3][::-1]
-                columns[2:4] = columns[1:3][:-1]
-            '''
     
             update_filename()
     
             if len(manual_sweep_flags) == 3:
                 master_loop_back_and_forth()
                 self.sweeper_flag3 == False
+                self.value1 = float(from_sweep1)
+                if parameter_to_sweep1 in device_to_sweep1.get_options:
+                    self.value1 = float(getattr(device_to_sweep1, parameter_to_sweep1)())
+                self.value2 = float(from_sweep2)
+                if parameter_to_sweep2 in device_to_sweep2.get_options:
+                    self.value2 = float(getattr(device_to_sweep2, parameter_to_sweep2)())
+                self.value3 = float(from_sweep3)
+                if parameter_to_sweep3 in device_to_sweep3.get_options:
+                    self.value3 = float(getattr(device_to_sweep3, parameter_to_sweep3)())
                 
         if self.setget_flag == True:
             setget_write()
@@ -8419,8 +8392,18 @@ class Sweeper_write(threading.Thread):
         self.sweepable2 = False
         self.sweepable3 = False
         
-        if globals()['dataframe'].empty:
-            os.remove(filename_sweep)
+        for device in list_of_devices:
+            
+            try:
+                device.clear()
+            except:
+                pass
+        
+        try:
+            if np.array(globals()['dataframe']).shape[0] == 0:
+                os.remove(filename_sweep)
+        except:
+            pass
 
 class FigureSettings(object):
     
@@ -8929,6 +8912,134 @@ class FigureSettings(object):
         else:
             raise Exception(f'plot_flag could only obtain values "Plot" or "Map", got {plot_flag}')
         
+class VerticalNavigationToolbar2Tk(NavigationToolbar2Tk):
+    def __init__(self, canvas, window):
+        super().__init__(canvas, window, pack_toolbar=True)
+
+    #Override pan function so it would return to original autoscale after releasing the button
+    def pan(self, *args):
+        
+        from enum import Enum
+        
+        class _Mode(str, Enum):
+            NONE = ""
+            PAN = "pan/zoom"
+            ZOOM = "zoom rect"
+            
+            def __init__(self, NONE):
+                self.N = NONE
+
+            def __str__(self):
+                return self.value
+
+            @property
+            def _navigate_mode(self):
+                return self.name if self is not self.N else None
+        
+        """
+        Toggle the pan/zoom tool.
+
+        Pan with left button, zoom with right.
+        """
+        if self.mode == _Mode.PAN:
+            self.mode = _Mode.NONE
+            self.canvas.widgetlock.release(self)
+            n = globals()['cur_animation_num'] - 3
+            autoscale_x = bool(globals()[f'x{n}_autoscale'])
+            autoscale_y = bool(globals()[f'y{n}_autoscale'])
+            ax = globals()[f'ax{n}']
+            ax.autoscale(enable = autoscale_x, axis = 'x')
+            ax.autoscale(enable = autoscale_y, axis = 'y')
+        else:
+            self.mode = _Mode.PAN
+            self.canvas.widgetlock(self)
+        for a in self.canvas.figure.get_axes():
+            a.set_navigate_mode(self.mode._navigate_mode)
+        self.set_message(self.mode)
+
+    #Override zoom function so it would return to original autoscale after releasing the button
+    def zoom(self, *args):
+        
+        from enum import Enum
+        
+        class _Mode(str, Enum):
+            NONE = ""
+            PAN = "pan/zoom"
+            ZOOM = "zoom rect"
+            
+            def __init__(self, NONE):
+                self.N = NONE
+
+            def __str__(self):
+                return self.value
+
+            @property
+            def _navigate_mode(self):
+                return self.name if self is not self.N else None
+        
+        """Toggle zoom to rect mode."""
+        if self.mode == _Mode.ZOOM:
+            self.mode = _Mode.NONE
+            self.canvas.widgetlock.release(self)
+            n = globals()['cur_animation_num'] - 3
+            autoscale_x = bool(globals()[f'x{n}_autoscale'])
+            autoscale_y = bool(globals()[f'y{n}_autoscale'])
+            ax = globals()[f'ax{n}']
+            ax.autoscale(enable = autoscale_x, axis = 'x')
+            ax.autoscale(enable = autoscale_y, axis = 'y')
+        else:
+            self.mode = _Mode.ZOOM
+            self.canvas.widgetlock(self)
+        for a in self.canvas.figure.get_axes():
+            a.set_navigate_mode(self.mode._navigate_mode)
+        self.set_message(self.mode)
+
+    def drag_pan(self, event):
+        """Callback for dragging in pan/zoom mode."""
+        for ax in self._pan_info.axes:
+            # Using the recorded button at the press is safer than the current
+            # button, as multiple buttons can get pressed during motion.
+            ax.drag_pan(self._pan_info.button, event.key, event.x, event.y)
+            ax.autoscale(enable = False, axis = 'x')
+            ax.autoscale(enable = False, axis = 'y')
+        self.canvas.draw_idle()
+        
+    def drag_zoom(self, event):
+        """Callback for dragging in zoom mode."""
+        start_xy = self._zoom_info.start_xy
+        self._zoom_info.axes[0].autoscale(enable = False, axis = 'x')
+        self._zoom_info.axes[0].autoscale(enable = False, axis = 'y')
+        (x1, y1), (x2, y2) = np.clip(
+            [start_xy, [event.x, event.y]], self._zoom_info.axes[0].bbox.min, self._zoom_info.axes[0].bbox.max)
+        key = event.key
+        # Force the key on colorbars to extend the short-axis bbox
+        if self._zoom_info.cbar == "horizontal":
+            key = "x"
+        elif self._zoom_info.cbar == "vertical":
+            key = "y"
+        if key == "x":
+            y1, y2 = self._zoom_info.axes[0].bbox.intervaly
+        elif key == "y":
+            x1, x2 = self._zoom_info.axes[0].bbox.intervalx
+
+        self.draw_rubberband(event, x1, y1, x2, y2)
+
+    # override _Button() to re-pack the toolbar button in vertical direction
+    def _Button(self, text, image_file, toggle, command):
+        b = super()._Button(text, image_file, toggle, command)
+        b.pack(side=tk.TOP)  # re-pack button in vertical direction
+        return b
+
+    # override _Spacer() to create vertical separator
+    def _Spacer(self):
+        s = tk.Frame(self, width=26, relief=tk.RIDGE, bg="White", padx=2)
+        s.pack(side=tk.TOP, pady = 5, fill="both", expand=True)  # pack in vertical direction
+        return s
+
+    # disable showing mouse position in toolbar
+    def set_message(self, s):
+        pass
+        
 def CreateFigureSettings(widget, ax):
     globals()[f'settingsFigure{var2str(ax)[2:]}'] = FigureSettings(widget)
     def enter(event):
@@ -9180,8 +9291,10 @@ class Graph():
             self.label_setget_filename.place(relx = 0.6, rely = 0.82)
         
         def close_graph():
+            global plot_flag
             if self.order == globals()['cur_animation_num'] - 3:
                 globals()['cur_animation_num'] -= 3
+            plot_flag = 'Plot'
             self.tw.destroy()
         
         self.tw.protocol("WM_DELETE_WINDOW", close_graph)
@@ -9405,7 +9518,7 @@ class Graph():
                     pass
             self.table_dataframe.item(item, values=tuple(dataframe))
             self.table_dataframe.after(250, self.update_item, item)
-        except FileNotFoundError:
+        except:
             self.table_dataframe.after(250, self.update_item, item)
 
 

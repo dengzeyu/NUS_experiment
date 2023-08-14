@@ -122,8 +122,9 @@ class mapper3D():
         
             self.concatenate_parameters()
             proc = len(self.maps_to_save)
-            with ThreadPool(proc) as p:
+            with ThreadPool() as p:
                 p.map(save_map, self.maps_to_save)
+            self.maps_to_save = []
     
     def concatenate_parameters(self):
         

@@ -126,7 +126,7 @@ class opticool():
         self.device.open()
         self.T_states = self.device.temperature.state_code_dict()
         self._T_approach = self.device.temperature.approach_mode(1)
-        self._Field_approach = self.device.field.approach_mode(2)
+        self._Field_approach = self.device.field.approach_mode(0)
         self._Field_driven = self.device.field.driven_mode(1)
         self._chamber_state = self.device.chamber.mode(1)
         self._T_rate = self.device.temperature.set_rate_per_min
@@ -273,8 +273,8 @@ class opticool():
         else:
             speed = min(float(speed), maxspeed)
         
+        #self._T_rate = 3
         self.set_T_rate(speed)
-        
         self.device.temperature.set_point = value
         self.device.set_temperature(value, self._T_rate, self._T_approach)
         
@@ -314,6 +314,7 @@ class opticool():
         
         self.set_Field_rate(speed)
         
+        #self._Field_rate = 50
         self.device.field.set_point = value
         self.device.set_field(value, self._Field_rate, self._Field_approach)
     

@@ -2,7 +2,7 @@ import os
 import matplotlib.pyplot as plt
 plt.rcParams.update({'figure.max_open_warning': 0})
 import imageio
-from filename_utils import unify_filename, fix_unicode
+from mapper.filename_utils import unify_filename, fix_unicode
 from functools import partial
 from multiprocessing.pool import ThreadPool
 
@@ -10,10 +10,13 @@ def create_gif(filename, idx, parameters_to_read):
     
     path = os.path.normpath(filename).split(os.path.sep)
     name = path[-1]
+    
     try:
         name = name[:len(name) - name[::-1].index('.') - 1]
     except ValueError:
         pass
+    if ':' in name:
+        name = name.replace(':', '')
     name = unify_filename(name)
     name = name[:(len(name) - name[::-1].find('-') - 1)]
     cur_dir = os.path.join(*path[:path.index('data_files')])
@@ -24,7 +27,10 @@ def create_gif(filename, idx, parameters_to_read):
     tomake_gif = fix_unicode(tomake_gif)
 
     if not os.path.exists(tomake_gif):
-        os.makedirs(tomake_gif)
+        try:
+            os.makedirs(tomake_gif)
+        except FileExistsError:
+            pass
 
     path_files = os.path.join(cur_dir, '2d_maps', 'images', f'{name}_{idx}')
     path_files = fix_unicode(path_files)
@@ -39,6 +45,8 @@ def create_gif(filename, idx, parameters_to_read):
     gif_names = []
     images_set = []
     for parameter in parameters_to_read:
+        if ':' in parameter:
+            parameter = parameter.replace(':', '')
         parameter_files = []
         parameter_idx = []
         for filename in image_files:
@@ -52,13 +60,13 @@ def create_gif(filename, idx, parameters_to_read):
         gif_names.append(gif_name)
         parameter_files = sorted(dat, key = lambda tup: tup[0])
         parameter_files = [i[1] for i in parameter_files]
-        with ThreadPool(len(parameter_files)) as p:
+        with ThreadPool() as p:
             parameter_images = p.map(partial(imageio.imread, format = 'PNG'), parameter_files)
         images_set.append(parameter_images)
     _args = zip(gif_names, images_set)
     args = []
     for i, j in _args:
         args.append((i, j))
-    with ThreadPool(len(parameters_to_read)) as p:
+    with ThreadPool() as p:
         p.starmap(partial(imageio.mimsave, fps = 3, loop = 0), args)
         
