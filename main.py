@@ -2597,14 +2597,14 @@ class Sweeper1d(tk.Frame):
                         self.open_graph()
                     elif answer2 == True:
                         _delta = abs(cur_value - from_sweep)
-                        nsteps = _delta / ratio_sweep + 1
+                        nsteps = abs(int(_delta / ratio_sweep + 1))
                         steps = np.linspace(cur_value, from_sweep, nsteps)
                         start_toplevel()
                         self.current_position = float(getattr(device, parameter)())
                         update_position()
                         for s in steps:
                             getattr(device, f'set_{parameter}')(value = s)
-                            time.sleep(self.time_delay1)
+                            time.sleep(self.delay_factor1)
                     else:
                         return
                         
@@ -4409,14 +4409,14 @@ class Sweeper2d(tk.Frame):
                         self.start_sweep_flag = True
                     elif answer2 == True:
                         _delta = abs(cur_value - from_sweep)
-                        nsteps = _delta / ratio_sweep + 1
+                        nsteps = abs(int(_delta / ratio_sweep + 1))
                         steps = np.linspace(cur_value, from_sweep, nsteps)
                         start_toplevel()
                         self.current_position1 = float(getattr(device, parameter)())
                         update_position()
                         for s in steps:
                             getattr(device, f'set_{parameter}')(value = s)
-                            time.sleep(self.time_delay1)
+                            time.sleep(self.delay_factor1)
                     else:
                         return
                         
@@ -4523,14 +4523,14 @@ class Sweeper2d(tk.Frame):
                         try_start()
                     elif answer2 == True:
                         _delta = abs(cur_value - from_sweep)
-                        nsteps = _delta / ratio_sweep + 1
+                        nsteps = abs(int(_delta / ratio_sweep + 1))
                         steps = np.linspace(cur_value, from_sweep, nsteps)
                         start_toplevel()
                         self.current_position2 = float(getattr(device, parameter)())
                         update_position()
                         for s in steps:
                             getattr(device, f'set_{parameter}')(value = s)
-                            time.sleep(self.time_delay1)
+                            time.sleep(self.delay_factor1)
                     else:
                         return
                         
@@ -4646,16 +4646,16 @@ class Sweeper2d(tk.Frame):
                     try_start()
                 elif answer2 == True:
                     _delta1 = abs(cur_value1 - start_master)
-                    nsteps1 = _delta1 / ratio_sweep1 + 1
+                    nsteps1 = abs(int(_delta1 / ratio_sweep1 + 1))
                     steps1 = np.linspace(cur_value1, start_master, nsteps1)
                     _delta2 = abs(cur_value2 - from_sweep2)
-                    nsteps2 = _delta2 / ratio_sweep2 + 1
+                    nsteps2 = abs(int(_delta2 / ratio_sweep2 + 1))
                     steps2 = np.linspace(cur_value2, from_sweep2, nsteps2)
                     start_toplevel()
                     self.current_position1 = float(getattr(device1, parameter1)())
                     self.current_position2 = float(getattr(device2, parameter2)())
                     update_position()
-                    time_delay = max(self.time_delay1, self.time_delay2)
+                    time_delay = max(self.delay_factor1, self.delay_factor2)
                     for i in range(max(nsteps1, nsteps2)):
                         try:
                             getattr(device1, f'set_{parameter1}')(value = steps1[i])
@@ -6851,14 +6851,14 @@ class Sweeper3d(tk.Frame):
                         self.start_sweep_flag = True
                     elif answer2 == True:
                         _delta = abs(cur_value - from_sweep)
-                        nsteps = _delta / ratio_sweep + 1
+                        nsteps = abs(int(_delta / ratio_sweep + 1))
                         steps = np.linspace(cur_value, from_sweep, nsteps)
                         start_toplevel()
                         self.current_position1 = float(getattr(device, parameter)())
                         update_position()
                         for s in steps:
                             getattr(device, f'set_{parameter}')(value = s)
-                            time.sleep(self.time_delay1)
+                            time.sleep(self.delay_factor1)
                     else:
                         return
                         
@@ -6955,14 +6955,14 @@ class Sweeper3d(tk.Frame):
                         self.start_sweep_flag = True
                     elif answer2 == True:
                         _delta = abs(cur_value - from_sweep)
-                        nsteps = _delta / ratio_sweep + 1
+                        nsteps = abs(int(_delta / ratio_sweep + 1))
                         steps = np.linspace(cur_value, from_sweep, nsteps)
                         start_toplevel()
                         self.current_position2 = float(getattr(device, parameter)())
                         update_position()
                         for s in steps:
                             getattr(device, f'set_{parameter}')(value = s)
-                            time.sleep(self.time_delay1)
+                            time.sleep(self.delay_factor1)
                     else:
                         return
                         
@@ -7069,14 +7069,14 @@ class Sweeper3d(tk.Frame):
                         try_start()
                     elif answer2 == True:
                         _delta = abs(cur_value - from_sweep)
-                        nsteps = _delta / ratio_sweep + 1
+                        nsteps = abs(int(_delta / ratio_sweep + 1))
                         steps = np.linspace(cur_value, from_sweep, nsteps)
                         start_toplevel()
                         self.current_position3 = float(getattr(device, parameter)())
                         update_position()
                         for s in steps:
                             getattr(device, f'set_{parameter}')(value = s)
-                            time.sleep(self.time_delay1)
+                            time.sleep(self.delay_factor1)
                     else:
                         return
                         
@@ -7192,16 +7192,16 @@ class Sweeper3d(tk.Frame):
                     try_start()
                 elif answer2 == True:
                     _delta1 = abs(cur_value1 - start_master)
-                    nsteps1 = _delta1 / ratio_sweep1 + 1
+                    nsteps1 = abs(int(_delta1 / ratio_sweep1 + 1))
                     steps1 = np.linspace(cur_value1, start_master, nsteps1)
                     _delta2 = abs(cur_value2 - from_sweep2)
-                    nsteps2 = _delta2 / ratio_sweep2 + 1
+                    nsteps2 = abs(int(_delta2 / ratio_sweep2 + 1))
                     steps2 = np.linspace(cur_value2, from_sweep2, nsteps2)
                     start_toplevel()
                     self.current_position1 = float(getattr(device1, parameter1)())
                     self.current_position2 = float(getattr(device2, parameter2)())
                     update_position()
-                    time_delay = max(self.time_delay1, self.time_delay2)
+                    time_delay = max(self.delay_factor1, self.delay_factor2)
                     for i in range(max(nsteps1, nsteps2)):
                         try:
                             getattr(device1, f'set_{parameter1}')(value = steps1[i])
