@@ -43,7 +43,7 @@ class my_SR860(SR860):
         500e-9, 1e-6, 2e-6, 5e-6, 10e-6, 20e-6, 50e-6, 100e-6,
         200e-6, 500e-6, 1e-3, 2e-3, 5e-3, 10e-3, 20e-3,
         50e-3, 100e-3, 200e-3, 500e-3, 1
-    ]
+    ][::-1]
 
     sensitivity = Instrument.control(
         "SCAL?", "SCAL %d",

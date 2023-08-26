@@ -134,7 +134,7 @@ class opticool():
         self.set_options = ['T', 'Field', 'T_rate', 'Field_rate', 'T_approach', 'Field_approach', 'Field_driven', 'chamber_state']
         self.get_options = ['T', 'Field', 'T_rate', 'Field_rate', 'T_approach', 'Field_approach', 'Field_driven', 'chamber_state']
         self.loggable = ['chamber_state']
-        self.sweepable = [True, True, False, False, False, False, False, False]
+        self.sweepable = [False, True, False, False, False, False, False, False]
         self.maxspeed = [5, self.max_Field_speed(), None, None, None, None, None, None]
         self.eps = [0.01, 50, None, None, None, None, None, None]
     
@@ -262,6 +262,7 @@ class opticool():
 
         """
         
+        '''
         maxspeed = self.maxspeed[self.set_options.index('T')]
         
         if speed == None:
@@ -272,9 +273,9 @@ class opticool():
         
         else:
             speed = min(float(speed), maxspeed)
-        
-        #self._T_rate = 3
-        self.set_T_rate(speed)
+        '''
+        self._T_rate = 1
+        #self.set_T_rate(speed)
         self.device.temperature.set_point = value
         self.device.set_temperature(value, self._T_rate, self._T_approach)
         
