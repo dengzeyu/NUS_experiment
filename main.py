@@ -2600,7 +2600,7 @@ class Sweeper1d(tk.Frame):
                     global sweeper_write
                     if len(steps) > 0:
                         getattr(device, f'set_{parameter}')(value = steps[0])
-                        self.label_position.after(delay / 1000, lambda steps = steps[1:], delay = delay: slow_approach(steps, delay))
+                        self.label_position.after(int(delay * 1000), lambda steps = steps[1:], delay = delay: slow_approach(steps, delay))
 
                 
                 if not sweepable:
@@ -2614,7 +2614,7 @@ class Sweeper1d(tk.Frame):
                         _delta = abs(cur_value - from_sweep)
                         step = ratio_sweep * self.delay_factor1
                         nsteps = abs(int(_delta // step) + 1)
-                        steps = list(np.linspace(cur_value, from_sweep, nsteps))
+                        steps = list(np.linspace(cur_value, from_sweep, nsteps + 1))
                         start_toplevel()
                         self.current_position = float(getattr(device, parameter)())
                         update_position()
@@ -4429,7 +4429,7 @@ class Sweeper2d(tk.Frame):
                     global sweeper_write
                     if len(steps) > 0:
                         getattr(device, f'set_{parameter}')(value = steps[0])
-                        self.label_position.after(delay / 1000, lambda steps = steps[1:], delay = delay: slow_approach(steps, delay))
+                        self.label_position1.after(int(delay * 1000), lambda steps = steps[1:], delay = delay: slow_approach(steps, delay))
                 
                 if not sweepable:
                     answer2 = messagebox.askyesnocancel('Start approach', 'Go slow (Yes) or jump to start (No)?')
@@ -4440,7 +4440,7 @@ class Sweeper2d(tk.Frame):
                        _delta = abs(cur_value - from_sweep)
                        step = ratio_sweep * self.delay_factor1
                        nsteps = abs(int(_delta // step) + 1)
-                       steps = list(np.linspace(cur_value, from_sweep, nsteps))
+                       steps = list(np.linspace(cur_value, from_sweep, nsteps + 1))
                        start_toplevel()
                        self.current_position1 = float(getattr(device, parameter)())
                        update_position()
@@ -4556,7 +4556,7 @@ class Sweeper2d(tk.Frame):
                     global sweeper_write
                     if len(steps) > 0:
                         getattr(device, f'set_{parameter}')(value = steps[0])
-                        self.label_position.after(delay / 1000, lambda steps = steps[1:], delay = delay: slow_approach(steps, delay))
+                        self.label_position2.after(int(delay * 1000), lambda steps = steps[1:], delay = delay: slow_approach(steps, delay))
                 
                 if not sweepable:
                     answer2 = messagebox.askyesnocancel('Start approach', 'Go slow (Yes) or jump to start (No)?')
@@ -4567,7 +4567,7 @@ class Sweeper2d(tk.Frame):
                         _delta = abs(cur_value - from_sweep)
                         step = ratio_sweep * self.delay_factor2
                         nsteps = abs(int(_delta // step) + 1)
-                        steps = list(np.linspace(cur_value, from_sweep, nsteps))
+                        steps = list(np.linspace(cur_value, from_sweep, nsteps + 1))
                         start_toplevel()
                         self.current_position2 = float(getattr(device, parameter)())
                         update_position()
@@ -4587,13 +4587,13 @@ class Sweeper2d(tk.Frame):
             else:
                 return
             
-    def pre_double_sweep(self):
+    def pre_double_sweep(self, i = 1, j=2):
         global sweeper_write
         global condition
-        device1 = globals()['device_to_sweep1']
-        parameter1 = globals()['parameter_to_sweep1']
-        device2 = globals()['device_to_sweep2']
-        parameter2 = globals()['parameter_to_sweep2']
+        device1 = globals()[f'device_to_sweep{i}']
+        parameter1 = globals()[f'parameter_to_sweep{i}']
+        device2 = globals()[f'device_to_sweep{j}']
+        parameter2 = globals()[f'parameter_to_sweep{j}']
         
         def try_start():
             global sweeper_write
@@ -4604,13 +4604,13 @@ class Sweeper2d(tk.Frame):
             else:
                 self.after(100, try_start)
         
-        from_sweep1 = self.from_sweep1
-        to_sweep1 = self.to_sweep1
-        ratio_sweep1 = self.ratio_sweep1
-
-        from_sweep2 = self.from_sweep2
-        to_sweep2 = self.to_sweep2
-        ratio_sweep2 = self.ratio_sweep2
+        from_sweep1 = self.__dict__[f'from_sweep{i}']
+        to_sweep1 = self.__dict__[f'to_sweep{i}']
+        ratio_sweep1 = self.__dict__[f'ratio_sweep{i}']
+        
+        from_sweep2 = self.__dict__[f'from_sweep{j}']
+        to_sweep2 = self.__dict__[f'to_sweep{j}']
+        ratio_sweep2 = self.__dict__[f'ratio_sweep{j}']
                 
         delta1 = abs(to_sweep1 - from_sweep1)
         delta2 = abs(to_sweep2 - from_sweep2)
@@ -4666,7 +4666,7 @@ class Sweeper2d(tk.Frame):
                     self.label_approaching = tk.Label(self.pop, text = 'Approaching start', font = LARGE_FONT)
                     self.label_approaching.grid(row = 0, column = 0)
                     
-                    self.label_position = tk.Label(self.pop2, text = '', font = LARGE_FONT)
+                    self.label_position = tk.Label(self.pop, text = '', font = LARGE_FONT)
                     self.label_position.grid(row = 1, column = 0)
                     
                 def update_position():
@@ -4679,34 +4679,52 @@ class Sweeper2d(tk.Frame):
                     else:
                         self.pop.destroy()
                         try_start()
+                        
+                def slow_approach(steps1: list, steps2: list, delay: float):
+                    '''
+                    Parameters
+                    ----------
+                    steps : list
+                        List of values for device to set.
+                    delay : float
+                        Time to sleep between steps
+                    '''
+                    global sweeper_write
+                    if max(len(steps1), len(steps2)) > 0:
+                        try:
+                            getattr(device1, f'set_{parameter1}')(value = steps1[0])
+                        except IndexError:
+                            pass
+                        try:
+                            getattr(device2, f'set_{parameter2}')(value = steps2[0])
+                        except IndexError:
+                            pass
+                        self.label_position.after(int(delay * 1000), 
+                                                  lambda steps1 = steps1[1:], 
+                                                  steps2 = steps2[1:], 
+                                                  delay = delay: slow_approach(steps1, steps2, delay))
                 
                 answer2 = messagebox.askyesnocancel('Start approach', 'Go slow (Yes) or jump to start (No)?')
                 if answer2 == False:
                     getattr(device1, f'set_{parameter1}')(value = start_master)
-                    getattr(device2, f'set_{parameter1}')(value = from_sweep2)
+                    getattr(device2, f'set_{parameter2}')(value = from_sweep2)
                     try_start()
                 elif answer2 == True:
+                    
                     _delta1 = abs(cur_value1 - start_master)
-                    nsteps1 = abs(int(_delta1 / ratio_sweep1 + 1))
-                    steps1 = np.linspace(cur_value1, start_master, nsteps1)
+                    step1 = ratio_sweep1 * self.__dict__[f'delay_factor{i}']
+                    nsteps1 = abs(int(_delta1 // step1) + 1)
+                    steps1 = list(np.linspace(cur_value1, start_master, nsteps1 + 1))
                     _delta2 = abs(cur_value2 - from_sweep2)
-                    nsteps2 = abs(int(_delta2 / ratio_sweep2 + 1))
-                    steps2 = np.linspace(cur_value2, from_sweep2, nsteps2)
+                    step2 = ratio_sweep2 * self.__dict__[f'delay_factor{j}']
+                    nsteps2 = abs(int(_delta2 // step2) + 1)
+                    steps2 = list(np.linspace(cur_value2, from_sweep2, nsteps2 + 1))
                     start_toplevel()
                     self.current_position1 = float(getattr(device1, parameter1)())
                     self.current_position2 = float(getattr(device2, parameter2)())
                     update_position()
-                    time_delay = max(self.delay_factor1, self.delay_factor2)
-                    for i in range(max(nsteps1, nsteps2)):
-                        try:
-                            getattr(device1, f'set_{parameter1}')(value = steps1[i])
-                        except IndexError:
-                            pass
-                        try:
-                            getattr(device2, f'set_{parameter2}')(value = steps2[i])
-                        except IndexError:
-                            pass
-                        time.sleep(time_delay)
+                    slow_approach(steps1, steps2, max(self.__dict__[f'delay_factor{i}'], self.__dict__[f'delay_factor{j}']))
+                                  
                 else:
                     return
 
@@ -6897,7 +6915,7 @@ class Sweeper3d(tk.Frame):
                     global sweeper_write
                     if len(steps) > 0:
                         getattr(device, f'set_{parameter}')(value = steps[0])
-                        self.label_position1.after(delay / 1000, lambda steps = steps[1:], delay = delay: slow_approach(steps, delay))
+                        self.label_position1.after(int(delay * 1000), lambda steps = steps[1:], delay = delay: slow_approach(steps, delay))
                 
                 if not sweepable:
                     answer2 = messagebox.askyesnocancel('Start approach', 'Go slow (Yes) or jump to start (No)?')
@@ -6908,7 +6926,7 @@ class Sweeper3d(tk.Frame):
                        _delta = abs(cur_value - from_sweep)
                        step = ratio_sweep * self.delay_factor1
                        nsteps = abs(int(_delta // step) + 1)
-                       steps = list(np.linspace(cur_value, from_sweep, nsteps))
+                       steps = list(np.linspace(cur_value, from_sweep, nsteps + 1))
                        start_toplevel()
                        self.current_position1 = float(getattr(device, parameter)())
                        update_position()
@@ -7014,7 +7032,7 @@ class Sweeper3d(tk.Frame):
                     global sweeper_write
                     if len(steps) > 0:
                         getattr(device, f'set_{parameter}')(value = steps[0])
-                        self.label_position2.after(delay / 1000, lambda steps = steps[1:], delay = delay: slow_approach(steps, delay))
+                        self.label_position2.after(int(delay * 1000), lambda steps = steps[1:], delay = delay: slow_approach(steps, delay))
                 
                 if not sweepable:
                     answer2 = messagebox.askyesnocancel('Start approach', 'Go slow (Yes) or jump to start (No)?')
@@ -7025,7 +7043,7 @@ class Sweeper3d(tk.Frame):
                        _delta = abs(cur_value - from_sweep)
                        step = ratio_sweep * self.delay_factor2
                        nsteps = abs(int(_delta // step) + 1)
-                       steps = list(np.linspace(cur_value, from_sweep, nsteps))
+                       steps = list(np.linspace(cur_value, from_sweep, nsteps + 1))
                        start_toplevel()
                        self.current_position2 = float(getattr(device, parameter)())
                        update_position()
@@ -7141,7 +7159,7 @@ class Sweeper3d(tk.Frame):
                     global sweeper_write
                     if len(steps) > 0:
                         getattr(device, f'set_{parameter}')(value = steps[0])
-                        self.label_position3.after(delay / 1000, lambda steps = steps[1:], delay = delay: slow_approach(steps, delay))
+                        self.label_position3.after(int(delay * 1000), lambda steps = steps[1:], delay = delay: slow_approach(steps, delay))
                 
                 if not sweepable:
                     answer2 = messagebox.askyesnocancel('Start approach', 'Go slow (Yes) or jump to start (No)?')
@@ -7152,7 +7170,7 @@ class Sweeper3d(tk.Frame):
                         _delta = abs(cur_value - from_sweep)
                         step = ratio_sweep * self.delay_factor3
                         nsteps = abs(int(_delta // step) + 1)
-                        steps = list(np.linspace(cur_value, from_sweep, nsteps))
+                        steps = list(np.linspace(cur_value, from_sweep, nsteps + 1))
                         start_toplevel()
                         self.current_position3 = float(getattr(device, parameter)())
                         update_position()
@@ -7251,7 +7269,7 @@ class Sweeper3d(tk.Frame):
                     self.label_approaching = tk.Label(self.pop, text = 'Approaching start', font = LARGE_FONT)
                     self.label_approaching.grid(row = 0, column = 0)
                     
-                    self.label_position = tk.Label(self.pop2, text = '', font = LARGE_FONT)
+                    self.label_position = tk.Label(self.pop, text = '', font = LARGE_FONT)
                     self.label_position.grid(row = 1, column = 0)
                     
                 def update_position():
@@ -7284,7 +7302,7 @@ class Sweeper3d(tk.Frame):
                             getattr(device2, f'set_{parameter2}')(value = steps2[0])
                         except IndexError:
                             pass
-                        self.label_position.after(delay / 1000, 
+                        self.label_position.after(int(delay * 1000), 
                                                   lambda steps1 = steps1[1:], 
                                                   steps2 = steps2[1:], 
                                                   delay = delay: slow_approach(steps1, steps2, delay))
@@ -7292,18 +7310,18 @@ class Sweeper3d(tk.Frame):
                 answer2 = messagebox.askyesnocancel('Start approach', 'Go slow (Yes) or jump to start (No)?')
                 if answer2 == False:
                     getattr(device1, f'set_{parameter1}')(value = start_master)
-                    getattr(device2, f'set_{parameter1}')(value = from_sweep2)
+                    getattr(device2, f'set_{parameter2}')(value = from_sweep2)
                     try_start()
                 elif answer2 == True:
                     
                     _delta1 = abs(cur_value1 - start_master)
-                    step1 = ratio_sweep1 * self.__dict__['delay_factor{i}']
+                    step1 = ratio_sweep1 * self.__dict__[f'delay_factor{i}']
                     nsteps1 = abs(int(_delta1 // step1) + 1)
-                    steps1 = list(np.linspace(cur_value1, start_master, nsteps1))
+                    steps1 = list(np.linspace(cur_value1, start_master, nsteps1 + 1))
                     _delta2 = abs(cur_value2 - from_sweep2)
-                    step2 = ratio_sweep2 * self.__dict__['delay_factor{j}']
+                    step2 = ratio_sweep2 * self.__dict__[f'delay_factor{j}']
                     nsteps2 = abs(int(_delta2 // step2) + 1)
-                    steps2 = list(np.linspace(cur_value2, from_sweep2, nsteps2))
+                    steps2 = list(np.linspace(cur_value2, from_sweep2, nsteps2 + 1))
                     start_toplevel()
                     self.current_position1 = float(getattr(device1, parameter1)())
                     self.current_position2 = float(getattr(device2, parameter2)())
