@@ -9,7 +9,7 @@ class keithley2000():
                             'Res_2W_range', 'Res_4W_range']
         self.get_options = ['Volt_DC', 'Volt_AC', 'Curr_DC', 'Curr_AC', 'Res_2W', 'Res_4W', 'Period',
                             'Frequency', 'Temperature']
-        
+        '''
         self.loggable = ['Mode', 'Curr_DC_range', 'Curr_DC_reference', 'Curr_DC_NPLC',
                          'Curr_AC_range', 'Curr_AC_reference', 'Curr_AC_NPLC', 'Curr_AC_bandwidth', 
                          'Volt_DC_range', 'Volt_DC_reference', 'Volt_DC_NPLC',
@@ -17,6 +17,7 @@ class keithley2000():
                          'Res_2W_range', 'Res_2W_reference', 'Res_2W_NPLC',
                          'Res_4W_range', 'Res_4W_reference', 'Res_4W_NPLC',
                          'Trigger_count', 'Trigger_delay']
+        '''
         
     def Volt_DC(self):
         self.meter.mode = 'voltage'
@@ -148,6 +149,15 @@ class keithley2000():
     
     def Trigger_delay(self):
         return self.meter.trigger_delay
+    
+def main():
+    device = keithley2000(adress = 'GPIB0::4::INSTR')
+    device.set_Volt_DC_range(1)
+    r = device.Volt_DC_range()
+    print(r)
+    
+if __name__ == '__main__':
+    main()
     
         
         

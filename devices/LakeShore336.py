@@ -53,9 +53,17 @@ class LakeShore336():
         self.get_options = ['T1', 'T2', 'T3', 'T4', 'speed1', 'speed2', 'led',
                             'heater_range1', 'heater_range2', 'heater_range3',
                             'heater_range4', 'tj_temp']
+        
+        self.sweepable = [True, True, True, True, False, False, False, False, False, False, False, False]
+        
+        self.eps = [0.005, 0.005, 0.005, 0.005, None, None, None, None, None, None, None, None]
+        
+        self.loggable = ['IDN', 'T1', 'T2', 'T3', 'T4', 'led',
+                            'heater_range1', 'heater_range2', 'heater_range3',
+                            'heater_range4', 'tj_temp']
 
     def IDN(self):
-        return self.get(self.ls, '*IDN?')
+        return get(self.ls, '*IDN?')[:-1]
 
     def T1(self):
         """
@@ -80,30 +88,46 @@ class LakeShore336():
         :return: Returns the temperature of the 4 channel in float, units being Kelvin
         """
         return float(get(self.ls, 'KRDG? D'))
+    
+    '''
+    def Setpoint_1(self):
+        """
+        Returns the setpoint on Ch1 
+        """
+        answer = float(get(self.ls, 'SETP? 1'))
+        return answer
+    
+    def Setpoint_2(self):
+        """
+        Returns the setpoint on Ch2 
+        """
+        answer = float(get(self.ls, 'SETP? 2'))
+        return answer
+    '''
 
     def set_T1(self, value, speed=None):
-        if speed == None:
+        if speed == None or speed == 'SetGet':
             self.ls.write(f'SETP 1,{float(value)}')
         else:
             self.set_speed1(speed)
             self.ls.write(f'SETP 1,{float(value)}')
 
     def set_T2(self, value, speed=None):
-        if speed == None:
+        if speed == None or speed == 'SetGet':
             self.ls.write(f'SETP 2,{float(value)}')
         else:
             self.set_speed2(speed)
             self.ls.write(f'SETP 2,{float(value)}')
 
     def set_T3(self, value, speed=None):
-        if speed == None:
+        if speed == None or speed == 'SetGet':
             self.ls.write(f'SETP 3,{float(value)}')
         else:
             self.set_speed3(speed)
             self.ls.write(f'SETP 3,{float(value)}')
 
     def set_T4(self, value, speed=None):
-        if speed == None:
+        if speed == None or speed == 'SetGet':
             self.ls.write(f'SETP 4,{float(value)}')
         else:
             self.set_speed4(speed)
@@ -191,8 +215,9 @@ class LakeShore336():
 
 def main():
     device = LakeShore336()
-    device.set_speed1(0.1)
-    print(device.speed1())
+    loggable = device.loggable
+    for param in loggable:
+        print(f'{param} = {getattr(device, param)()}')
 
 
 if __name__ == '__main__':
