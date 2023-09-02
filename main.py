@@ -482,7 +482,7 @@ def map_animation(i, n, filename):
     
     ax = globals()[f'ax{n}']
     
-    if len(manual_sweep_flags) == 2:
+    if len(manual_sweep_flags) == 2 or (len(manual_sweep_flags) == 3 and (sweeper_write.condition_status == 'yz' or sweeper_write.condition_status == 'yx')):
         if hasattr(sweeper_write.mapper2D, 'map_slave'):
             _pass = True
         else:
@@ -500,7 +500,7 @@ def map_animation(i, n, filename):
         
     if _pass:
         
-        if len(manual_sweep_flags) == 2:
+        if len(manual_sweep_flags) == 2 or (len(manual_sweep_flags) == 3 and (sweeper_write.condition_status == 'yz' or sweeper_write.condition_status == 'yx')):
             x = sweeper_write.mapper2D.map_slave
             y = sweeper_write.mapper2D.map_master
             parameter = parameters_to_read[globals()[f'z{n}_status']]
@@ -4895,6 +4895,8 @@ class Sweeper2d(tk.Frame):
         manual_sweep_flags = self.manual_sweep_flags
         manual_filenames = self.manual_filenames
 
+        self.rewrite_preset()
+
         if self.start_sweep_flag:
             zero_time = time.perf_counter()
             stop_flag = False
@@ -4903,9 +4905,11 @@ class Sweeper2d(tk.Frame):
             sweeper_flag3 = False
             snakemode_master_flag = self.status_snakemode_master.get()
             #fastmode_master_flag = self.status_fastmode_master.get()
-            self.rewrite_preset()
-            if ('x' in condition or 'X' in condition) and ('y' in condition or 'Y' in condition) and ('==' in condition or '=' in condition):
-                self.pre_double_sweep()
+            conds = rm_all(condition)
+            if len(conds) == 1:
+                conds = conds[0]
+                if ('x' in conds or 'X' in conds) and ('y' in conds or 'Y' in conds) and ('==' in conds or '=' in conds):
+                    self.pre_double_sweep()
             else:
                 self.pre_sweep1()
                 self.pre_sweep2()
@@ -6143,6 +6147,10 @@ class Sweeper3d(tk.Frame):
             self.sweep_options1['value'] = ['']
             self.sweep_options1.current(0)
             self.sweep_options1.after(interval)
+            
+        if self.combo_to_sweep1.current() != self.combo_to_sweep1_current:
+            self.preset.loc[0, 'combo_to_sweep1'] = self.combo_to_sweep1.current()
+            self.preset.to_csv(globals()['sweeper3d_path'], index = False)
 
     def update_sweep_parameters2(self, event, interval=100):
         global types_of_devices
@@ -6163,6 +6171,10 @@ class Sweeper3d(tk.Frame):
             self.sweep_options2['value'] = ['']
             self.sweep_options2.current(0)
             self.sweep_options2.after(interval)
+            
+        if self.combo_to_sweep2.current() != self.combo_to_sweep2_current:
+            self.preset.loc[0, 'combo_to_sweep2'] = self.combo_to_sweep2.current()
+            self.preset.to_csv(globals()['sweeper3d_path'], index = False)
 
     def update_sweep_parameters3(self, event, interval=100):
         global types_of_devices
@@ -6183,9 +6195,13 @@ class Sweeper3d(tk.Frame):
             self.sweep_options3.current(0)
             self.sweep_options3.after(interval)
             
+        if self.combo_to_sweep3.current() != self.combo_to_sweep3_current:
+            self.preset.loc[0, 'combo_to_sweep3'] = self.combo_to_sweep3.current()
+            self.preset.to_csv(globals()['sweeper3d_path'], index = False)
+            
     def update_sweep_options1(self, event):
         if self.sweep_options1.current() != self.sweep_options1_current:
-            self.preset.loc[0, 'sweep_options2'] = self.sweep_options2.current()
+            self.preset.loc[0, 'sweep_options1'] = self.sweep_options1.current()
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
     
     def update_sweep_options2(self, event):
@@ -7567,8 +7583,14 @@ class Sweeper3d(tk.Frame):
             #fastmode_master_flag = self.status_fastmode_master.get()
             snakemode_slave_flag = self.status_snakemode_slave.get()
             #fastmode_slave_flag = self.status_fastmode_slave.get()
-            if ('z' in condition or 'Z' in condition) and ('y' in condition or 'Y' in condition) and ('==' in condition or '=' in condition):
-                self.pre_double_sweep(2, 3)
+            conds = rm_all(condition)
+
+            if len(conds) == 1:
+                conds = conds[0]
+                if ('z' in conds or 'Z' in conds) and ('y' in conds or 'Y' in conds) and ('==' in conds or '=' in conds):
+                    self.pre_double_sweep(2, 3)
+                elif ('x' in conds or 'X' in conds) and ('y' in conds or 'Y' in conds) and ('==' in conds or '=' in conds):
+                    self.pre_double_sweep(1, 2)
             else:
                 self.pre_sweep1()
                 self.pre_sweep2()
@@ -7842,6 +7864,24 @@ class Sweeper_write(threading.Thread):
                     self.sweepable3 = False
                     func = condition_2_func(self.conds, self.value3)
                     self.value2 = optimize.newton(func, x0 = self.from_sweep2, maxiter = 500)
+                    
+                    self.mapper2D = mapper2D(self.parameter_to_sweep1, self.parameter_to_sweep3, 
+                                             self.parameters_to_read, filename_sweep, interpolated = interpolated3D,
+                                             uniform = uniform3D, _from = self.from_sweep3, _to = self.to_sweep3,
+                                             nsteps = self.nstep3, walks = globals()['back_and_forth_slave_slave'], 
+                                             index_filename = index)
+                    
+                elif ('y' in self.conds or 'Y' in self.conds) and ('x' in self.conds or 'X' in self.conds) and ('z' not in self.conds and 'Z' not in self.conds) and ('==' in self.conds or '=' in self.conds):
+                    self.condition_status = 'yx'
+                    func = condition_2_func(self.conds, self.value2)
+                    self.value1 = optimize.newton(func, x0 = self.from_sweep1, maxiter = 500)
+                    
+                    self.mapper2D = mapper2D(self.parameter_to_sweep2, self.parameter_to_sweep3, 
+                                             self.parameters_to_read, filename_sweep, interpolated = interpolated3D,
+                                             uniform = uniform3D, _from = self.from_sweep3, _to = self.to_sweep3,
+                                             nsteps = self.nstep3, walks = globals()['back_and_forth_slave_slave'], 
+                                             index_filename = index)
+                    
                 else:
                     self.condition_status = 'unknown'    
         if self.condition_status != 'unknown':
@@ -8334,7 +8374,7 @@ class Sweeper_write(threading.Thread):
                     self.__dict__[f'paused_{axis}'] = True
                     if hasattr(device_to_sweep, 'pause'):
                         device_to_sweep.pause()
-                time.sleep(1)
+                time.sleep(0.1)
                 step(axis, value)
             
             if value == 'None':
@@ -8468,7 +8508,111 @@ class Sweeper_write(threading.Thread):
                         device_to_sweep_master.pause()
                     if hasattr(device_to_sweep_slave, 'pause'):
                         device_to_sweep_slave.pause()
-                time.sleep(1)
+                time.sleep(0.1)
+                double_step()
+        
+        def double_step_yx():
+            
+            '''performs a step along two axis with respect to self.condition'''
+            
+            def try_tozero():
+                
+                device1 = globals()['device_to_sweep1']
+                parameter1 = globals()['parameter_to_sweep1']
+                device2 = globals()['device_to_sweep2']
+                parameter2 = globals()['parameter_to_sweep2']
+                device3 = globals()['device_to_sweep3']
+                parameter3 = globals()['parameter_to_sweep3']
+                try:
+                    current1 = float(getattr(device1, parameter1)())
+                except:
+                    current1 = self.value1
+                try:
+                    current2 = float(getattr(device2, parameter2)())
+                except:
+                    current2 = self.value2
+                try:
+                    current3 = float(getattr(device3, parameter3)())
+                except:
+                    current3 = self.value3
+                steps1 = np.linspace(current1, 0, 10)
+                steps2 = np.linspace(current2, 0, 10)
+                steps3 = np.linspace(current3, 0, 10)
+                if not self.sweepable3:
+                    for ind, step in enumerate(steps1):
+                        getattr(device1, f'set_{parameter1}')(value = step)
+                        getattr(device2, f'set_{parameter2}')(value = steps2[ind])
+                        getattr(device3, f'set_{parameter3}')(value = steps3[ind])
+                        time.sleep(0.1)
+                else:
+                    getattr(device3, f'set_{parameter3}')(value = 0)
+                    for ind, step in enumerate(steps1):
+                        getattr(device1, f'set_{parameter1}')(value = step)
+                        getattr(device2, f'set_{parameter2}')(value = steps2[ind])
+                        time.sleep(0.1)
+                
+            global zero_time
+            global dataframe
+            global manual_sweep_flags
+            global stop_flag
+            global pause_flag
+            global tozero_flag
+            
+            if len(dataframe) == 0:
+                dataframe = [np.round(i, 2) for i in [time.perf_counter() - zero_time]]
+            else:
+                dataframe[0] = [np.round(i, 2) for i in [time.perf_counter() - zero_time]][0]
+                
+            device_to_sweep_master = globals()['device_to_sweep1']
+            parameter_to_sweep_master = globals()['parameter_to_sweep1']
+            device_to_sweep_slave = globals()['device_to_sweep2']
+            parameter_to_sweep_slave = globals()['parameter_to_sweep2']
+            
+            if pause_flag == False:
+                self.paused2 = False
+                if tozero_flag == False:
+                    # sweep process here
+                    ###################
+                    # set 'parameter_to_sweep' to 'value'
+                    dataframe.append("{:.3e}".format(self.value1))
+                    dataframe.append("{:.3e}".format(self.value2))
+                    #slave
+                    value_slave = self.value2
+                    getattr(device_to_sweep_slave, 'set_' + str(parameter_to_sweep_slave))(value=value_slave)
+                    delay_factor = globals()['delay_factor2']
+                    time.sleep(delay_factor)
+                    self.value2 += self.step2
+                    #master
+                    value_master = self.value1
+                    getattr(device_to_sweep_master, 'set_' + str(parameter_to_sweep_master))(value=value_master)
+                    delay_factor = globals()['delay_factor1']
+                    time.sleep(delay_factor)
+                    func = condition_2_func(self.conds, self.value2)
+                    self.value1 = optimize.newton(func, x0 = self.value1)
+                    
+                    ###################
+                    globals()['self'] = self
+                    exec(script, globals())
+                    return
+                else:
+                    try_tozero()
+                    
+                    stop_flag = True
+                    
+            else:
+                if not hasattr(self, 'paused2'):
+                    self.__dict__['paused2'] = True
+                    if hasattr(device_to_sweep_master, 'pause'):
+                        device_to_sweep_master.pause()
+                    if hasattr(device_to_sweep_slave, 'pause'):
+                        device_to_sweep_slave.pause()
+                elif self.paused2 == False:
+                    self.paused2 = True
+                    if hasattr(device_to_sweep_master, 'pause'):
+                        device_to_sweep_master.pause()
+                    if hasattr(device_to_sweep_slave, 'pause'):
+                        device_to_sweep_slave.pause()
+                time.sleep(0.1)
                 double_step()
         
         def update_filename():
@@ -8611,9 +8755,9 @@ class Sweeper_write(threading.Thread):
             sure = True only for 3D sweep for axis = 2'''
             if len(manual_sweep_flags) == 1:
                 globals()['dataframe'] = [np.round(i, 2) for i in [time.perf_counter() - zero_time]]
-            if len(manual_sweep_flags) == 2 or sure == True:
+            if len(manual_sweep_flags) == 2 or sure == True or self.condition_status == 'yx':
                 globals()['dataframe'] = [*globals()['dataframe_after']]
-            if len(manual_sweep_flags) == 3 and sure == None:
+            if len(manual_sweep_flags) == 3 and sure == None and self.condition_status != 'yx':
                 globals()['dataframe'] = [*globals()['dataframe_after_after']]
                 
             print('Dataframe updated')
@@ -8671,8 +8815,13 @@ class Sweeper_write(threading.Thread):
                         self.value2 += self.step2
                     for parameter in self.parameters_to_read:
                         self.mapper2D.append_parameter(str(parameter), np.nan)
-                    
-            elif len(manual_sweep_flags) == 3:
+                  
+            elif len(manual_sweep_flags) == 3 and self.condition_status == 'yx':
+                  update_dataframe()
+                  step(3, value3)
+                  append_read_parameters()
+                  tofile() 
+            elif len(manual_sweep_flags) == 3 and self.condition_status != 'yx':
                 point = current_point()
                 if self.isinarea(point = point, grid_area = self.grid_space, sweep_dimension = len(manual_sweep_flags)):
                     update_dataframe()
@@ -8729,7 +8878,7 @@ class Sweeper_write(threading.Thread):
             
             if len(manual_sweep_flags) == 2:
                 self.mapper2D.add_sub_slave()
-            elif len(manual_sweep_flags) == 3:
+            elif len(manual_sweep_flags) == 3 and self.condition_status != 'yx':
                 self.mapper3D.add_sub_slave_slave()
             
             print('Single inner loop was made')
@@ -8781,7 +8930,14 @@ class Sweeper_write(threading.Thread):
                         elif i == walks and back_and_forth_slave != 1 and manual_sweep_flags[0] == 1:
                             self.cur_manual_index1 += 1
                             
-                    elif globals()['snakemode_slave_flag'] == True and len(manual_sweep_flags) == 3:
+                    elif globals()['snakemode_slave_flag'] == True and len(manual_sweep_flags) == 3 and self.condition_status == 'yx':
+                        if i != walks and back_and_forth_slave != 1:
+                            step(axis = 2)
+                            globals()['Sweeper_object'].cur_walk2 += 1
+                        elif i == walks and back_and_forth_slave != 1 and manual_sweep_flags[0] == 1:
+                            self.cur_manual_index2 += 1
+                            
+                    elif globals()['snakemode_slave_flag'] == True and len(manual_sweep_flags) == 3 and self.condition_status != 'yx':
                         if i != walks and back_and_forth_slave_slave != 1:
                             self.mapper3D.walks = 1
                             self.mapper3D.slave_slave_done_walking()
@@ -8821,8 +8977,8 @@ class Sweeper_write(threading.Thread):
                 self.mapper2D.clear_slave()
                 self.mapper2D.clear_sub_slaves()
                 self.mapper2D.clear_parameters()
-            
-            if len(manual_sweep_flags) == 3:
+                    
+            elif len(manual_sweep_flags) == 3 and self.condition_status != 'yx':
                 self.mapper3D.slave_slave_done_walking()
                 self.mapper3D.concatenate_all()
                 self.mapper3D.clear_slave_slave()
@@ -8888,6 +9044,22 @@ class Sweeper_write(threading.Thread):
                
             print('Double inner loop was made back and forth') 
                
+        def double_external_loop_single(direction = 1):
+            '''perform sequence of steps through master (for 2-d) or slave (for 3-d) axis
+            with inner_loop on each step'''
+            
+            while condition(1) and condition(2):
+                
+                double_step_yx()
+                
+                globals()['Sweeper_object'].__dict__['cur_walk1'] += 1
+                globals()['Sweeper_object'].__dict__['cur_walk2'] += 1
+                
+                globals()['dataframe_after'] = [*globals()['dataframe']]
+                            
+                inner_loop_back_and_forth()
+                update_filename()
+            
         def external_loop_single(direction = 1):
             '''perform sequence of steps through master (for 2-d) or slave (for 3-d) axis
             with inner_loop on each step'''
@@ -8941,6 +9113,34 @@ class Sweeper_write(threading.Thread):
                 raise Exception('manual_sweep_flag is not correct, needs 0 or 1, but got ', manual_sweep_flags[-1])
             
             print('Single external loop was made')
+            
+        def double_external_loop_back_and_forth():
+            '''travels through a slave axis back and forth as many times, as was given'''
+            global back_and_forth_master
+            global back_and_forth_slave
+            global filename_sweep
+            
+            walks = max(back_and_forth_master, back_and_forth_slave)
+            if walks == 1:
+                self.cur_manual_index1 = 0
+                self.cur_manual_index2 = 0
+                double_external_loop_single()
+                back_and_forth_transposition(2, False)
+            
+            elif walks > 1:
+                for i in range(1, walks + 1):
+                    self.cur_manual_index1 = 0
+                    self.cur_manual_index2 = 0
+                    double_external_loop_single(round(2 * (i % 2) - 1))
+                    if (globals()['snakemode_slave_flag'] == True) or (globals()['snakemode_master_flag'] == True):
+                        if i != walks and back_and_forth_slave != 1:
+                            step(axis = 1)
+                    back_and_forth_transposition(2)
+                    double_step_yx()
+                    double_step_yx()
+                    
+                if walks % 2 == 1:
+                    back_and_forth_transposition(2)
             
         def external_loop_back_and_forth():
             '''travels through a slave axis back and forth as many times, as was given'''
@@ -9071,7 +9271,7 @@ class Sweeper_write(threading.Thread):
             print('External loop was made back and forth')
             
         def double_master_loop_back_and_forth():
-            '''travels through a master axis back and forth as many times, as was given'''
+            '''travels through a double axis back and forth as many times, as was given'''
             global back_and_forth_master
             
             walks = back_and_forth_master
@@ -9138,6 +9338,8 @@ class Sweeper_write(threading.Thread):
                     master_loop_back_and_forth()
                 elif self.condition_status == 'yz':
                     double_master_loop_back_and_forth()
+                elif self.condition_status == 'yx':
+                    double_external_loop_back_and_forth()
                 self.sweeper_flag3 == False
                 self.value1 = float(from_sweep1)
                 if parameter_to_sweep1 in device_to_sweep1.get_options:
