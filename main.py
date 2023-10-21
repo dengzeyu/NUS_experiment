@@ -8114,7 +8114,7 @@ class Sweeper_write(threading.Thread):
                     if str(parameter_value) == '':
                         parameter_value = np.nan
                         
-                    if len(manual_sweep_flags) == 2:
+                    if len(manual_sweep_flags) == 2 or (len(manual_sweep_flags) == 3 and self.condition_status != 'unknown'):
                         self.mapper2D.append_parameter(str(parameter), parameter_value)
                     if len(manual_sweep_flags) == 3:
                         self.mapper3D.append_parameter(str(parameter), parameter_value)
@@ -8783,6 +8783,10 @@ class Sweeper_write(threading.Thread):
                 globals()['dataframe'] = [np.round(i, 2) for i in [time.perf_counter() - zero_time]]
             else:
                 globals()['dataframe'] = [*globals()['dataframe_after']]
+                if self.sweepable3 == True:
+                    self.mapper2D.append_slave(value = self.current_value)
+                else:
+                    self.mapper2D.append_slave(value = self.value3)
             double_step()
             append_read_parameters()
             tofile() 
@@ -8818,6 +8822,10 @@ class Sweeper_write(threading.Thread):
                   
             elif len(manual_sweep_flags) == 3 and self.condition_status == 'yx':
                   update_dataframe()
+                  if self.sweepable3 == True:
+                      self.mapper2D.append_slave(value = self.current_value)
+                  else:
+                      self.mapper2D.append_slave(value = self.value3)
                   step(3, value3)
                   append_read_parameters()
                   tofile() 
@@ -8878,6 +8886,8 @@ class Sweeper_write(threading.Thread):
             
             if len(manual_sweep_flags) == 2:
                 self.mapper2D.add_sub_slave()
+            elif len(manual_sweep_flags) == 3 and self.condition_status == 'yx':
+                self.mapper2D.add_sub_slave()
             elif len(manual_sweep_flags) == 3 and self.condition_status != 'yx':
                 self.mapper3D.add_sub_slave_slave()
             
@@ -8932,6 +8942,13 @@ class Sweeper_write(threading.Thread):
                             
                     elif globals()['snakemode_slave_flag'] == True and len(manual_sweep_flags) == 3 and self.condition_status == 'yx':
                         if i != walks and back_and_forth_slave != 1:
+                            self.mapper2D.walks = 1
+                            self.mapper2D.slave_done_walking()
+                            self.mapper2D.concatenate_all()
+                            self.mapper2D.clear_slave()
+                            self.mapper2D.clear_sub_slaves()
+                            self.mapper2D.clear_parameters()
+                            self.mapper2D.append_master(value = self.value2)
                             step(axis = 2)
                             globals()['Sweeper_object'].cur_walk2 += 1
                         elif i == walks and back_and_forth_slave != 1 and manual_sweep_flags[0] == 1:
@@ -8977,6 +8994,13 @@ class Sweeper_write(threading.Thread):
                 self.mapper2D.clear_slave()
                 self.mapper2D.clear_sub_slaves()
                 self.mapper2D.clear_parameters()
+                
+            elif len(manual_sweep_flags) == 3 and self.condition_status == 'yx':
+                self.mapper2D.slave_done_walking()
+                self.mapper2D.concatenate_all()
+                self.mapper2D.clear_slave()
+                self.mapper2D.clear_sub_slaves()
+                self.mapper2D.clear_parameters()
                     
             elif len(manual_sweep_flags) == 3 and self.condition_status != 'yx':
                 self.mapper3D.slave_slave_done_walking()
@@ -8997,6 +9021,8 @@ class Sweeper_write(threading.Thread):
                 double_inner_step()
                 if not self.started:
                     self.started = True
+            
+            self.mapper2D.add_sub_slave()
             
             print('Single double inner loop was made')
             
@@ -9024,6 +9050,13 @@ class Sweeper_write(threading.Thread):
                     globals()['Sweeper_object'].__dict__[f'cur_walk{len(manual_sweep_flags)}'] += 1
                     if globals()['snakemode_master_flag'] == True:
                         if i != walks:
+                            self.mapper2D.walks = 1
+                            self.mapper2D.slave_done_walking()
+                            self.mapper2D.concatenate_all()
+                            self.mapper2D.clear_slave()
+                            self.mapper2D.clear_sub_slaves()
+                            self.mapper2D.clear_parameters()
+                            self.mapper2D.append_master(value = self.value1)
                             step(axis = 1)
                             globals()['Sweeper_object'].cur_walk1 += 1
                             
@@ -9039,6 +9072,12 @@ class Sweeper_write(threading.Thread):
            
             time.sleep(0.01) 
                
+            self.mapper2D.slave_done_walking()
+            self.mapper2D.concatenate_all()
+            self.mapper2D.clear_slave()
+            self.mapper2D.clear_sub_slaves()
+            self.mapper2D.clear_parameters()
+            
             if not hasattr(self, 'time2'):
                 self.time2 = time.perf_counter()
                
@@ -9050,6 +9089,7 @@ class Sweeper_write(threading.Thread):
             
             while condition(1) and condition(2):
                 
+                self.mapper2D.append_master(value = self.value2)
                 double_step_yx()
                 
                 globals()['Sweeper_object'].__dict__['cur_walk1'] += 1
@@ -9238,6 +9278,7 @@ class Sweeper_write(threading.Thread):
             with double_inner_loop_back_and_forth on each step'''
     
             while condition(1):
+                self.mapper2D.append_master(value = self.value1)
                 step(1)
                 globals()['Sweeper_object'].cur_walk1 += 1
                 globals()['dataframe_after'] = [*globals()['dataframe']]
@@ -10417,6 +10458,7 @@ class Graph():
         global plot_flag
         global columns
         global manual_sweep_flags
+        global sweeper_write
         
         if plot_flag == 'Plot':
             plot_flag = 'Map'
@@ -10433,7 +10475,7 @@ class Graph():
             ax = globals()[f'ax{self.order}']
             globals()[f'settingsFigure{self.order}'].showsettings(ax)
             globals()[f'settingsFigure{self.order}'].hidesettings(ax)
-            if len(manual_sweep_flags) == 3:
+            if len(manual_sweep_flags) == 3 and sweeper_write.condition_status == 'unknown':
                 self.combo_x1.config(value = columns[4:])
                 self.master = globals()['sweeper_write'].mapper3D.master
                 self.master_shape = self.master.shape[0]
@@ -10458,7 +10500,7 @@ class Graph():
             ax = globals()[f'ax{self.order}']
             globals()[f'settingsFigure{self.order}'].showsettings(ax)
             globals()[f'settingsFigure{self.order}'].hidesettings(ax)
-            if len(manual_sweep_flags) == 3:
+            if len(manual_sweep_flags) == 3 and sweeper_write.condition_status == 'unknown':
                 
                 self.slider.place_forget()
         else:
