@@ -117,15 +117,21 @@ parameters_to_read_dict = {}
 from_sweep1 = 0
 to_sweep1 = 1
 ratio_sweep1 = 1
+back_ratio_sweep1 = 1
 delay_factor1 = 1
+back_delay_factor1 = 1
 from_sweep2 = 0
 to_sweep2 = 1
 ratio_sweep2 = 1
+back_ratio_sweep2 = 1
 delay_factor2 = 1
+back_delay_factor2 = 1
 from_sweep3 = 0
 to_sweep3 = 1
 ratio_sweep3 = 1
+back_ratio_sweep3 = 1
 delay_factor3 = 1
+back_delay_factor3 = 1
 stepper_flag = False
 #fastmode_slave_flag = False
 #fastmode_master_flag = False
@@ -223,7 +229,9 @@ def create_preset(dimension):
              dic['to' + str(i+1)] = ['']
              dic['count_option' + str(i+1)] = ['ratio']
              dic['ratio' + str(i+1)] = ['']
+             dic['back_ratio' + str(i+1)] = ['']
              dic['delay_factor' + str(i+1)] = ['']
+             dic['back_delay_factor' + str(i+1)] = ['']
              dic['status_back_and_forth' + str(i+1)] = [0]
              dic['status_manual' + str(i+1)] = [0]
              dic['manual_filename' + str(i+1)] = ''
@@ -1496,8 +1504,10 @@ class Sweeper1d(tk.Frame):
         self.from1_init = self.preset['from1'].values[0]
         self.to1_init = self.preset['to1'].values[0]
         self.ratio1_init = self.preset['ratio1'].values[0]
+        self.back_ratio1_init = self.preset['back_ratio1'].values[0]
         self.count_option1 = self.preset['count_option1'][0]
         self.delay_factor1_init = self.preset['delay_factor1'].values[0]
+        self.back_delay_factor1_init = self.preset['back_delay_factor1'].values[0]
         self.status_back_and_forth_master = tk.IntVar(value = int(self.preset['status_back_and_forth1'].values[0]))
         self.status_manual = tk.IntVar(value = int(self.preset['status_manual1'].values[0]))
         self.manual_filenames = [self.preset['manual_filename1'].values[0]]
@@ -1582,6 +1592,12 @@ class Sweeper1d(tk.Frame):
                 label_back_and_forth_slave.grid(row = 0, column = 0, pady = 2)
                 
                 self.combo_back_and_forth_master = ttk.Combobox(tw, value = [2, 'custom', 'continious'])
+                if self.parent.status_back_and_forth_master.get() == 0:
+                    self.combo_back_and_forth_master.current(0)
+                else:
+                    self.combo_back_and_forth_master.current(1)
+                    self.combo_back_and_forth_master.delete(0, tk.END)
+                    self.combo_back_and_forth_master.insert(0, self.parent.back_and_forth_master_count)
                 self.combo_back_and_forth_master.grid(row = 1, column = 0, pady = 2)
                 
                 def update_back_and_forth_master_count():
@@ -1593,6 +1609,14 @@ class Sweeper1d(tk.Frame):
                         self.parent.back_and_forth_master_count = int(1e6)
                     else:
                         raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_master.get())}')
+                    
+                    self.parent.entry_ratio.delete(0, tk.END)
+                    self.parent.entry_ratio.insert(0, self.entry_ratio1.get())
+                    self.parent.back_ratio1_init = self.entry_back_ratio1.get()
+                    
+                    self.parent.entry_delay_factor.delete(0, tk.END)
+                    self.parent.entry_delay_factor.insert(0, self.entry_delay_factor1.get())
+                    self.parent.back_delay_factor1_init = self.entry_back_delay_factor1.get()
                 
                 button_set_back_and_forth_master = tk.Button(tw, text = 'Set', command = update_back_and_forth_master_count)
                 button_set_back_and_forth_master.grid(row = 1, column = 1, pady = 2)
@@ -1604,12 +1628,46 @@ class Sweeper1d(tk.Frame):
                 
                 tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
                 
+            def update_ratio1(self):
+                tw = self.master_toplevel
+                
+                count_option1 = self.parent.count_option1
+                
+                self.entry_ratio_label = tk.Label(tw, text = f'Forward {count_option1}')
+                self.entry_ratio_label.grid(row = 2, column = 0, pady = 2)
+                
+                self.entry_back_ratio_label = tk.Label(tw, text = f'Back {count_option1}')
+                self.entry_back_ratio_label.grid(row = 2, column = 1, pady = 2)
+                
+                self.entry_ratio1 = tk.Entry(tw)
+                self.entry_ratio1.insert(0, self.parent.entry_ratio.get())
+                self.entry_ratio1.grid(row = 3, column = 0, pady = 2)
+                
+                self.entry_back_ratio1 = tk.Entry(tw)
+                self.entry_back_ratio1.insert(0, self.parent.back_ratio1_init)
+                self.entry_back_ratio1.grid(row = 3, column = 1, pady = 2)
+                
+                self.entry_delay_factor_label = tk.Label(tw, text = 'Forward delay factor')
+                self.entry_delay_factor_label.grid(row = 4, column = 0, pady = 2)
+                
+                self.entry_back_delay_factor_label = tk.Label(tw, text = 'Back delay factor')
+                self.entry_back_delay_factor_label.grid(row = 4, column = 1, pady = 2)
+                
+                self.entry_delay_factor1 = tk.Entry(tw)
+                self.entry_delay_factor1.insert(0, self.parent.entry_delay_factor.get())
+                self.entry_delay_factor1.grid(row = 5, column = 0, pady = 2)
+                
+                self.entry_back_delay_factor1 = tk.Entry(tw)
+                self.entry_back_delay_factor1.insert(0, self.parent.back_delay_factor1_init)
+                self.entry_back_delay_factor1.grid(row = 5, column = 1, pady = 2)
+            
         def CreateMasterToplevel(widget, parent):
             
             toplevel = BackAndForthMaster(widget, parent)
             
             def show(event):
                 toplevel.show_toplevel()
+                toplevel.update_ratio1()
                 
             widget.bind('<Button-3>', show)    
     
@@ -2094,9 +2152,13 @@ class Sweeper1d(tk.Frame):
         if self.entry_ratio.get() != self.ratio1_init:
             self.preset.loc[0, 'ratio1'] = self.entry_ratio.get()
             self.preset.to_csv(globals()['sweeper1d_path'], index = False)
+        self.preset.loc[0, 'back_ratio1'] = self.back_ratio1_init
+        self.preset.to_csv(globals()['sweeper1d_path'], index = False)
         if self.entry_delay_factor.get() != self.delay_factor1_init:
             self.preset.loc[0, 'delay_factor1'] = self.entry_delay_factor.get()
             self.preset.to_csv(globals()['sweeper1d_path'], index = False)
+        self.preset.loc[0, 'back_delay_factor1'] = self.back_delay_factor1_init
+        self.preset.to_csv(globals()['sweeper1d_path'], index = False)
             
         current_filename = self.entry_filename.get()
         path_current = os.path.normpath(current_filename).split(os.path.sep)
@@ -2646,7 +2708,9 @@ class Sweeper1d(tk.Frame):
         global from_sweep1
         global to_sweep1
         global ratio_sweep1
+        global back_ratio_sweep1
         global delay_factor1
+        global back_delay_factor1
         global parameters_to_read
         global parameters_to_read_dict
         global sweeper_flag1
@@ -2694,8 +2758,32 @@ class Sweeper1d(tk.Frame):
                 if self.from_sweep1 > self.to_sweep1 and self.ratio_sweep1 > 0:
                     self.ratio_sweep1 = - self.ratio_sweep1
                 ratio_sweep1 = self.ratio_sweep1
+                
+                if self.back_ratio1_init == '':
+                    back_ratio_sweep1 = ratio_sweep1
+                else:
+                    try:
+                        back_ratio_sweep1 = float(self.back_ratio1_init)
+                    except:
+                        messagebox.showerror('Invalid value in "back_ratio1" entrybox', f'Can not convert {self.back_ratio1_init} to float')
+                        self.start_sweep_flag = False
+                        
+                if self.back_delay_factor1_init == '':
+                    back_delay_factor1 = delay_factor1
+                else:
+                    try:
+                        back_delay_factor1 = float(self.back_delay_factor1_init)
+                    except:
+                        messagebox.showerror('Invalid value in "back_delay_factor1" entrybox', f'Can not convert {self.back_delay_factor1_init} to float')
+                        self.start_sweep_flag = False
+                
+                if self.count_option1 == 'step':
+                    back_ratio_sweep1 = back_ratio_sweep1 / back_delay_factor1
+                if back_ratio_sweep1 * ratio_sweep1 > 0:
+                    back_ratio_sweep1 = - back_ratio_sweep1
+                
             except:
-                messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio.get()} to float')
+                messagebox.showerror('Invalid value in "ratio" entrybox', f'Can not convert {self.entry_ratio.get()} to float')
                 self.start_sweep_flag = False
         
         def get_key(val, my_dict):
@@ -2759,13 +2847,17 @@ class Sweeper2d(tk.Frame):
         self.from1_init = self.preset['from1'].values[0]
         self.to1_init = self.preset['to1'].values[0]
         self.ratio1_init = self.preset['ratio1'].values[0]
+        self.back_ratio1_init = self.preset['back_ratio1'].values[0]
         self.count_option1 = self.preset['count_option1'][0]
         self.delay_factor1_init = self.preset['delay_factor1'].values[0]
+        self.back_delay_factor1_init = self.preset['back_delay_factor1'].values[0]
         self.from2_init = self.preset['from2'].values[0]
         self.to2_init = self.preset['to2'].values[0]
         self.ratio2_init = self.preset['ratio2'].values[0]
+        self.back_ratio2_init = self.preset['back_ratio2'].values[0]
         self.count_option2 = self.preset['count_option2'][0]
         self.delay_factor2_init = self.preset['delay_factor2'].values[0]
+        self.back_delay_factor2_init = self.preset['back_delay_factor2'].values[0]
         self.manual_filenames = [self.preset['manual_filename1'].values[0], self.preset['manual_filename2'].values[0]]
         self.status_back_and_forth_master = tk.IntVar(value = int(self.preset['status_back_and_forth1'].values[0]))
         self.status_manual1 = tk.IntVar(value = int(self.preset['status_manual1'].values[0]))
@@ -2895,6 +2987,12 @@ class Sweeper2d(tk.Frame):
                 label_back_and_forth_slave.grid(row = 0, column = 0, pady = 2)
                 
                 self.combo_back_and_forth_master = ttk.Combobox(tw, value = [2, 'custom', 'continious'])
+                if self.parent.status_back_and_forth_master.get() == 0:
+                    self.combo_back_and_forth_master.current(0)
+                else:
+                    self.combo_back_and_forth_master.current(1)
+                    self.combo_back_and_forth_master.delete(0, tk.END)
+                    self.combo_back_and_forth_master.insert(0, self.parent.back_and_forth_master_count)
                 self.combo_back_and_forth_master.grid(row = 1, column = 0, pady = 2)
                 
                 def update_back_and_forth_master_count():
@@ -2906,6 +3004,14 @@ class Sweeper2d(tk.Frame):
                         self.parent.back_and_forth_master_count = int(1e6)
                     else:
                         raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_master.get())}')
+                    
+                    self.parent.entry_ratio1.delete(0, tk.END)
+                    self.parent.entry_ratio1.insert(0, self.entry_ratio1.get())
+                    self.parent.back_ratio1_init = self.entry_back_ratio1.get()
+                    
+                    self.parent.entry_delay_factor1.delete(0, tk.END)
+                    self.parent.entry_delay_factor1.insert(0, self.entry_delay_factor1.get())
+                    self.parent.back_delay_factor1_init = self.entry_back_delay_factor1.get()
                 
                 button_set_back_and_forth_master = tk.Button(tw, text = 'Set', command = update_back_and_forth_master_count)
                 button_set_back_and_forth_master.grid(row = 1, column = 1, pady = 2)
@@ -2917,12 +3023,46 @@ class Sweeper2d(tk.Frame):
                 
                 tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
                 
+            def update_ratio1(self):
+                tw = self.master_toplevel
+                
+                count_option1 = self.parent.count_option1
+                
+                self.entry_ratio_label = tk.Label(tw, text = f'Forward {count_option1}')
+                self.entry_ratio_label.grid(row = 2, column = 0, pady = 2)
+                
+                self.entry_back_ratio_label = tk.Label(tw, text = f'Back {count_option1}')
+                self.entry_back_ratio_label.grid(row = 2, column = 1, pady = 2)
+                
+                self.entry_ratio1 = tk.Entry(tw)
+                self.entry_ratio1.insert(0, self.parent.entry_ratio1.get())
+                self.entry_ratio1.grid(row = 3, column = 0, pady = 2)
+                
+                self.entry_back_ratio1 = tk.Entry(tw)
+                self.entry_back_ratio1.insert(0, self.parent.back_ratio1_init)
+                self.entry_back_ratio1.grid(row = 3, column = 1, pady = 2)
+                
+                self.entry_delay_factor_label = tk.Label(tw, text = 'Forward delay factor')
+                self.entry_delay_factor_label.grid(row = 4, column = 0, pady = 2)
+                
+                self.entry_back_delay_factor_label = tk.Label(tw, text = 'Back delay factor')
+                self.entry_back_delay_factor_label.grid(row = 4, column = 1, pady = 2)
+                
+                self.entry_delay_factor1 = tk.Entry(tw)
+                self.entry_delay_factor1.insert(0, self.parent.entry_delay_factor1.get())
+                self.entry_delay_factor1.grid(row = 5, column = 0, pady = 2)
+                
+                self.entry_back_delay_factor1 = tk.Entry(tw)
+                self.entry_back_delay_factor1.insert(0, self.parent.back_delay_factor1_init)
+                self.entry_back_delay_factor1.grid(row = 5, column = 1, pady = 2)
+                
         def CreateMasterToplevel(widget, parent):
             
             toplevel = BackAndForthMaster(widget, parent)
             
             def show(event):
                 toplevel.show_toplevel()
+                toplevel.update_ratio1()
                 
             widget.bind('<Button-3>', show)
     
@@ -2943,6 +3083,12 @@ class Sweeper2d(tk.Frame):
                 label_back_and_forth_slave.grid(row = 0, column = 0, pady = 2)
                 
                 self.combo_back_and_forth_slave = ttk.Combobox(tw, value = [2, 'custom', 'continious'])
+                if self.parent.status_back_and_forth_slave.get() == 0:
+                    self.combo_back_and_forth_slave.current(0)
+                else:
+                    self.combo_back_and_forth_slave.current(1)
+                    self.combo_back_and_forth_slave.delete(0, tk.END)
+                    self.combo_back_and_forth_slave.insert(0, self.parent.back_and_forth_master_count)
                 self.combo_back_and_forth_slave.grid(row = 1, column = 0, pady = 2)
                 
                 def update_back_and_forth_slave_count():
@@ -2954,6 +3100,14 @@ class Sweeper2d(tk.Frame):
                         self.parent.back_and_forth_slave_count = int(1e6)
                     else:
                         raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_slave.get())}')
+                
+                    self.parent.entry_ratio2.delete(0, tk.END)
+                    self.parent.entry_ratio2.insert(0, self.entry_ratio2.get())
+                    self.parent.back_ratio2_init = self.entry_back_ratio2.get()
+                    
+                    self.parent.entry_delay_factor2.delete(0, tk.END)
+                    self.parent.entry_delay_factor2.insert(0, self.entry_delay_factor2.get())
+                    self.parent.back_delay_factor2_init = self.entry_back_delay_factor2.get()
                 
                 button_set_back_and_forth_slave = tk.Button(tw, text = 'Set', command = update_back_and_forth_slave_count)
                 button_set_back_and_forth_slave.grid(row = 1, column = 1, pady = 2)
@@ -3014,12 +3168,46 @@ class Sweeper2d(tk.Frame):
                 
                 tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
                 
+            def update_ratio2(self):
+                tw = self.slave_toplevel
+                
+                count_option2 = self.parent.count_option2
+                
+                self.entry_ratio_label = tk.Label(tw, text = f'Forward {count_option2}')
+                self.entry_ratio_label.grid(row = 3, column = 0, pady = 2)
+                
+                self.entry_back_ratio_label = tk.Label(tw, text = f'Back {count_option2}')
+                self.entry_back_ratio_label.grid(row = 3, column = 1, pady = 2)
+                
+                self.entry_ratio2 = tk.Entry(tw)
+                self.entry_ratio2.insert(0, self.parent.entry_ratio2.get())
+                self.entry_ratio2.grid(row = 4, column = 0, pady = 2)
+                
+                self.entry_back_ratio2 = tk.Entry(tw)
+                self.entry_back_ratio2.insert(0, self.parent.back_ratio2_init)
+                self.entry_back_ratio2.grid(row = 4, column = 1, pady = 2)
+                
+                self.entry_delay_factor_label = tk.Label(tw, text = 'Forward delay factor')
+                self.entry_delay_factor_label.grid(row = 5, column = 0, pady = 2)
+                
+                self.entry_back_delay_factor_label = tk.Label(tw, text = 'Back delay factor')
+                self.entry_back_delay_factor_label.grid(row = 5, column = 1, pady = 2)
+                
+                self.entry_delay_factor2 = tk.Entry(tw)
+                self.entry_delay_factor2.insert(0, self.parent.entry_delay_factor2.get())
+                self.entry_delay_factor2.grid(row = 6, column = 0, pady = 2)
+                
+                self.entry_back_delay_factor2 = tk.Entry(tw)
+                self.entry_back_delay_factor2.insert(0, self.parent.back_delay_factor2_init)
+                self.entry_back_delay_factor2.grid(row = 6, column = 1, pady = 2)
+                
         def CreateSlaveToplevel(widget, parent):
             
             toplevel = BackAndForthSlave(widget, parent)
             
             def show(event):
                 toplevel.show_toplevel()
+                toplevel.update_ratio2()
                 
             widget.bind('<Button-3>', show)
     
@@ -3840,6 +4028,10 @@ class Sweeper2d(tk.Frame):
         if self.entry_ratio1.get() != self.ratio1_init:
             self.preset.loc[0, 'ratio1'] = self.entry_ratio1.get()
             self.preset.to_csv(globals()['sweeper2d_path'], index = False)
+        self.preset.loc[0, 'back_ratio1'] = self.back_ratio1_init
+        self.preset.to_csv(globals()['sweeper2d_path'], index = False)
+        self.preset.loc[0, 'back_delay_factor1'] = self.back_delay_factor1_init
+        self.preset.to_csv(globals()['sweeper2d_path'], index = False)
         if self.entry_delay_factor1.get() != self.delay_factor1_init:
             self.preset.loc[0, 'delay_factor1'] = self.entry_delay_factor1.get()
             self.preset.to_csv(globals()['sweeper2d_path'], index = False)
@@ -3852,6 +4044,10 @@ class Sweeper2d(tk.Frame):
         if self.entry_ratio2.get() != self.ratio2_init:
             self.preset.loc[0, 'ratio2'] = self.entry_ratio2.get()
             self.preset.to_csv(globals()['sweeper2d_path'], index = False)
+        self.preset.loc[0, 'back_ratio2'] = self.back_ratio2_init
+        self.preset.to_csv(globals()['sweeper2d_path'], index = False)
+        self.preset.loc[0, 'back_delay_factor2'] = self.back_delay_factor2_init
+        self.preset.to_csv(globals()['sweeper2d_path'], index = False)
         if self.entry_delay_factor2.get() != self.delay_factor2_init:
             self.preset.loc[0, 'delay_factor2'] = self.entry_delay_factor2.get()
             self.preset.to_csv(globals()['sweeper2d_path'], index = False)
@@ -4745,11 +4941,15 @@ class Sweeper2d(tk.Frame):
         global from_sweep1
         global to_sweep1
         global ratio_sweep1
+        global back_ratio_sweep1
         global delay_factor1
+        global back_delay_factor1
         global from_sweep2
         global to_sweep2
         global ratio_sweep2
+        global back_ratio_sweep2
         global delay_factor2
+        global back_delay_factor2
         global parameters_to_read
         global parameter_to_read_dict
         global sweeper_flag1
@@ -4804,6 +5004,30 @@ class Sweeper2d(tk.Frame):
                 if self.from_sweep1 > self.to_sweep1 and self.ratio_sweep1 > 0:
                     self.ratio_sweep1 = - self.ratio_sweep1
                 ratio_sweep1 = self.ratio_sweep1
+                
+                if self.back_ratio1_init == '':
+                    back_ratio_sweep1 = ratio_sweep1
+                else:
+                    try:
+                        back_ratio_sweep1 = float(self.back_ratio1_init)
+                    except:
+                        messagebox.showerror('Invalid value in "back_ratio1" entrybox', f'Can not convert {self.back_ratio1_init} to float')
+                        self.start_sweep_flag = False
+                        
+                if self.back_delay_factor1_init == '':
+                    back_delay_factor1 = delay_factor1
+                else:
+                    try:
+                        back_delay_factor1 = float(self.back_delay_factor1_init)
+                    except:
+                        messagebox.showerror('Invalid value in "back_delay_factor1" entrybox', f'Can not convert {self.back_delay_factor1_init} to float')
+                        self.start_sweep_flag = False
+                
+                if self.count_option1 == 'step':
+                    back_ratio_sweep1 = back_ratio_sweep1 / back_delay_factor1
+                if back_ratio_sweep1 * ratio_sweep1 > 0:
+                    back_ratio_sweep1 = - back_ratio_sweep1
+                
             except:
                 messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio1.get()} to float')
                 self.start_sweep_flag = False
@@ -4840,6 +5064,30 @@ class Sweeper2d(tk.Frame):
                 if self.from_sweep2 > self.to_sweep2 and self.ratio_sweep2 > 0:
                     self.ratio_sweep2 = - self.ratio_sweep2
                 ratio_sweep2 = self.ratio_sweep2
+                
+                if self.back_ratio2_init == '':
+                    back_ratio_sweep2 = ratio_sweep2
+                else:
+                    try:
+                        back_ratio_sweep2 = float(self.back_ratio2_init)
+                    except:
+                        messagebox.showerror('Invalid value in "back_ratio2" entrybox', f'Can not convert {self.back_ratio2_init} to float')
+                        self.start_sweep_flag = False
+                        
+                if self.back_delay_factor2_init == '':
+                    back_delay_factor2 = delay_factor2
+                else:
+                    try:
+                        back_delay_factor2 = float(self.back_delay_factor2_init)
+                    except:
+                        messagebox.showerror('Invalid value in "back_delay_factor1" entrybox', f'Can not convert {self.back_delay_factor1_init} to float')
+                        self.start_sweep_flag = False
+                
+                if self.count_option2 == 'step':
+                    back_ratio_sweep2 = back_ratio_sweep2 / back_delay_factor2
+                if back_ratio_sweep2 * ratio_sweep2 > 0:
+                    back_ratio_sweep2 = - back_ratio_sweep2
+                
             except:
                 messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio2.get()} to float')
                 self.start_sweep_flag = False
@@ -4932,18 +5180,24 @@ class Sweeper3d(tk.Frame):
         self.from1_init = self.preset['from1'].values[0]
         self.to1_init = self.preset['to1'].values[0]
         self.ratio1_init = self.preset['ratio1'].values[0]
+        self.back_ratio1_init = self.preset['back_ratio1'].values[0]
         self.count_option1 = self.preset['count_option1'][0]
         self.delay_factor1_init = self.preset['delay_factor1'].values[0]
+        self.back_delay_factor1_init = self.preset['back_delay_factor1'].values[0]
         self.from2_init = self.preset['from2'].values[0]
         self.to2_init = self.preset['to2'].values[0]
         self.ratio2_init = self.preset['ratio2'].values[0]
+        self.back_ratio2_init = self.preset['back_ratio2'].values[0]
         self.count_option2 = self.preset['count_option2'][0]
         self.delay_factor2_init = self.preset['delay_factor2'].values[0]
+        self.back_delay_factor2_init = self.preset['back_delay_factor2'].values[0]
         self.from3_init = self.preset['from3'].values[0]
         self.to3_init = self.preset['to3'].values[0]
         self.ratio3_init = self.preset['ratio3'].values[0]
+        self.back_ratio3_init = self.preset['back_ratio3'].values[0]
         self.count_option3 = self.preset['count_option3'][0]
         self.delay_factor3_init = self.preset['delay_factor3'].values[0]
+        self.back_delay_factor3_init = self.preset['back_delay_factor3'].values[0]
         self.manual_filenames = [self.preset['manual_filename1'].values[0], self.preset['manual_filename2'].values[0], self.preset['manual_filename3'].values[0]]
         self.status_back_and_forth_master = tk.IntVar(value = int(self.preset['status_back_and_forth1'].values[0]))
         self.status_manual1 = tk.IntVar(value = int(self.preset['status_manual1'].values[0]))
@@ -5094,21 +5348,35 @@ class Sweeper3d(tk.Frame):
                 y = y + self.master_widget.winfo_rooty()
                 self.master_toplevel = tw = tk.Toplevel(self.master_widget)
                 tw.wm_geometry("+%d+%d" % (x, y))
-                label_back_and_forth_master = tk.Label(tw, text = 'Set number of back and forth\n walks for master axis', font = LARGE_FONT)
-                label_back_and_forth_master.grid(row = 0, column = 0, pady = 2)
+                label_back_and_forth_slave = tk.Label(tw, text = 'Set number of back and forth\n walks for slave axis', font = LARGE_FONT)
+                label_back_and_forth_slave.grid(row = 0, column = 0, pady = 2)
                 
                 self.combo_back_and_forth_master = ttk.Combobox(tw, value = [2, 'custom', 'continious'])
+                if self.parent.status_back_and_forth_master.get() == 0:
+                    self.combo_back_and_forth_master.current(0)
+                else:
+                    self.combo_back_and_forth_master.current(1)
+                    self.combo_back_and_forth_master.delete(0, tk.END)
+                    self.combo_back_and_forth_master.insert(0, self.parent.back_and_forth_master_count)
                 self.combo_back_and_forth_master.grid(row = 1, column = 0, pady = 2)
                 
                 def update_back_and_forth_master_count():
                     if self.combo_back_and_forth_master.current() == 0:
                         self.parent.back_and_forth_master_count = 2
                     elif self.combo_back_and_forth_master.current() == -1:
-                        self.parent.back_and_forth_master_count = int(self.combo_back_and_forth_master.get())
+                        self.parent.back_and_forth_master_count = int(self.combo_back_and_forth_slave.get())
                     elif self.combo_back_and_forth_master.current() == 2:
                         self.parent.back_and_forth_master_count = int(1e6)
                     else:
                         raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_master.get())}')
+                    
+                    self.parent.entry_ratio1.delete(0, tk.END)
+                    self.parent.entry_ratio1.insert(0, self.entry_ratio1.get())
+                    self.parent.back_ratio1_init = self.entry_back_ratio1.get()
+                    
+                    self.parent.entry_delay_factor1.delete(0, tk.END)
+                    self.parent.entry_delay_factor1.insert(0, self.entry_delay_factor1.get())
+                    self.parent.back_delay_factor1_init = self.entry_back_delay_factor1.get()
                 
                 button_set_back_and_forth_master = tk.Button(tw, text = 'Set', command = update_back_and_forth_master_count)
                 button_set_back_and_forth_master.grid(row = 1, column = 1, pady = 2)
@@ -5120,12 +5388,46 @@ class Sweeper3d(tk.Frame):
                 
                 tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
                 
+            def update_ratio1(self):
+                tw = self.master_toplevel
+                
+                count_option1 = self.parent.count_option1
+                
+                self.entry_ratio_label = tk.Label(tw, text = f'Forward {count_option1}')
+                self.entry_ratio_label.grid(row = 2, column = 0, pady = 2)
+                
+                self.entry_back_ratio_label = tk.Label(tw, text = f'Back {count_option1}')
+                self.entry_back_ratio_label.grid(row = 2, column = 1, pady = 2)
+                
+                self.entry_ratio1 = tk.Entry(tw)
+                self.entry_ratio1.insert(0, self.parent.entry_ratio1.get())
+                self.entry_ratio1.grid(row = 3, column = 0, pady = 2)
+                
+                self.entry_back_ratio1 = tk.Entry(tw)
+                self.entry_back_ratio1.insert(0, self.parent.back_ratio1_init)
+                self.entry_back_ratio1.grid(row = 3, column = 1, pady = 2)
+                
+                self.entry_delay_factor_label = tk.Label(tw, text = 'Forward delay factor')
+                self.entry_delay_factor_label.grid(row = 4, column = 0, pady = 2)
+                
+                self.entry_back_delay_factor_label = tk.Label(tw, text = 'Back delay factor')
+                self.entry_back_delay_factor_label.grid(row = 4, column = 1, pady = 2)
+                
+                self.entry_delay_factor1 = tk.Entry(tw)
+                self.entry_delay_factor1.insert(0, self.parent.entry_delay_factor1.get())
+                self.entry_delay_factor1.grid(row = 5, column = 0, pady = 2)
+                
+                self.entry_back_delay_factor1 = tk.Entry(tw)
+                self.entry_back_delay_factor1.insert(0, self.parent.back_delay_factor1_init)
+                self.entry_back_delay_factor1.grid(row = 5, column = 1, pady = 2)
+                
         def CreateMasterToplevel(widget, parent):
             
             toplevel = BackAndForthMaster(widget, parent)
             
             def show(event):
                 toplevel.show_toplevel()
+                toplevel.update_ratio1()
                 
             widget.bind('<Button-3>', show)
     
@@ -5172,6 +5474,12 @@ class Sweeper3d(tk.Frame):
                 label_back_and_forth_slave.grid(row = 0, column = 0, pady = 2)
                 
                 self.combo_back_and_forth_slave = ttk.Combobox(tw, value = [2, 'custom', 'continious'])
+                if self.parent.status_back_and_forth_slave.get() == 0:
+                    self.combo_back_and_forth_slave.current(0)
+                else:
+                    self.combo_back_and_forth_slave.current(1)
+                    self.combo_back_and_forth_slave.delete(0, tk.END)
+                    self.combo_back_and_forth_slave.insert(0, self.parent.back_and_forth_slave_count)
                 self.combo_back_and_forth_slave.grid(row = 1, column = 0, pady = 2)
                 
                 def update_back_and_forth_slave_count():
@@ -5183,6 +5491,14 @@ class Sweeper3d(tk.Frame):
                         self.parent.back_and_forth_slave_count = int(1e6)
                     else:
                         raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_slave.get())}')
+                
+                    self.parent.entry_ratio2.delete(0, tk.END)
+                    self.parent.entry_ratio2.insert(0, self.entry_ratio2.get())
+                    self.parent.back_ratio2_init = self.entry_back_ratio2.get()
+                    
+                    self.parent.entry_delay_factor2.delete(0, tk.END)
+                    self.parent.entry_delay_factor2.insert(0, self.entry_delay_factor2.get())
+                    self.parent.back_delay_factor2_init = self.entry_back_delay_factor2.get()
                 
                 button_set_back_and_forth_slave = tk.Button(tw, text = 'Set', command = update_back_and_forth_slave_count)
                 button_set_back_and_forth_slave.grid(row = 1, column = 1, pady = 2)
@@ -5241,12 +5557,46 @@ class Sweeper3d(tk.Frame):
                 
                 tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
                 
+            def update_ratio2(self):
+                tw = self.slave_toplevel
+                
+                count_option2 = self.parent.count_option2
+                
+                self.entry_ratio_label = tk.Label(tw, text = f'Forward {count_option2}')
+                self.entry_ratio_label.grid(row = 3, column = 0, pady = 2)
+                
+                self.entry_back_ratio_label = tk.Label(tw, text = f'Back {count_option2}')
+                self.entry_back_ratio_label.grid(row = 3, column = 1, pady = 2)
+                
+                self.entry_ratio2 = tk.Entry(tw)
+                self.entry_ratio2.insert(0, self.parent.entry_ratio2.get())
+                self.entry_ratio2.grid(row = 4, column = 0, pady = 2)
+                
+                self.entry_back_ratio2 = tk.Entry(tw)
+                self.entry_back_ratio2.insert(0, self.parent.back_ratio2_init)
+                self.entry_back_ratio2.grid(row = 4, column = 1, pady = 2)
+                
+                self.entry_delay_factor_label = tk.Label(tw, text = 'Forward delay factor')
+                self.entry_delay_factor_label.grid(row = 5, column = 0, pady = 2)
+                
+                self.entry_back_delay_factor_label = tk.Label(tw, text = 'Back delay factor')
+                self.entry_back_delay_factor_label.grid(row = 5, column = 1, pady = 2)
+                
+                self.entry_delay_factor2 = tk.Entry(tw)
+                self.entry_delay_factor2.insert(0, self.parent.entry_delay_factor2.get())
+                self.entry_delay_factor2.grid(row = 6, column = 0, pady = 2)
+                
+                self.entry_back_delay_factor2 = tk.Entry(tw)
+                self.entry_back_delay_factor2.insert(0, self.parent.back_delay_factor2_init)
+                self.entry_back_delay_factor2.grid(row = 6, column = 1, pady = 2)
+                
         def CreateSlaveToplevel(widget, parent):
             
             toplevel = BackAndForthSlave(widget, parent)
             
             def show(event):
                 toplevel.show_toplevel()
+                toplevel.update_ratio2()
                 
             widget.bind('<Button-3>', show)
     
@@ -5294,6 +5644,12 @@ class Sweeper3d(tk.Frame):
                 label_back_and_forth_slave.grid(row = 0, column = 0, pady = 2)
                 
                 self.combo_back_and_forth_slave_slave = ttk.Combobox(tw, value = [2, 'custom', 'continious'])
+                if self.parent.status_back_and_forth_slave_slave.get() == 0:
+                    self.combo_back_and_forth_slave_slave.current(0)
+                else:
+                    self.combo_back_and_forth_slave_slave.current(1)
+                    self.combo_back_and_forth_slave_slave.delete(0, tk.END)
+                    self.combo_back_and_forth_slave_slave.insert(0, self.parent.back_and_forth_slave_slave_count)
                 self.combo_back_and_forth_slave_slave.grid(row = 1, column = 0, pady = 2)
                 
                 def update_back_and_forth_slave_slave_count():
@@ -5305,6 +5661,14 @@ class Sweeper3d(tk.Frame):
                         self.back_and_forth_slave_slave_count = int(1e6)
                     else:
                         raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_slave_slave.get())}')
+                
+                    self.parent.entry_ratio3.delete(0, tk.END)
+                    self.parent.entry_ratio3.insert(0, self.entry_ratio3.get())
+                    self.parent.back_ratio3_init = self.entry_back_ratio3.get()
+                    
+                    self.parent.entry_delay_factor3.delete(0, tk.END)
+                    self.parent.entry_delay_factor3.insert(0, self.entry_delay_factor3.get())
+                    self.parent.back_delay_factor3_init = self.entry_back_delay_factor3.get()
                 
                 button_set_back_and_forth_slave_slave = tk.Button(tw, text = 'Set', command = update_back_and_forth_slave_slave_count)
                 button_set_back_and_forth_slave_slave.grid(row = 1, column = 1, pady = 2)
@@ -5359,12 +5723,46 @@ class Sweeper3d(tk.Frame):
                 
                 tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
                 
+            def update_ratio3(self):
+                tw = self.slave_slave_toplevel
+                
+                count_option3 = self.parent.count_option3
+                
+                self.entry_ratio_label = tk.Label(tw, text = f'Forward {count_option3}')
+                self.entry_ratio_label.grid(row = 3, column = 0, pady = 2)
+                
+                self.entry_back_ratio_label = tk.Label(tw, text = f'Back {count_option3}')
+                self.entry_back_ratio_label.grid(row = 3, column = 1, pady = 2)
+                
+                self.entry_ratio3 = tk.Entry(tw)
+                self.entry_ratio3.insert(0, self.parent.entry_ratio3.get())
+                self.entry_ratio3.grid(row = 4, column = 0, pady = 2)
+                
+                self.entry_back_ratio3 = tk.Entry(tw)
+                self.entry_back_ratio3.insert(0, self.parent.back_ratio3_init)
+                self.entry_back_ratio3.grid(row = 4, column = 1, pady = 2)
+                
+                self.entry_delay_factor_label = tk.Label(tw, text = 'Forward delay factor')
+                self.entry_delay_factor_label.grid(row = 5, column = 0, pady = 2)
+                
+                self.entry_back_delay_factor_label = tk.Label(tw, text = 'Back delay factor')
+                self.entry_back_delay_factor_label.grid(row = 5, column = 1, pady = 2)
+                
+                self.entry_delay_factor3 = tk.Entry(tw)
+                self.entry_delay_factor3.insert(0, self.parent.entry_delay_factor3.get())
+                self.entry_delay_factor3.grid(row = 6, column = 0, pady = 2)
+                
+                self.entry_back_delay_factor3 = tk.Entry(tw)
+                self.entry_back_delay_factor3.insert(0, self.parent.back_delay_factor3_init)
+                self.entry_back_delay_factor3.grid(row = 6, column = 1, pady = 2)
+                
         def CreateSlaveSlaveToplevel(widget, parent):
             
             toplevel = BackAndForthSlaveSlave(widget, parent)
             
             def show(event):
                 toplevel.show_toplevel()
+                toplevel.update_ratio3()
                 
             widget.bind('<Button-3>', show)
     
@@ -6275,6 +6673,10 @@ class Sweeper3d(tk.Frame):
         if self.entry_ratio1.get() != self.ratio1_init:
             self.preset.loc[0, 'ratio1'] = self.entry_ratio1.get()
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
+        self.preset.loc[0, 'back_ratio1'] = self.back_ratio1_init
+        self.preset.to_csv(globals()['sweeper3d_path'], index = False)
+        self.preset.loc[0, 'back_delay_factor1'] = self.back_delay_factor1_init
+        self.preset.to_csv(globals()['sweeper3d_path'], index = False)
         if self.entry_delay_factor1.get() != self.delay_factor1_init:
             self.preset.loc[0, 'delay_factor1'] = self.entry_delay_factor1.get()
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
@@ -6287,6 +6689,10 @@ class Sweeper3d(tk.Frame):
         if self.entry_ratio2.get() != self.ratio2_init:
             self.preset.loc[0, 'ratio2'] = self.entry_ratio2.get()
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
+        self.preset.loc[0, 'back_ratio2'] = self.back_ratio2_init
+        self.preset.to_csv(globals()['sweeper3d_path'], index = False)
+        self.preset.loc[0, 'back_delay_factor2'] = self.back_delay_factor2_init
+        self.preset.to_csv(globals()['sweeper3d_path'], index = False)
         if self.entry_delay_factor2.get() != self.delay_factor2_init:
             self.preset.loc[0, 'delay_factor2'] = self.entry_delay_factor2.get()
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
@@ -6299,6 +6705,10 @@ class Sweeper3d(tk.Frame):
         if self.entry_ratio3.get() != self.ratio3_init:
             self.preset.loc[0, 'ratio3'] = self.entry_ratio3.get()
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
+        self.preset.loc[0, 'back_ratio3'] = self.back_ratio3_init
+        self.preset.to_csv(globals()['sweeper3d_path'], index = False)
+        self.preset.loc[0, 'back_delay_factor3'] = self.back_delay_factor3_init
+        self.preset.to_csv(globals()['sweeper3d_path'], index = False)
         if self.entry_delay_factor3.get() != self.delay_factor3_init:
             self.preset.loc[0, 'delay_factor3'] = self.entry_delay_factor3.get()
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
@@ -7366,15 +7776,21 @@ class Sweeper3d(tk.Frame):
         global from_sweep1
         global to_sweep1
         global ratio_sweep1
+        global back_ratio_sweep1
         global delay_factor1
+        global back_delay_factor1
         global from_sweep2
         global to_sweep2
         global ratio_sweep2
+        global back_ratio_sweep2
         global delay_factor2
+        global back_delay_factor2
         global from_sweep3
         global to_sweep3
         global ratio_sweep3
+        global back_ratio_sweep3
         global delay_factor3
+        global back_delay_factor3
         global parameters_to_read_dict
         global parameters_to_read
         global sweeper_flag1
@@ -7432,6 +7848,30 @@ class Sweeper3d(tk.Frame):
                 if self.from_sweep1 > self.to_sweep1 and self.ratio_sweep1 > 0:
                     self.ratio_sweep1 = - self.ratio_sweep1
                 ratio_sweep1 = self.ratio_sweep1
+                
+                if self.back_ratio1_init == '':
+                    back_ratio_sweep1 = ratio_sweep1
+                else:
+                    try:
+                        back_ratio_sweep1 = float(self.back_ratio1_init)
+                    except:
+                        messagebox.showerror('Invalid value in "back_ratio1" entrybox', f'Can not convert {self.back_ratio1_init} to float')
+                        self.start_sweep_flag = False
+                        
+                if self.back_delay_factor1_init == '':
+                    back_delay_factor1 = delay_factor1
+                else:
+                    try:
+                        back_delay_factor1 = float(self.back_delay_factor1_init)
+                    except:
+                        messagebox.showerror('Invalid value in "back_delay_factor1" entrybox', f'Can not convert {self.back_delay_factor1_init} to float')
+                        self.start_sweep_flag = False
+                
+                if self.count_option1 == 'step':
+                    back_ratio_sweep1 = back_ratio_sweep1 / back_delay_factor1
+                if back_ratio_sweep1 * ratio_sweep1 > 0:
+                    back_ratio_sweep1 = - back_ratio_sweep1
+                
             except:
                 messagebox.showerror('Invalid value in "Ratio1" entrybox', f'Can not convert {self.entry_ratio1.get()} to float')
                 self.start_sweep_flag = False
@@ -7468,6 +7908,30 @@ class Sweeper3d(tk.Frame):
                 if self.from_sweep2 > self.to_sweep2 and self.ratio_sweep2 > 0:
                     self.ratio_sweep2 = - self.ratio_sweep2
                 ratio_sweep2 = self.ratio_sweep2
+                
+                if self.back_ratio2_init == '':
+                    back_ratio_sweep2 = ratio_sweep2
+                else:
+                    try:
+                        back_ratio_sweep2 = float(self.back_ratio2_init)
+                    except:
+                        messagebox.showerror('Invalid value in "back_ratio2" entrybox', f'Can not convert {self.back_ratio2_init} to float')
+                        self.start_sweep_flag = False
+                        
+                if self.back_delay_factor2_init == '':
+                    back_delay_factor2 = delay_factor2
+                else:
+                    try:
+                        back_delay_factor2 = float(self.back_delay_factor2_init)
+                    except:
+                        messagebox.showerror('Invalid value in "back_delay_factor2" entrybox', f'Can not convert {self.back_delay_factor2_init} to float')
+                        self.start_sweep_flag = False
+                
+                if self.count_option2 == 'step':
+                    back_ratio_sweep2 = back_ratio_sweep2 / back_delay_factor2
+                if back_ratio_sweep2 * ratio_sweep2 > 0:
+                    back_ratio_sweep2 = - back_ratio_sweep2
+                
             except:
                 messagebox.showerror('Invalid value in "Ratio2" entrybox', f'Can not convert {self.entry_ratio2.get()} to float')
                 self.start_sweep_flag = False
@@ -7504,8 +7968,32 @@ class Sweeper3d(tk.Frame):
                 if self.from_sweep3 > self.to_sweep3 and self.ratio_sweep3 > 0:
                     self.ratio_sweep3 = - self.ratio_sweep3
                 ratio_sweep3 = self.ratio_sweep3
+                
+                if self.back_ratio3_init == '':
+                    back_ratio_sweep3 = ratio_sweep3
+                else:
+                    try:
+                        back_ratio_sweep3 = float(self.back_ratio3_init)
+                    except:
+                        messagebox.showerror('Invalid value in "back_ratio3" entrybox', f'Can not convert {self.back_ratio3_init} to float')
+                        self.start_sweep_flag = False
+                        
+                if self.back_delay_factor3_init == '':
+                    back_delay_factor3 = delay_factor3
+                else:
+                    try:
+                        back_delay_factor3 = float(self.back_delay_factor3_init)
+                    except:
+                        messagebox.showerror('Invalid value in "back_delay_factor3" entrybox', f'Can not convert {self.back_delay_factor3_init} to float')
+                        self.start_sweep_flag = False
+                 
+                if self.count_option3 == 'step':
+                    back_ratio_sweep3 = back_ratio_sweep3 / back_delay_factor3
+                if back_ratio_sweep3 * ratio_sweep3 > 0:
+                    back_ratio_sweep3 = - back_ratio_sweep3
+                
             except:
-                messagebox.showerror('Invalid value in "Ratio3" entrybox', f'Can not convert {self.entry_ratio3.get()} to float')
+                messagebox.showerror('Invalid value in "ratio3" entrybox', f'Can not convert {self.entry_ratio3.get()} to float')
                 self.start_sweep_flag = False
             
         def get_key(val, my_dict):
@@ -7643,11 +8131,14 @@ class Sweeper_write(threading.Thread):
         
         if self.sweepable1 == False:
             self.step1 = float(delay_factor1) * float(ratio_sweep1)
+            self.back_step1 = float(back_delay_factor1) * float(back_ratio_sweep1)
         else:
             if stepper_flag == False:
                 self.step1 = (float(to_sweep1) - float(self.value1))
+                self.back_step1 = float(self.value1) - float(from_sweep1)
             else:
                 self.step1 = float(delay_factor1) * float(ratio_sweep1)
+                self.back_step1 = float(back_delay_factor1) * float(back_ratio_sweep1)
         
         try:
             self.nstep1 = (float(to_sweep1) - float(from_sweep1)) / self.ratio_sweep1 / self.delay_factor1
@@ -7705,16 +8196,20 @@ class Sweeper_write(threading.Thread):
                             
             if self.sweepable2 == False:
                 self.step2 = float(delay_factor2) * float(ratio_sweep2)
+                self.back_step2 = float(back_delay_factor2) * float(back_ratio_sweep2)
             else:
                 if stepper_flag == False:
                     self.step2 = (float(to_sweep2) - float(self.value2))
+                    self.back_step2 = float(self.value2) - float(from_sweep2)
                 else:
                     self.step2 = float(delay_factor2) * float(ratio_sweep2)
+                    self.back_step2 = float(back_delay_factor2) * float(back_ratio_sweep2)
                 
             if self.sweepable2 == True and stepper_flag == False:
                 self.nstep2 = 1
                 
             self.step1 = float(delay_factor1) * float(ratio_sweep1)
+            self.back_step1 = float(back_delay_factor1) * float(back_ratio_sweep1)
             
             try:
                 self.nstep1 = (float(to_sweep1) - float(from_sweep1)) / self.ratio_sweep1 / self.delay_factor1
@@ -7796,13 +8291,19 @@ class Sweeper_write(threading.Thread):
                             
             if self.sweepable3 == False:
                 self.step3 = float(delay_factor3) * float(ratio_sweep3)
+                self.back_step3 = float(back_delay_factor3) * float(back_ratio_sweep3)
             else:
                 if stepper_flag == False:
                     self.step3 = (float(to_sweep3) - float(self.value3))
+                    self.back_step3 = float(self.value3) - float(from_sweep3)
                 else:
                     self.step3 = float(delay_factor3) * float(ratio_sweep3)
+                    self.back_step3 = float(back_delay_factor3) * float(back_ratio_sweep3)
                 
             self.step1 = float(delay_factor1) * float(ratio_sweep1)
+            self.step2 = float(delay_factor2) * float(ratio_sweep2)
+            self.back_step1 = float(back_delay_factor1) * float(back_ratio_sweep1)
+            self.back_step2 = float(back_delay_factor2) * float(back_ratio_sweep2)
             
             try:
                 self.nstep1 = (float(to_sweep1) - float(from_sweep1)) / self.ratio_sweep1 / self.delay_factor1
@@ -8158,6 +8659,7 @@ class Sweeper_write(threading.Thread):
             
             axis = str(axis)
             value = float(getattr(self, 'value' + axis))
+            step = float(getattr(self, 'step' + axis))
             to_sweep = float(globals()['to_sweep' + axis])
             from_sweep = float(globals()['from_sweep' + axis])
             speed = float(globals()['ratio_sweep' + axis])
@@ -8170,6 +8672,7 @@ class Sweeper_write(threading.Thread):
                 eps = abs(float(getattr(self, f'step{axis}')) * 0.1)
                 
             print(f'Epsilon = {eps}')
+            print(f'Step = {step}')
                 
             if getattr(self, f'sweepable{axis}') == True:
                 self.current_value = float(getattr(device_to_sweep, parameter_to_sweep)())
@@ -8186,9 +8689,9 @@ class Sweeper_write(threading.Thread):
                     setattr(self, f'value{axis}', to_sweep - getattr(self, f'step{axis}'))
             else:
                 if speed >= 0:
-                    result = (value >= from_sweep - eps and value <= to_sweep + eps)
+                    result = (value + step >= from_sweep - eps and value + step <= to_sweep + eps)
                 else:
-                    result = (value >= to_sweep - eps and value <= from_sweep + eps)
+                    result = (value + step >= to_sweep - eps and value + step <= from_sweep + eps)
                 
             if speed > 0:
                 print('Condition checked, result is ' + str(result) + f'\nBoundaries are [{from_sweep};{to_sweep}], Value is {value}, Ratio is positive')
@@ -8699,8 +9202,15 @@ class Sweeper_write(threading.Thread):
                 dub = globals()['to_sweep' + axis]
                 globals()['to_sweep' + axis] = globals()['from_sweep' + axis]
                 globals()['from_sweep' + axis] = dub
-                setattr(self, 'step' + axis, - getattr(self, 'step' + axis))
-                globals()['ratio_sweep' + axis] = - globals()['ratio_sweep' + axis]
+                dub_step = self.__dict__['back_step' + axis]
+                setattr(self, 'back_step' + axis, getattr(self, 'step' + axis))
+                setattr(self, 'step' + axis, dub_step)
+                dub_ratio = globals()['back_ratio_sweep' + axis]
+                globals()['back_ratio_sweep' + axis] = globals()['ratio_sweep' + axis]
+                globals()['ratio_sweep' + axis] = dub_ratio
+                dub_delay_factor = globals()['back_delay_factor' + axis]
+                globals()['back_delay_factor' + axis] = globals()['delay_factor' + axis]
+                globals()['delay_factor' + axis] = dub_delay_factor
             else:
                 if self.__dict__[f'sweepable{axis}']:
                     from_sweep = float(globals()['from_sweep' + axis])
@@ -8976,17 +9486,16 @@ class Sweeper_write(threading.Thread):
                         elif i == walks and back_and_forth_slave_slave != 1 and manual_sweep_flags[1] == 1:
                             self.cur_manual_index2 += 1
                     back_and_forth_transposition(len(manual_sweep_flags))
-                    step(axis = len(manual_sweep_flags))
-                    if not getattr(self, f'sweepable{len(manual_sweep_flags)}') == True:
+                    if getattr(self, f'sweepable{len(manual_sweep_flags)}') == True:
                         step(axis = len(manual_sweep_flags))
+                    #if not getattr(self, f'sweepable{len(manual_sweep_flags)}') == True:
+                    #    step(axis = len(manual_sweep_flags))
                         
                 if walks % 2 == 1:
                     back_and_forth_transposition(len(manual_sweep_flags))
                     
             else:
                 raise Exception('back_and_forth_slave is not correct, needs >= 1, but got ', back_and_forth_slave)
-           
-            time.sleep(0.01) 
            
             if len(manual_sweep_flags) == 2:
                 self.mapper2D.slave_done_walking()
@@ -9061,8 +9570,8 @@ class Sweeper_write(threading.Thread):
                             globals()['Sweeper_object'].cur_walk1 += 1
                             
                     back_and_forth_transposition(len(manual_sweep_flags))
-                    double_step()
-                    double_step()
+                    #double_step()
+                    #double_step()
                         
                 if walks % 2 == 1:
                     back_and_forth_transposition(len(manual_sweep_flags))
@@ -9176,8 +9685,8 @@ class Sweeper_write(threading.Thread):
                         if i != walks and back_and_forth_slave != 1:
                             step(axis = 1)
                     back_and_forth_transposition(2)
-                    double_step_yx()
-                    double_step_yx()
+                    #double_step_yx()
+                    #double_step_yx()
                     
                 if walks % 2 == 1:
                     back_and_forth_transposition(2)
@@ -9221,8 +9730,8 @@ class Sweeper_write(threading.Thread):
                         elif i == walks and back_and_forth_slave != 1 and manual_sweep_flags[1] == 1:
                             self.cur_manual_index1 += 1
                     back_and_forth_transposition(len(manual_sweep_flags) - 1)
-                    step(axis = len(manual_sweep_flags) - 1)
-                    if not getattr(self, f'sweepable{len(manual_sweep_flags) - 1}') == True:
+                    #step(axis = len(manual_sweep_flags) - 1)
+                    if getattr(self, f'sweepable{len(manual_sweep_flags) - 1}') == True:
                         step(axis = len(manual_sweep_flags) - 1)
                     
                 if walks % 2 == 1:
@@ -9299,8 +9808,8 @@ class Sweeper_write(threading.Thread):
                     self.cur_manual_index1 = 0
                     master_loop_single(round(2 * (i % 2) - 1))
                     back_and_forth_transposition(1)
-                    step(axis = 1)
-                    if not self.sweepable1 == True:
+                    #step(axis = 1)
+                    if self.sweepable1 == True:
                         step(axis = 1)
                     
                 if back_and_forth_master % 2 == 1:
@@ -9325,7 +9834,7 @@ class Sweeper_write(threading.Thread):
                     self.cur_manual_index1 = 0
                     double_master_loop_single(round(2 * (i % 2) - 1))
                     back_and_forth_transposition(1)
-                    step(axis = 1)
+                    #step(axis = 1)
                     #step(axis = 1)
                     
                 if back_and_forth_master % 2 == 1:
