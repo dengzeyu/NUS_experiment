@@ -954,7 +954,7 @@ class SetGet(tk.Frame):
         device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
-        value = float(self.__dict__[f'entry_set{i}'].get())
+        value = self.__dict__[f'entry_set{i}'].get()
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -1009,7 +1009,7 @@ class SetGet(tk.Frame):
         device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
-        value = float(self.__dict__[f'entry_set{i}'].get())
+        value = self.__dict__[f'entry_set{i}'].get()
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -1064,7 +1064,7 @@ class SetGet(tk.Frame):
         device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
-        value = float(self.__dict__[f'entry_set{i}'].get())
+        value = self.__dict__[f'entry_set{i}'].get()
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -1119,7 +1119,7 @@ class SetGet(tk.Frame):
         device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
-        value = float(self.__dict__[f'entry_set{i}'].get())
+        value = self.__dict__[f'entry_set{i}'].get()
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -1174,7 +1174,7 @@ class SetGet(tk.Frame):
         device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
-        value = float(self.__dict__[f'entry_set{i}'].get())
+        value = self.__dict__[f'entry_set{i}'].get()
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -1229,7 +1229,7 @@ class SetGet(tk.Frame):
         device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
-        value = float(self.__dict__[f'entry_set{i}'].get())
+        value = self.__dict__[f'entry_set{i}'].get()
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -1489,6 +1489,10 @@ class SetGet(tk.Frame):
             self.table_dataframe.after(250, self.update_item, item)
         except FileNotFoundError:
             self.table_dataframe.after(250, self.update_item, item)
+            
+    def pause(self):
+        global pause_flag
+        pause_flag = not(pause_flag)
             
 
 class Sweeper1d(tk.Frame):
@@ -2753,21 +2757,22 @@ class Sweeper1d(tk.Frame):
         
             try:
                 self.ratio_sweep1 = float(self.entry_ratio.get())
-                if self.count_option1 == 'step':
-                    self.ratio_sweep1 = self.ratio_sweep1 / self.delay_factor1
-                if self.from_sweep1 > self.to_sweep1 and self.ratio_sweep1 > 0:
-                    self.ratio_sweep1 = - self.ratio_sweep1
-                ratio_sweep1 = self.ratio_sweep1
                 
                 if self.back_ratio1_init == '':
-                    back_ratio_sweep1 = ratio_sweep1
+                    back_ratio_sweep1 = self.ratio_sweep1
                 else:
                     try:
                         back_ratio_sweep1 = float(self.back_ratio1_init)
                     except:
                         messagebox.showerror('Invalid value in "back_ratio1" entrybox', f'Can not convert {self.back_ratio1_init} to float')
                         self.start_sweep_flag = False
-                        
+                
+                if self.count_option1 == 'step':
+                    self.ratio_sweep1 = self.ratio_sweep1 / self.delay_factor1
+                if self.from_sweep1 > self.to_sweep1 and self.ratio_sweep1 > 0:
+                    self.ratio_sweep1 = - self.ratio_sweep1
+                ratio_sweep1 = self.ratio_sweep1
+                
                 if self.back_delay_factor1_init == '':
                     back_delay_factor1 = delay_factor1
                 else:
@@ -4999,11 +5004,6 @@ class Sweeper2d(tk.Frame):
         
             try:
                 self.ratio_sweep1 = float(self.entry_ratio1.get())
-                if self.count_option1 == 'step':
-                    self.ratio_sweep1 = self.ratio_sweep1 / self.delay_factor1
-                if self.from_sweep1 > self.to_sweep1 and self.ratio_sweep1 > 0:
-                    self.ratio_sweep1 = - self.ratio_sweep1
-                ratio_sweep1 = self.ratio_sweep1
                 
                 if self.back_ratio1_init == '':
                     back_ratio_sweep1 = ratio_sweep1
@@ -5013,7 +5013,13 @@ class Sweeper2d(tk.Frame):
                     except:
                         messagebox.showerror('Invalid value in "back_ratio1" entrybox', f'Can not convert {self.back_ratio1_init} to float')
                         self.start_sweep_flag = False
-                        
+                
+                if self.count_option1 == 'step':
+                    self.ratio_sweep1 = self.ratio_sweep1 / self.delay_factor1
+                if self.from_sweep1 > self.to_sweep1 and self.ratio_sweep1 > 0:
+                    self.ratio_sweep1 = - self.ratio_sweep1
+                ratio_sweep1 = self.ratio_sweep1
+                
                 if self.back_delay_factor1_init == '':
                     back_delay_factor1 = delay_factor1
                 else:
@@ -5059,11 +5065,6 @@ class Sweeper2d(tk.Frame):
         
             try:
                 self.ratio_sweep2 = float(self.entry_ratio2.get())
-                if self.count_option2 == 'step':
-                    self.ratio_sweep2 = self.ratio_sweep2 / self.delay_factor2
-                if self.from_sweep2 > self.to_sweep2 and self.ratio_sweep2 > 0:
-                    self.ratio_sweep2 = - self.ratio_sweep2
-                ratio_sweep2 = self.ratio_sweep2
                 
                 if self.back_ratio2_init == '':
                     back_ratio_sweep2 = ratio_sweep2
@@ -5073,16 +5074,22 @@ class Sweeper2d(tk.Frame):
                     except:
                         messagebox.showerror('Invalid value in "back_ratio2" entrybox', f'Can not convert {self.back_ratio2_init} to float')
                         self.start_sweep_flag = False
-                        
+                
+                if self.count_option2 == 'step':
+                    self.ratio_sweep2 = self.ratio_sweep2 / self.delay_factor2
+                if self.from_sweep2 > self.to_sweep2 and self.ratio_sweep2 > 0:
+                    self.ratio_sweep2 = - self.ratio_sweep2
+                ratio_sweep2 = self.ratio_sweep2
+                
                 if self.back_delay_factor2_init == '':
                     back_delay_factor2 = delay_factor2
                 else:
                     try:
                         back_delay_factor2 = float(self.back_delay_factor2_init)
                     except:
-                        messagebox.showerror('Invalid value in "back_delay_factor1" entrybox', f'Can not convert {self.back_delay_factor1_init} to float')
+                        messagebox.showerror('Invalid value in "back_delay_factor2" entrybox', f'Can not convert {self.back_delay_factor2_init} to float')
                         self.start_sweep_flag = False
-                
+                        
                 if self.count_option2 == 'step':
                     back_ratio_sweep2 = back_ratio_sweep2 / back_delay_factor2
                 if back_ratio_sweep2 * ratio_sweep2 > 0:
@@ -7843,11 +7850,6 @@ class Sweeper3d(tk.Frame):
         
             try:
                 self.ratio_sweep1 = float(self.entry_ratio1.get())
-                if self.count_option1 == 'step':
-                    self.ratio_sweep1 = self.ratio_sweep1 / self.delay_factor1
-                if self.from_sweep1 > self.to_sweep1 and self.ratio_sweep1 > 0:
-                    self.ratio_sweep1 = - self.ratio_sweep1
-                ratio_sweep1 = self.ratio_sweep1
                 
                 if self.back_ratio1_init == '':
                     back_ratio_sweep1 = ratio_sweep1
@@ -7857,6 +7859,12 @@ class Sweeper3d(tk.Frame):
                     except:
                         messagebox.showerror('Invalid value in "back_ratio1" entrybox', f'Can not convert {self.back_ratio1_init} to float')
                         self.start_sweep_flag = False
+                
+                if self.count_option1 == 'step':
+                    self.ratio_sweep1 = self.ratio_sweep1 / self.delay_factor1
+                if self.from_sweep1 > self.to_sweep1 and self.ratio_sweep1 > 0:
+                    self.ratio_sweep1 = - self.ratio_sweep1
+                ratio_sweep1 = self.ratio_sweep1
                         
                 if self.back_delay_factor1_init == '':
                     back_delay_factor1 = delay_factor1
@@ -7903,11 +7911,6 @@ class Sweeper3d(tk.Frame):
         
             try:
                 self.ratio_sweep2 = float(self.entry_ratio2.get())
-                if self.count_option2 == 'step':
-                    self.ratio_sweep2 = self.ratio_sweep2 / self.delay_factor2
-                if self.from_sweep2 > self.to_sweep2 and self.ratio_sweep2 > 0:
-                    self.ratio_sweep2 = - self.ratio_sweep2
-                ratio_sweep2 = self.ratio_sweep2
                 
                 if self.back_ratio2_init == '':
                     back_ratio_sweep2 = ratio_sweep2
@@ -7917,7 +7920,13 @@ class Sweeper3d(tk.Frame):
                     except:
                         messagebox.showerror('Invalid value in "back_ratio2" entrybox', f'Can not convert {self.back_ratio2_init} to float')
                         self.start_sweep_flag = False
-                        
+                
+                if self.count_option2 == 'step':
+                    self.ratio_sweep2 = self.ratio_sweep2 / self.delay_factor2
+                if self.from_sweep2 > self.to_sweep2 and self.ratio_sweep2 > 0:
+                    self.ratio_sweep2 = - self.ratio_sweep2
+                ratio_sweep2 = self.ratio_sweep2
+                
                 if self.back_delay_factor2_init == '':
                     back_delay_factor2 = delay_factor2
                 else:
@@ -7963,11 +7972,6 @@ class Sweeper3d(tk.Frame):
         
             try:
                 self.ratio_sweep3 = float(self.entry_ratio3.get())
-                if self.count_option3 == 'step':
-                    self.ratio_sweep3 = self.ratio_sweep3 / self.delay_factor3
-                if self.from_sweep3 > self.to_sweep3 and self.ratio_sweep3 > 0:
-                    self.ratio_sweep3 = - self.ratio_sweep3
-                ratio_sweep3 = self.ratio_sweep3
                 
                 if self.back_ratio3_init == '':
                     back_ratio_sweep3 = ratio_sweep3
@@ -7977,6 +7981,12 @@ class Sweeper3d(tk.Frame):
                     except:
                         messagebox.showerror('Invalid value in "back_ratio3" entrybox', f'Can not convert {self.back_ratio3_init} to float')
                         self.start_sweep_flag = False
+                
+                if self.count_option3 == 'step':
+                    self.ratio_sweep3 = self.ratio_sweep3 / self.delay_factor3
+                if self.from_sweep3 > self.to_sweep3 and self.ratio_sweep3 > 0:
+                    self.ratio_sweep3 = - self.ratio_sweep3
+                ratio_sweep3 = self.ratio_sweep3
                         
                 if self.back_delay_factor3_init == '':
                     back_delay_factor3 = delay_factor3
@@ -8148,6 +8158,9 @@ class Sweeper_write(threading.Thread):
             
         if self.sweepable1 == True and stepper_flag == False:
             self.nstep = 1
+            
+        print(f'back_delay_factor1 = {back_delay_factor1}')
+        print(f'back_ratio_sweep1 = {back_ratio_sweep1}')
         
         if self.sweeper_flag2 == True:
             self.device_to_sweep2 = device_to_sweep2
@@ -8564,36 +8577,39 @@ class Sweeper_write(threading.Thread):
             global filename_setget
             global pause_flag
             
-            while setget_flag and not pause_flag:
-                dataframe = []
-                dataframe.append(round(time.perf_counter() - zero_time, 2))
-                
-                for parameter in self.parameters_to_read:
-                    index_dot = len(parameter) - parameter[::-1].find('.') - 1
-                    adress = parameter[:index_dot]
-                    option = parameter[index_dot + 1:]
-                    try:
-                        parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
-                                                  option)()
-                        dataframe.append(parameter_value)
-                    except Exception as e:
-                        print(f'Exception happened in setget_write: {e}')
-                        dataframe.append(None)
-                        return
-                        
-                time.sleep(0.2)
+            while setget_flag:
+                if not pause_flag:
+                    dataframe = []
+                    dataframe.append(round(time.perf_counter() - zero_time, 2))
                     
-                with open(filename_setget, 'a') as f_object:
-                    try:
-                        writer_object = writer(f_object)
-                        writer_object.writerow(dataframe)
-                        f_object.close()
-                    except KeyboardInterrupt:
-                        f_object.close()
-                    except Exception as e:
-                        print(f'Exception happened in setget_write append: {e}')
-                    finally:
-                        f_object.close()
+                    for parameter in self.parameters_to_read:
+                        index_dot = len(parameter) - parameter[::-1].find('.') - 1
+                        adress = parameter[:index_dot]
+                        option = parameter[index_dot + 1:]
+                        try:
+                            parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
+                                                      option)()
+                            dataframe.append(parameter_value)
+                        except Exception as e:
+                            print(f'Exception happened in setget_write: {e}')
+                            dataframe.append(None)
+                            return
+                            
+                    time.sleep(0.2)
+                        
+                    with open(filename_setget, 'a') as f_object:
+                        try:
+                            writer_object = writer(f_object)
+                            writer_object.writerow(dataframe)
+                            f_object.close()
+                        except KeyboardInterrupt:
+                            f_object.close()
+                        except Exception as e:
+                            print(f'Exception happened in setget_write append: {e}')
+                        finally:
+                            f_object.close()
+                else:
+                    time.sleep(0.2)
         
         def append_read_parameters():
             '''appends dataframe with parameters to read'''
@@ -9202,15 +9218,18 @@ class Sweeper_write(threading.Thread):
                 dub = globals()['to_sweep' + axis]
                 globals()['to_sweep' + axis] = globals()['from_sweep' + axis]
                 globals()['from_sweep' + axis] = dub
-                dub_step = self.__dict__['back_step' + axis]
-                setattr(self, 'back_step' + axis, getattr(self, 'step' + axis))
-                setattr(self, 'step' + axis, dub_step)
                 dub_ratio = globals()['back_ratio_sweep' + axis]
                 globals()['back_ratio_sweep' + axis] = globals()['ratio_sweep' + axis]
                 globals()['ratio_sweep' + axis] = dub_ratio
                 dub_delay_factor = globals()['back_delay_factor' + axis]
                 globals()['back_delay_factor' + axis] = globals()['delay_factor' + axis]
                 globals()['delay_factor' + axis] = dub_delay_factor
+                if self.__dict__[f'sweepable{axis}'] == False:
+                    dub_step = self.__dict__['back_step' + axis]
+                    setattr(self, 'back_step' + axis, getattr(self, 'step' + axis))
+                    setattr(self, 'step' + axis, dub_step)
+                else:
+                    setattr(self, 'step' + axis, - getattr(self, 'step' + axis))
             else:
                 if self.__dict__[f'sweepable{axis}']:
                     from_sweep = float(globals()['from_sweep' + axis])
@@ -9233,8 +9252,6 @@ class Sweeper_write(threading.Thread):
                         getattr(device_to_sweep, f'set_{parameter_to_sweep}')(value = from_sweep, speed = speed)
                         current_value = float(getattr(device_to_sweep, parameter_to_sweep)())
                         delta = abs(current_value - from_sweep)
-                else:    
-                    setattr(self, f'value{axis}', globals()[f'from_sweep{axis}'])
                 
             print(f'Back and forth transposition (axis = {axis}) happened\nNow From is {globals()["from_sweep" + axis]}, To is {globals()["to_sweep" + axis]}')
             
@@ -9360,6 +9377,44 @@ class Sweeper_write(threading.Thread):
                 raise Exception('manual_sweep_flag length is not correct, needs 1, 2 or 3, but got ', len(manual_sweep_flags))
                 
             print('Inner step was made')
+            
+        def final_step(axis):
+            axis = str(axis)
+            
+            device_to_sweep = globals()[f'device_to_sweep{axis}']
+            parameter_to_sweep = globals()[f'parameter_to_sweep{axis}']
+            to_sweep = globals()[f'to_sweep{axis}']
+            
+            if not getattr(self, f'sweepable{axis}') and manual_sweep_flags[int(axis) - 1] == 0:
+            
+                if hasattr(device_to_sweep, parameter_to_sweep):
+                    current = getattr(device_to_sweep, parameter_to_sweep)
+                    
+                    if hasattr(device_to_sweep, 'eps') == True:
+                        eps = device_to_sweep.eps[device_to_sweep.set_options.index(parameter_to_sweep)]
+                    else:
+                        eps = abs(float(getattr(self, f'step{axis}')) * 0.1)
+                    
+                    try:
+                        if not abs(float(current) - float(to_sweep)) < eps:
+                            if axis == '1':
+                                inner_step(value1 = to_sweep)
+                            elif axis == '2':
+                                inner_step(value2 = to_sweep)
+                            elif axis == '3':
+                                inner_step(value3 = to_sweep)
+                    except TypeError as ty:
+                        print(f'Exception happened in the last step for axis {axis}: {ty}')
+                    
+                else:
+                    if axis == '1':
+                        inner_step(value1 = to_sweep)
+                    elif axis == '2':
+                        inner_step(value2 = to_sweep)
+                    elif axis == '3':
+                        inner_step(value3 = to_sweep)
+                
+                self.__dict__[f'value{axis}'] = to_sweep
                 
         def inner_loop_single(direction = 1):
             '''commits a walk through mater (for 1d), slave (for 2d) or slave-slave (for 3d) axis'''
@@ -9416,6 +9471,7 @@ class Sweeper_write(threading.Thread):
                 self.inner_count = 1
                 self.__dict__[f'cur_manual_index{len(manual_sweep_flags)}'] = 0
                 inner_loop_single()
+                final_step(axis = len(manual_sweep_flags))
                 globals()['Sweeper_object'].__dict__[f'cur_walk{len(manual_sweep_flags)}'] += 1
                 if len(manual_sweep_flags) != 1:
                     back_and_forth_transposition(len(manual_sweep_flags), False)
@@ -9425,6 +9481,7 @@ class Sweeper_write(threading.Thread):
                     self.inner_count = 1
                     self.__dict__[f'cur_manual_index{len(manual_sweep_flags)}'] = 0
                     inner_loop_single(direction = round(2 * (i % 2) - 1))
+                    final_step(axis = len(manual_sweep_flags))
                     globals()['Sweeper_object'].__dict__[f'cur_walk{len(manual_sweep_flags)}'] += 1
                     if globals()['snakemode_master_flag'] == True and len(manual_sweep_flags) == 2:
                         if i != walks and back_and_forth_slave != 1:
@@ -9485,11 +9542,8 @@ class Sweeper_write(threading.Thread):
                                 step(axis = 2, value = value)
                         elif i == walks and back_and_forth_slave_slave != 1 and manual_sweep_flags[1] == 1:
                             self.cur_manual_index2 += 1
+                        
                     back_and_forth_transposition(len(manual_sweep_flags))
-                    if getattr(self, f'sweepable{len(manual_sweep_flags)}') == True:
-                        step(axis = len(manual_sweep_flags))
-                    #if not getattr(self, f'sweepable{len(manual_sweep_flags)}') == True:
-                    #    step(axis = len(manual_sweep_flags))
                         
                 if walks % 2 == 1:
                     back_and_forth_transposition(len(manual_sweep_flags))
@@ -9702,6 +9756,7 @@ class Sweeper_write(threading.Thread):
             if walks == 1:
                 self.__dict__[f'cur_manual_index{len(manual_sweep_flags) - 1}'] = 0
                 external_loop_single()
+                final_step(axis = len(manual_sweep_flags) - 1)
                 if len(manual_sweep_flags) == 3:
                     back_and_forth_transposition(len(manual_sweep_flags) - 1, False)
             
@@ -9709,6 +9764,7 @@ class Sweeper_write(threading.Thread):
                 for i in range(1, walks + 1):
                     self.__dict__[f'cur_manual_index{len(manual_sweep_flags) - 1}'] = 0
                     external_loop_single(round(2 * (i % 2) - 1))
+                    final_step(axis = len(manual_sweep_flags) - 1)
                     if globals()['snakemode_master_flag'] == True and len(manual_sweep_flags) == 3:
                         if i != walks and back_and_forth_slave != 1:
                             self.mapper3D.walks = 1
@@ -9730,9 +9786,6 @@ class Sweeper_write(threading.Thread):
                         elif i == walks and back_and_forth_slave != 1 and manual_sweep_flags[1] == 1:
                             self.cur_manual_index1 += 1
                     back_and_forth_transposition(len(manual_sweep_flags) - 1)
-                    #step(axis = len(manual_sweep_flags) - 1)
-                    if getattr(self, f'sweepable{len(manual_sweep_flags) - 1}') == True:
-                        step(axis = len(manual_sweep_flags) - 1)
                     
                 if walks % 2 == 1:
                     back_and_forth_transposition(len(manual_sweep_flags) - 1)
@@ -9802,15 +9855,14 @@ class Sweeper_write(threading.Thread):
             if walks == 1:
                 self.cur_manual_index1 = 0
                 master_loop_single()
+                final_step(axis = 1)
             
             elif walks > 1:
                 for i in range(1, walks + 1):
                     self.cur_manual_index1 = 0
                     master_loop_single(round(2 * (i % 2) - 1))
+                    final_step(axis = 1)
                     back_and_forth_transposition(1)
-                    #step(axis = 1)
-                    if self.sweepable1 == True:
-                        step(axis = 1)
                     
                 if back_and_forth_master % 2 == 1:
                     back_and_forth_transposition(1)
