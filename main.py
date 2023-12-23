@@ -145,6 +145,8 @@ uniform3D = True
 plot_flag = 'Plot'
 plot_err_msg = ''
 
+deli = '\t'
+
 #month_dictionary = {'01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr', '05': 'May', '06': 'Jun', 
 #                    '07': 'Jul', '08': 'Aug', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'}
 DAY = datetime.today().strftime('%d')
@@ -412,7 +414,7 @@ def plot_animation(i, n, filename):
     
         
     try:
-        data = pd.read_csv(filename)
+        data = pd.read_csv(filename, sep = deli)
         globals()[f'x{n}'] = data[columns[globals()[f'x{n}_status']]].values
         globals()[f'y{n}'] = data[columns[globals()[f'y{n}_status']]].values
     except Exception as e:
@@ -1392,6 +1394,7 @@ class SetGet(tk.Frame):
         global filename_setget
         global ind_setget
         global columns
+        global deli
         
         if self.ind_setget not in ind_setget:
             ind_setget.append(self.ind_setget)
@@ -1415,7 +1418,7 @@ class SetGet(tk.Frame):
         for parameter in self.list_to_read:
             columns.append(parameter)
         setget_data = pd.DataFrame(columns=columns)
-        setget_data.to_csv(filename_setget, index=False)
+        setget_data.to_csv(filename_setget, index=False, sep = deli)
         
         setget_flag = True
         
@@ -1482,9 +1485,10 @@ class SetGet(tk.Frame):
     def update_item(self, item):
         
         global filename_setget
+        global deli 
         
         try:
-            dataframe = pd.read_csv(filename_setget).tail(1).values.flatten()
+            dataframe = pd.read_csv(filename_setget, sep = deli, engine = 'python').tail(1).values.flatten()
             self.table_dataframe.item(item, values=tuple(dataframe))
             self.table_dataframe.after(250, self.update_item, item)
         except FileNotFoundError:
@@ -8159,9 +8163,6 @@ class Sweeper_write(threading.Thread):
         if self.sweepable1 == True and stepper_flag == False:
             self.nstep = 1
             
-        print(f'back_delay_factor1 = {back_delay_factor1}')
-        print(f'back_ratio_sweep1 = {back_ratio_sweep1}')
-        
         if self.sweeper_flag2 == True:
             self.device_to_sweep2 = device_to_sweep2
             self.parameter_to_sweep2 = parameter_to_sweep2
@@ -8576,6 +8577,7 @@ class Sweeper_write(threading.Thread):
             global setget_flag
             global filename_setget
             global pause_flag
+            global deli
             
             while setget_flag:
                 if not pause_flag:
@@ -8597,9 +8599,9 @@ class Sweeper_write(threading.Thread):
                             
                     time.sleep(0.2)
                         
-                    with open(filename_setget, 'a') as f_object:
+                    with open(filename_setget, 'a', newline = '') as f_object:
                         try:
-                            writer_object = writer(f_object)
+                            writer_object = writer(f_object, delimiter = deli)
                             writer_object.writerow(dataframe)
                             f_object.close()
                         except KeyboardInterrupt:
@@ -8646,12 +8648,13 @@ class Sweeper_write(threading.Thread):
             
             global dataframe
             global filename_sweep
+            global deli
             
             print('File rewrote')
             
-            with open(filename_sweep, 'a') as f_object:
+            with open(filename_sweep, 'a', newline='') as f_object:
                 try:
-                    writer_object = writer(f_object)
+                    writer_object = writer(f_object, delimiter = deli)
                     writer_object.writerow(dataframe)
                     f_object.close()
                 except KeyboardInterrupt:
@@ -9141,6 +9144,7 @@ class Sweeper_write(threading.Thread):
             global DAY
             global MONTH
             global YEAR
+            global deli
             global sweeper_flag1
             global sweeper_flag2
             global sweeper_flag3
@@ -9205,7 +9209,7 @@ class Sweeper_write(threading.Thread):
                     pass
             
             globals()['dataframe'] = pd.DataFrame(columns=self.columns)
-            globals()['dataframe'].to_csv(filename_sweep, index=False)
+            globals()['dataframe'].to_csv(filename_sweep, index=False, sep = deli)
             
             print('Filename updated')
         
@@ -9388,7 +9392,7 @@ class Sweeper_write(threading.Thread):
             if not getattr(self, f'sweepable{axis}') and manual_sweep_flags[int(axis) - 1] == 0:
             
                 if hasattr(device_to_sweep, parameter_to_sweep):
-                    current = getattr(device_to_sweep, parameter_to_sweep)
+                    current = getattr(device_to_sweep, parameter_to_sweep)()
                     
                     if hasattr(device_to_sweep, 'eps') == True:
                         eps = device_to_sweep.eps[device_to_sweep.set_options.index(parameter_to_sweep)]
@@ -9449,6 +9453,8 @@ class Sweeper_write(threading.Thread):
             else:
                 raise Exception('manual_sweep_flag is not correct, needs 0 or 1, but got ', manual_sweep_flags[len(manual_sweep_flags) - 1])
             
+            final_step(axis = len(manual_sweep_flags))
+            
             if len(manual_sweep_flags) == 2:
                 self.mapper2D.add_sub_slave()
             elif len(manual_sweep_flags) == 3 and self.condition_status == 'yx':
@@ -9471,7 +9477,6 @@ class Sweeper_write(threading.Thread):
                 self.inner_count = 1
                 self.__dict__[f'cur_manual_index{len(manual_sweep_flags)}'] = 0
                 inner_loop_single()
-                final_step(axis = len(manual_sweep_flags))
                 globals()['Sweeper_object'].__dict__[f'cur_walk{len(manual_sweep_flags)}'] += 1
                 if len(manual_sweep_flags) != 1:
                     back_and_forth_transposition(len(manual_sweep_flags), False)
@@ -9481,7 +9486,6 @@ class Sweeper_write(threading.Thread):
                     self.inner_count = 1
                     self.__dict__[f'cur_manual_index{len(manual_sweep_flags)}'] = 0
                     inner_loop_single(direction = round(2 * (i % 2) - 1))
-                    final_step(axis = len(manual_sweep_flags))
                     globals()['Sweeper_object'].__dict__[f'cur_walk{len(manual_sweep_flags)}'] += 1
                     if globals()['snakemode_master_flag'] == True and len(manual_sweep_flags) == 2:
                         if i != walks and back_and_forth_slave != 1:
@@ -9624,9 +9628,7 @@ class Sweeper_write(threading.Thread):
                             globals()['Sweeper_object'].cur_walk1 += 1
                             
                     back_and_forth_transposition(len(manual_sweep_flags))
-                    #double_step()
-                    #double_step()
-                        
+                    
                 if walks % 2 == 1:
                     back_and_forth_transposition(len(manual_sweep_flags))
                     
@@ -9690,6 +9692,7 @@ class Sweeper_write(threading.Thread):
                 
                     inner_loop_back_and_forth()
                     update_filename()
+                    final_step(axis = len(manual_sweep_flags) - 1)
                     
             elif manual_sweep_flags[-2] == 1:
                 data_middle = pd.read_csv(manual_filenames[-2]).values.reshape(-1)
@@ -9756,7 +9759,6 @@ class Sweeper_write(threading.Thread):
             if walks == 1:
                 self.__dict__[f'cur_manual_index{len(manual_sweep_flags) - 1}'] = 0
                 external_loop_single()
-                final_step(axis = len(manual_sweep_flags) - 1)
                 if len(manual_sweep_flags) == 3:
                     back_and_forth_transposition(len(manual_sweep_flags) - 1, False)
             
@@ -9764,7 +9766,6 @@ class Sweeper_write(threading.Thread):
                 for i in range(1, walks + 1):
                     self.__dict__[f'cur_manual_index{len(manual_sweep_flags) - 1}'] = 0
                     external_loop_single(round(2 * (i % 2) - 1))
-                    final_step(axis = len(manual_sweep_flags) - 1)
                     if globals()['snakemode_master_flag'] == True and len(manual_sweep_flags) == 3:
                         if i != walks and back_and_forth_slave != 1:
                             self.mapper3D.walks = 1
@@ -11076,13 +11077,15 @@ class Graph():
         
         
     def update_item(self, item):
+        global deli
+        
         name = self.filename
         
         if not 'setget' in self.filename:
             name = globals()['filename_sweep']
 
         try:
-            dataframe = pd.read_csv(name).tail(1).values.flatten()
+            dataframe = pd.read_csv(name, delimiter = deli, engine='python').tail(1).values.flatten()
             
             for ind, value in enumerate(dataframe):
                 try:
