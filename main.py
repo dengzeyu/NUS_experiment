@@ -9692,7 +9692,7 @@ class Sweeper_write(threading.Thread):
                 
                     inner_loop_back_and_forth()
                     update_filename()
-                    final_step(axis = len(manual_sweep_flags) - 1)
+                final_step(axis = len(manual_sweep_flags) - 1)
                     
             elif manual_sweep_flags[-2] == 1:
                 data_middle = pd.read_csv(manual_filenames[-2]).values.reshape(-1)
@@ -9815,6 +9815,7 @@ class Sweeper_write(threading.Thread):
                     globals()['dataframe_after'] = [*globals()['dataframe']]
                     external_loop_back_and_forth()
                     update_filename()
+                final_step(axis = 1)
             elif manual_sweep_flags[0] == 1:
                 data_external = pd.read_csv(manual_filenames[0]).values.reshape(-1)
                 for i, value in enumerate(data_external[::direction]):
@@ -9856,13 +9857,11 @@ class Sweeper_write(threading.Thread):
             if walks == 1:
                 self.cur_manual_index1 = 0
                 master_loop_single()
-                final_step(axis = 1)
             
             elif walks > 1:
                 for i in range(1, walks + 1):
                     self.cur_manual_index1 = 0
                     master_loop_single(round(2 * (i % 2) - 1))
-                    final_step(axis = 1)
                     back_and_forth_transposition(1)
                     
                 if back_and_forth_master % 2 == 1:
