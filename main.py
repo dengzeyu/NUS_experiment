@@ -89,7 +89,7 @@ matplotlib.use("Agg")
 plt.rcParams['animation.html'] = 'jshtml'
 LARGE_FONT = ('Verdana', 12)
 SUPER_LARGE = ('Verdana', 16)
-style.use('seaborn-whitegrid')
+style.use('seaborn-v0_8-whitegrid')
 
 # Check if everything connected properly
 rm = visa.ResourceManager()
@@ -4982,26 +4982,26 @@ class Sweeper2d(tk.Frame):
         self.start_sweep_flag = True
 
         if self.status_manual1.get() == 0:
-
+    
             try:
                 self.from_sweep1 = float(self.entry_from1.get())
                 from_sweep1 = self.from_sweep1
             except:
-                messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from1.get()} to float')
+                messagebox.showerror('Invalid value in "From 1" entrybox', f'Can not convert {self.entry_from1.get()} to float')
                 self.start_sweep_flag = False
                 
             try:
                 self.to_sweep1 = float(self.entry_to1.get())
                 to_sweep1 = self.to_sweep1
             except:
-                messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to1.get()} to float')
+                messagebox.showerror('Invalid value in "To 1" entrybox', f'Can not convert {self.entry_to1.get()} to float')
                 self.start_sweep_flag = False
         
         try:
             self.delay_factor1 = float(self.entry_delay_factor1.get())
             delay_factor1 = self.delay_factor1
         except:
-            messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delay_factor1.get()} to float')
+            messagebox.showerror('Invalid value in "Delay factor 1" entrybox', f'Can not convert {self.entry_delaty_factor1.get()} to float')
             self.start_sweep_flag = False
         
         if self.status_manual1.get() == 0:
@@ -5010,7 +5010,7 @@ class Sweeper2d(tk.Frame):
                 self.ratio_sweep1 = float(self.entry_ratio1.get())
                 
                 if self.back_ratio1_init == '':
-                    back_ratio_sweep1 = ratio_sweep1
+                    back_ratio_sweep1 = self.ratio_sweep1
                 else:
                     try:
                         back_ratio_sweep1 = float(self.back_ratio1_init)
@@ -5039,30 +5039,30 @@ class Sweeper2d(tk.Frame):
                     back_ratio_sweep1 = - back_ratio_sweep1
                 
             except:
-                messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio1.get()} to float')
+                messagebox.showerror('Invalid value in "ratio1" entrybox', f'Can not convert {self.entry_ratio1.get()} to float')
                 self.start_sweep_flag = False
             
         if self.status_manual2.get() == 0:
-            
+    
             try:
                 self.from_sweep2 = float(self.entry_from2.get())
                 from_sweep2 = self.from_sweep2
             except:
-                messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from2.get()} to float')
+                messagebox.showerror('Invalid value in "From 2" entrybox', f'Can not convert {self.entry_from2.get()} to float')
                 self.start_sweep_flag = False
                 
             try:
                 self.to_sweep2 = float(self.entry_to2.get())
                 to_sweep2 = self.to_sweep2
             except:
-                messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to2.get()} to float')
+                messagebox.showerror('Invalid value in "To 2" entrybox', f'Can not convert {self.entry_to2.get()} to float')
                 self.start_sweep_flag = False
         
         try:
             self.delay_factor2 = float(self.entry_delay_factor2.get())
             delay_factor2 = self.delay_factor2
         except:
-            messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delay_factor2.get()} to float')
+            messagebox.showerror('Invalid value in "Delay factor 2" entrybox', f'Can not convert {self.entry_delaty_factor2.get()} to float')
             self.start_sweep_flag = False
         
         if self.status_manual2.get() == 0:
@@ -5071,7 +5071,7 @@ class Sweeper2d(tk.Frame):
                 self.ratio_sweep2 = float(self.entry_ratio2.get())
                 
                 if self.back_ratio2_init == '':
-                    back_ratio_sweep2 = ratio_sweep2
+                    back_ratio_sweep2 = self.ratio_sweep2
                 else:
                     try:
                         back_ratio_sweep2 = float(self.back_ratio2_init)
@@ -5093,14 +5093,14 @@ class Sweeper2d(tk.Frame):
                     except:
                         messagebox.showerror('Invalid value in "back_delay_factor2" entrybox', f'Can not convert {self.back_delay_factor2_init} to float')
                         self.start_sweep_flag = False
-                        
+                
                 if self.count_option2 == 'step':
                     back_ratio_sweep2 = back_ratio_sweep2 / back_delay_factor2
                 if back_ratio_sweep2 * ratio_sweep2 > 0:
                     back_ratio_sweep2 = - back_ratio_sweep2
                 
             except:
-                messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio2.get()} to float')
+                messagebox.showerror('Invalid value in "ratio 2" entrybox', f'Can not convert {self.entry_ratio2.get()} to float')
                 self.start_sweep_flag = False
 
         def get_key(val, my_dict):
@@ -7827,36 +7827,36 @@ class Sweeper3d(tk.Frame):
         
         self.start_sweep_flag = True
 
-        if self.status_manual1.get() == 0:    
-
+        if self.status_manual1.get() == 0:
+    
             try:
                 self.from_sweep1 = float(self.entry_from1.get())
                 from_sweep1 = self.from_sweep1
             except:
-                messagebox.showerror('Invalid value in "From1" entrybox', f'Can not convert {self.entry_from1.get()} to float')
+                messagebox.showerror('Invalid value in "From 1" entrybox', f'Can not convert {self.entry_from1.get()} to float')
                 self.start_sweep_flag = False
                 
             try:
                 self.to_sweep1 = float(self.entry_to1.get())
                 to_sweep1 = self.to_sweep1
             except:
-                messagebox.showerror('Invalid value in "To1" entrybox', f'Can not convert {self.entry_to1.get()} to float')
+                messagebox.showerror('Invalid value in "To 1" entrybox', f'Can not convert {self.entry_to1.get()} to float')
                 self.start_sweep_flag = False
         
         try:
             self.delay_factor1 = float(self.entry_delay_factor1.get())
             delay_factor1 = self.delay_factor1
         except:
-            messagebox.showerror('Invalid value in "Delay factor1" entrybox', f'Can not convert {self.entry_delay_factor1.get()} to float')
+            messagebox.showerror('Invalid value in "Delay factor 1" entrybox', f'Can not convert {self.entry_delaty_factor1.get()} to float')
             self.start_sweep_flag = False
         
-        if self.status_manual1.get() == 0:  
+        if self.status_manual1.get() == 0:
         
             try:
                 self.ratio_sweep1 = float(self.entry_ratio1.get())
                 
                 if self.back_ratio1_init == '':
-                    back_ratio_sweep1 = ratio_sweep1
+                    back_ratio_sweep1 = self.ratio_sweep1
                 else:
                     try:
                         back_ratio_sweep1 = float(self.back_ratio1_init)
@@ -7869,7 +7869,7 @@ class Sweeper3d(tk.Frame):
                 if self.from_sweep1 > self.to_sweep1 and self.ratio_sweep1 > 0:
                     self.ratio_sweep1 = - self.ratio_sweep1
                 ratio_sweep1 = self.ratio_sweep1
-                        
+                
                 if self.back_delay_factor1_init == '':
                     back_delay_factor1 = delay_factor1
                 else:
@@ -7885,39 +7885,39 @@ class Sweeper3d(tk.Frame):
                     back_ratio_sweep1 = - back_ratio_sweep1
                 
             except:
-                messagebox.showerror('Invalid value in "Ratio1" entrybox', f'Can not convert {self.entry_ratio1.get()} to float')
+                messagebox.showerror('Invalid value in "ratio1" entrybox', f'Can not convert {self.entry_ratio1.get()} to float')
                 self.start_sweep_flag = False
             
-        if self.status_manual2.get() == 0:  
-            
+        if self.status_manual2.get() == 0:
+    
             try:
                 self.from_sweep2 = float(self.entry_from2.get())
                 from_sweep2 = self.from_sweep2
             except:
-                messagebox.showerror('Invalid value in "From2" entrybox', f'Can not convert {self.entry_from2.get()} to float')
+                messagebox.showerror('Invalid value in "From 2" entrybox', f'Can not convert {self.entry_from2.get()} to float')
                 self.start_sweep_flag = False
                 
             try:
                 self.to_sweep2 = float(self.entry_to2.get())
                 to_sweep2 = self.to_sweep2
             except:
-                messagebox.showerror('Invalid value in "To2" entrybox', f'Can not convert {self.entry_to2.get()} to float')
+                messagebox.showerror('Invalid value in "To 2" entrybox', f'Can not convert {self.entry_to2.get()} to float')
                 self.start_sweep_flag = False
         
         try:
             self.delay_factor2 = float(self.entry_delay_factor2.get())
             delay_factor2 = self.delay_factor2
         except:
-            messagebox.showerror('Invalid value in "Delay factor2" entrybox', f'Can not convert {self.entry_delay_factor2.get()} to float')
+            messagebox.showerror('Invalid value in "Delay factor 2" entrybox', f'Can not convert {self.entry_delaty_factor2.get()} to float')
             self.start_sweep_flag = False
         
-        if self.status_manual2.get() == 0:  
+        if self.status_manual2.get() == 0:
         
             try:
                 self.ratio_sweep2 = float(self.entry_ratio2.get())
                 
                 if self.back_ratio2_init == '':
-                    back_ratio_sweep2 = ratio_sweep2
+                    back_ratio_sweep2 = self.ratio_sweep2
                 else:
                     try:
                         back_ratio_sweep2 = float(self.back_ratio2_init)
@@ -7946,7 +7946,7 @@ class Sweeper3d(tk.Frame):
                     back_ratio_sweep2 = - back_ratio_sweep2
                 
             except:
-                messagebox.showerror('Invalid value in "Ratio2" entrybox', f'Can not convert {self.entry_ratio2.get()} to float')
+                messagebox.showerror('Invalid value in "ratio 2" entrybox', f'Can not convert {self.entry_ratio2.get()} to float')
                 self.start_sweep_flag = False
                 
         if self.status_manual3.get() == 0:  
@@ -8319,6 +8319,13 @@ class Sweeper_write(threading.Thread):
             self.back_step1 = float(back_delay_factor1) * float(back_ratio_sweep1)
             self.back_step2 = float(back_delay_factor2) * float(back_ratio_sweep2)
             
+            print(f'Step1 = {self.step1}')
+            print(f'Back step1 = {self.back_step1}')
+            print(f'Step2 = {self.step2}')
+            print(f'Back step2 = {self.back_step2}')
+            print(f'Step3 = {self.step3}')
+            print(f'Back step3 = {self.back_step3}')
+            
             try:
                 self.nstep1 = (float(to_sweep1) - float(from_sweep1)) / self.ratio_sweep1 / self.delay_factor1
                 self.nstep1 = int(abs(self.nstep1))
@@ -8639,7 +8646,11 @@ class Sweeper_write(threading.Thread):
                         self.mapper3D.append_parameter(str(parameter), parameter_value)
                     dataframe.append(parameter_value)
                 except:
-                    dataframe.append(None)
+                    if len(manual_sweep_flags) == 2 or (len(manual_sweep_flags) == 3 and self.condition_status != 'unknown'):
+                        self.mapper2D.append_parameter(str(parameter), np.nan)
+                    if len(manual_sweep_flags) == 3:
+                        self.mapper3D.append_parameter(str(parameter), np.nan)
+                    dataframe.append(np.nan)
         
             data = dataframe.copy()
         
@@ -9340,6 +9351,7 @@ class Sweeper_write(threading.Thread):
                     if self.sweepable2 == True:
                         self.mapper2D.append_slave(value = self.current_value)
                     else:
+                        
                         self.mapper2D.append_slave(value = self.value2)
                     step(2, value2)
                     append_read_parameters()
