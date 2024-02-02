@@ -90,7 +90,7 @@ matplotlib.use("Agg")
 plt.rcParams['animation.html'] = 'jshtml'
 LARGE_FONT = ('Verdana', 12)
 SUPER_LARGE = ('Verdana', 16)
-style.use('seaborn-whitegrid')
+style.use('seaborn-v0_8-whitegrid')
 
 # Check if everything connected properly
 rm = visa.ResourceManager()
@@ -890,8 +890,11 @@ class SetGet(tk.Frame):
             self, text='📊', font = SUPER_LARGE, command = self.open_graph)
         button_open_graph.place(relx = 0.85, rely = 0.6)
         
-        button_get = tk.Button(self, text = 'Get!', command = self.get_read_parameters)
-        button_get.place(relx = 0.9, rely = 0.45)
+        self.button_get = tk.Button(self, text = 'Get!', command = self.check_get_mode)
+        self.button_get.bind('<Button-3>', self.change_button_get)
+        self.button_get.place(relx = 0.9, rely = 0.45)
+        CreateToolTip(self.button_get, 'Right click to switch modes')
+        
         
         idx = len(filename_setget) - filename_setget[::-1].index('-') - 1
         self.ind_setget = int(filename_setget[idx + 1:-4])
@@ -905,6 +908,16 @@ class SetGet(tk.Frame):
         
         controller.show_frame(StartPage)
             
+    def change_button_get(self, event):
+        global setget_flag
+        global pause_flag
+        
+        if self.button_get['text'] == 'Get!' and not setget_flag and not pause_flag:
+            self.button_get['text'] = 'Append line!'
+        elif self.button_get['text'] == 'Append line!':
+            self.ind_setget += 1
+            self.button_get['text'] = 'Get!'
+        
     def update_sweep_parameters1(self, event, interval=100):
         global types_of_devices
         global list_of_devices
@@ -1382,6 +1395,12 @@ class SetGet(tk.Frame):
         self.dict_num_heading[self.current_heading] = self.num_tw
         self.num_tw += 1
           
+    def check_get_mode(self):
+        if self.button_get['text'] == 'Get!':
+            self.get_read_parameters()
+        elif self.button_get['text'] == 'Append line!':
+            self.append_read_parameters()
+        
     def get_read_parameters(self):
         global setget_flag
         global filename_setget
@@ -1474,7 +1493,114 @@ class SetGet(tk.Frame):
             self.scrollbar_table.config(command=self.table_dataframe.xview)
             self.table_dataframe.config(xscrollcommand=self.scrollbar_table.set)
             
-    
+    def append_read_parameters(self):
+        
+        global setget_flag
+        global filename_setget
+        global ind_setget
+        global columns
+        global deli
+        
+        filename_setget = os.path.join(cur_dir, 'data_files', f'setget_{YEAR}{MONTH}{DAY}-{self.ind_setget}.csv')
+
+        def get_key(val, my_dict):
+            for key, value in my_dict.items():
+                if val == value:
+                    return key
+        
+        self.list_to_read = []
+        # asking multichoise to get parameters to read
+        selection = self.lstbox_to_read.curselection()
+        for i in selection:
+            entrada = self.lstbox_to_read.get(i)
+            self.list_to_read.append(get_key(entrada, self.dict_lstbox))
+        globals()['parameters_to_read'] = self.list_to_read
+        
+        if not exists(filename_setget):
+            columns = ['Time']
+            for parameter in self.list_to_read:
+                columns.append(parameter)
+            setget_data = pd.DataFrame(columns=columns)
+            setget_data.to_csv(filename_setget, index=False, sep = deli)
+        
+        dataframe = []
+        dataframe.append(round(time.perf_counter() - zero_time, 2))
+        
+        for parameter in globals()['parameters_to_read']:
+            index_dot = len(parameter) - parameter[::-1].find('.') - 1
+            adress = parameter[:index_dot]
+            option = parameter[index_dot + 1:]
+            try:
+                parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
+                                          option)()
+                dataframe.append(parameter_value)
+            except Exception as e:
+                print(f'Exception happened in setget_write: {e}')
+                dataframe.append(None)
+                return
+        time.sleep(0.2)
+            
+        with open(filename_setget, 'a', newline='') as f_object:
+            try:
+                writer_object = writer(f_object, delimiter = deli)
+                writer_object.writerow(dataframe)
+                f_object.close()
+            except KeyboardInterrupt:
+                f_object.close()
+            except Exception as e:
+                print(f'Exception happened in setget_write append: {e}')
+            finally:
+                f_object.close()
+        
+        if not hasattr(self, 'table_dataframe'):
+            self.table_dataframe = ttk.Treeview(self, columns = columns, show = 'headings', height = 1)
+            self.table_dataframe.place(relx = 0.28, rely = 0.76, relwidth = 0.65)
+            
+            self.initial_value = []
+            
+            for ind, heading in enumerate(columns):
+                self.table_dataframe.heading(ind, text = heading)
+                self.table_dataframe.column(ind, anchor=tk.CENTER, stretch=tk.YES, width=120)
+                self.initial_value.append(heading)
+                    
+            self.table_dataframe.insert('', tk.END, 'Current dataframe', text = 'Current dataframe', values = self.initial_value)
+            
+            self.update_item('Current dataframe')
+            
+            self.scrollbar_table = tk.Scrollbar(self, orient = 'horizontal')
+            self.scrollbar_table.place(relx = 0.28, rely = 0.82, relwidth = 0.65)
+            
+            self.scrollbar_table.config(command=self.table_dataframe.xview)
+            self.table_dataframe.config(xscrollcommand=self.scrollbar_table.set)
+            
+            self.num_tw = 1
+        
+        else:
+            self.table_dataframe.destroy()
+            self.scrollbar_table.destroy()
+            setget_flag = False
+            time.sleep(0.11)
+            setget_flag = True
+            self.table_dataframe = ttk.Treeview(self, columns = columns, show = 'headings', height = 1)
+            self.table_dataframe.place(relx = 0.28, rely = 0.76, relwidth = 0.65)
+            
+            self.initial_value = []
+            
+            for ind, heading in enumerate(columns):
+                self.table_dataframe.heading(ind, text = heading)
+                self.table_dataframe.column(ind,anchor=tk.CENTER, stretch=tk.YES, width=120)
+                self.initial_value.append(heading)
+                    
+            self.table_dataframe.insert('', tk.END, 'Current dataframe', text = 'Current dataframe', values = self.initial_value)
+            
+            self.update_item('Current dataframe')
+            
+            self.scrollbar_table = tk.Scrollbar(self, orient = 'horizontal')
+            self.scrollbar_table.place(relx = 0.28, rely = 0.82, relwidth = 0.65)
+            
+            self.scrollbar_table.config(command=self.table_dataframe.xview)
+            self.table_dataframe.config(xscrollcommand=self.scrollbar_table.set)
+        
     def update_item(self, item):
         
         global filename_setget
