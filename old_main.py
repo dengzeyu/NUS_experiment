@@ -913,10 +913,14 @@ class SetGet(tk.Frame):
         global pause_flag
         
         if self.button_get['text'] == 'Get!' and not setget_flag and not pause_flag:
-            self.button_get['text'] = 'Append line!'
+            answer = messagebox.askyesnocancel('Mode change', 'Are you sure you want to change the measurement mode to "Append"?\n This would change the current datafile.')
+            if answer:
+                self.button_get['text'] = 'Append line!'
         elif self.button_get['text'] == 'Append line!':
-            self.ind_setget += 1
-            self.button_get['text'] = 'Get!'
+            answer = messagebox.askyesnocancel('Mode change', 'Are you sure you want to change the measurement mode to "Get"?\n This would change the current datafile.')
+            if answer:
+                self.ind_setget += 1
+                self.button_get['text'] = 'Get!'
         
     def update_sweep_parameters1(self, event, interval=100):
         global types_of_devices
