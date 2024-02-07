@@ -809,7 +809,7 @@ class SetGet(tk.Frame):
                                  command=lambda: self.go_home(controller))
         button_home.pack()
         
-        button_set_all = tk.Button(self, text = 'Set all', command = lambda: self.set_all())
+        button_set_all = tk.Button(self, text = 'Set all', command = self.set_all)
         button_set_all.pack()
         
         for i in range (1, self.num_widgets + 1):
@@ -895,11 +895,20 @@ class SetGet(tk.Frame):
         self.button_get.place(relx = 0.9, rely = 0.45)
         CreateToolTip(self.button_get, 'Right click to switch modes')
         
+        self.entry_filename = tk.Entry(self)
+        self.entry_filename.insert(0, filename_setget)
+        self.entry_filename.place(relx = 0.65, rely = 0.7, width = 600)
+        self.entry_filename.config(state=tk.DISABLED)
         
         idx = len(filename_setget) - filename_setget[::-1].index('-') - 1
         self.ind_setget = int(filename_setget[idx + 1:-4])
         
         self.thread_n = 0
+        
+    def pause(self):
+        global pause_flag
+        
+        pause_flag = not pause_flag
         
     def go_home(self, controller):
         global setget_flag
@@ -911,16 +920,29 @@ class SetGet(tk.Frame):
     def change_button_get(self, event):
         global setget_flag
         global pause_flag
+        global ind_setget
+        global filename_setget
         
         if self.button_get['text'] == 'Get!' and not setget_flag and not pause_flag:
             answer = messagebox.askyesnocancel('Mode change', 'Are you sure you want to change the measurement mode to "Append"?\n This would change the current datafile.')
             if answer:
                 self.button_get['text'] = 'Append line!'
+                self.entry_filename.config(state='normal')
+                self.ind_setget += 1
+                ind_setget.append(self.ind_setget)
+                filename_setget = os.path.join(cur_dir, 'data_files', f'setget_{YEAR}{MONTH}{DAY}-{self.ind_setget}.csv')
+                self.entry_filename.delete(0, tk.END)
+                self.entry_filename.insert(0, filename_setget)
         elif self.button_get['text'] == 'Append line!':
             answer = messagebox.askyesnocancel('Mode change', 'Are you sure you want to change the measurement mode to "Get"?\n This would change the current datafile.')
             if answer:
-                self.ind_setget += 1
                 self.button_get['text'] = 'Get!'
+                self.ind_setget += 1
+                ind_setget.append(self.ind_setget)
+                filename_setget = os.path.join(cur_dir, 'data_files', f'setget_{YEAR}{MONTH}{DAY}-{self.ind_setget}.csv')
+                self.entry_filename.delete(0, tk.END)
+                self.entry_filename.insert(0, filename_setget)
+                self.entry_filename.config(state=tk.DISABLED)
         
     def update_sweep_parameters1(self, event, interval=100):
         global types_of_devices
@@ -1349,6 +1371,8 @@ class SetGet(tk.Frame):
     def open_graph(self):
         
         global cur_animation_num
+        global x_current
+        global y_current
         
         def return_range(x, n):
             if x % n == 0:
@@ -1360,10 +1384,20 @@ class SetGet(tk.Frame):
         
         globals()[f'graph_object{globals()["cur_animation_num"]}'] = Graph(globals()['filename_setget'])
         for i in return_range(cur_animation_num, 3):
+            preset = pd.read_csv(globals()['graph_preset_path'], sep = ',')
+            preset = preset.fillna('')
+            x_current = int(preset[f'x{i + 1}_current'].values[0])
+            y_current = int(preset[f'y{i + 1}_current'].values[0])
             globals()[f'x{i + 1}'] = []
-            globals()[f'x{i + 1}_status'] = 0
+            if x_current < len(columns):
+                globals()[f'x{i + 1}_status'] = x_current
+            else:
+                globals()[f'x{i + 1}_status'] = 0
             globals()[f'y{i + 1}'] = []
-            globals()[f'y{i + 1}_status'] = 0
+            if y_current < len(columns):
+                globals()[f'y{i + 1}_status'] = y_current
+            else:
+                globals()[f'y{i + 1}_status'] = 0
             globals()[f'ani{i+1}'] = StartAnimation
             globals()[f'ani{i+1}'].start(globals()['filename_setget'])
 
@@ -1412,10 +1446,7 @@ class SetGet(tk.Frame):
         global columns
         global deli
         
-        if self.ind_setget not in ind_setget:
-            ind_setget.append(self.ind_setget)
-            filename_setget = os.path.join(cur_dir, 'data_files', f'setget_{YEAR}{MONTH}{DAY}-{self.ind_setget}.csv')
-            self.ind_setget += 1
+        filename_setget = self.entry_filename.get()
 
         def get_key(val, my_dict):
             for key, value in my_dict.items():
@@ -1505,8 +1536,8 @@ class SetGet(tk.Frame):
         global columns
         global deli
         
-        filename_setget = os.path.join(cur_dir, 'data_files', f'setget_{YEAR}{MONTH}{DAY}-{self.ind_setget}.csv')
-
+        filename_setget = self.entry_filename.get()
+        
         def get_key(val, my_dict):
             for key, value in my_dict.items():
                 if val == value:
@@ -1526,7 +1557,23 @@ class SetGet(tk.Frame):
                 columns.append(parameter)
             setget_data = pd.DataFrame(columns=columns)
             setget_data.to_csv(filename_setget, index=False, sep = deli)
-        
+        else:
+            existing_columns = list(pd.read_csv(filename_setget).columns)
+            columns = ['Time']
+            for parameter in self.list_to_read:
+                columns.append(parameter)
+            if existing_columns != columns:
+                answer = messagebox.askyesnocancel('Coulmns matching conflict', f'The file you trying to append contains the following columns\n {list(existing_columns)}\n The current selection is\n {columns}\n Append to a separate file?')
+                if answer:
+                    self.ind_setget += 1
+                    ind_setget.append(self.ind_setget)
+                    self.ind_setget = np.max(ind_setget)
+                    filename_setget = os.path.join(cur_dir, 'data_files', f'setget_{YEAR}{MONTH}{DAY}-{self.ind_setget}.csv')
+                    self.entry_filename.delete(0, tk.END)
+                    self.entry_filename.insert(0, filename_setget)
+                    setget_data = pd.DataFrame(columns=columns)
+                    setget_data.to_csv(filename_setget, index=False, sep = deli)
+                    
         dataframe = []
         dataframe.append(round(time.perf_counter() - zero_time, 2))
         
@@ -8199,35 +8246,38 @@ class Sweeper_write(threading.Thread):
             global pause_flag
             global deli
             
-            while setget_flag and not pause_flag:
-                dataframe = []
-                dataframe.append(round(time.perf_counter() - zero_time, 2))
-                
-                for parameter in self.parameters_to_read:
-                    index_dot = len(parameter) - parameter[::-1].find('.') - 1
-                    adress = parameter[:index_dot]
-                    option = parameter[index_dot + 1:]
-                    try:
-                        parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
-                                                  option)()
-                        dataframe.append(parameter_value)
-                    except Exception as e:
-                        print(f'Exception happened in setget_write: {e}')
-                        dataframe.append(None)
-                        return
-                time.sleep(0.2)
+            while setget_flag:
+                if not pause_flag:
+                    dataframe = []
+                    dataframe.append(round(time.perf_counter() - zero_time, 2))
                     
-                with open(filename_setget, 'a', newline='') as f_object:
-                    try:
-                        writer_object = writer(f_object, delimiter = deli)
-                        writer_object.writerow(dataframe)
-                        f_object.close()
-                    except KeyboardInterrupt:
-                        f_object.close()
-                    except Exception as e:
-                        print(f'Exception happened in setget_write append: {e}')
-                    finally:
-                        f_object.close()
+                    for parameter in self.parameters_to_read:
+                        index_dot = len(parameter) - parameter[::-1].find('.') - 1
+                        adress = parameter[:index_dot]
+                        option = parameter[index_dot + 1:]
+                        try:
+                            parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
+                                                      option)()
+                            dataframe.append(parameter_value)
+                        except Exception as e:
+                            print(f'Exception happened in setget_write: {e}')
+                            dataframe.append(None)
+                            return
+                    time.sleep(0.2)
+                        
+                    with open(filename_setget, 'a', newline='') as f_object:
+                        try:
+                            writer_object = writer(f_object, delimiter = deli)
+                            writer_object.writerow(dataframe)
+                            f_object.close()
+                        except KeyboardInterrupt:
+                            f_object.close()
+                        except Exception as e:
+                            print(f'Exception happened in setget_write append: {e}')
+                        finally:
+                            f_object.close()
+                else:
+                    time.sleep(0.2)
         
         def append_read_parameters():
             '''appends dataframe with parameters to read'''
