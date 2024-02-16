@@ -145,7 +145,7 @@ uniform3D = True
 plot_flag = 'Plot'
 plot_err_msg = ''
 
-deli = '\t'
+deli = ','
 
 #month_dictionary = {'01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr', '05': 'May', '06': 'Jun', 
 #                    '07': 'Jul', '08': 'Aug', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'}
@@ -2725,6 +2725,7 @@ class Sweeper1d(tk.Frame):
         global sweeper_flag2
         global sweeper_flag3
         global stop_flag
+        global pause_flag
         global columns
         global script
         global manual_filenames
@@ -2834,6 +2835,7 @@ class Sweeper1d(tk.Frame):
 
         if self.start_sweep_flag:
             zero_time = time.perf_counter()
+            pause_flag = False
             stop_flag = False
             sweeper_flag1 = True
             sweeper_flag2 = False
@@ -4965,6 +4967,7 @@ class Sweeper2d(tk.Frame):
         global sweeper_flag2
         global sweeper_flag3
         global stop_flag
+        global pause_flag
         global condition
         global script
         global interpolated2D
@@ -5159,6 +5162,7 @@ class Sweeper2d(tk.Frame):
         if self.start_sweep_flag:
             zero_time = time.perf_counter()
             stop_flag = False
+            pause_flag = False
             sweeper_flag1 = False
             sweeper_flag2 = True
             sweeper_flag3 = False
@@ -7808,6 +7812,7 @@ class Sweeper3d(tk.Frame):
         global sweeper_flag2
         global sweeper_flag3
         global stop_flag
+        global pause_flag
         global condition
         global script
         global interpolated3D
@@ -8078,6 +8083,7 @@ class Sweeper3d(tk.Frame):
         if self.start_sweep_flag:
             zero_time = time.perf_counter()
             stop_flag = False
+            pause_flag = False
             sweeper_flag1 = False
             sweeper_flag2 = False
             sweeper_flag3 = True
@@ -8230,6 +8236,9 @@ class Sweeper_write(threading.Thread):
                 self.nstep1 = int(abs(self.nstep1))
             except ValueError:
                 self.nstep1 = 1
+                
+            globals()['from_sweep1'] -+ self.step1
+            globals()['to_sweep1'] += self.step1
         
         if self.sweeper_flag3 == True:
             self.device_to_sweep2 = device_to_sweep2
@@ -8327,6 +8336,11 @@ class Sweeper_write(threading.Thread):
                 
             if self.sweepable3 == True and stepper_flag == False:
                 self.nstep3 = 1
+                
+            globals()['from_sweep1'] -+ self.step1
+            globals()['to_sweep1'] += self.step1
+            globals()['from_sweep2'] -+ self.step2
+            globals()['to_sweep2'] += self.step2
             
         #print(f'Manual_sweep_flags are {manual_sweep_flags}\nrange1 = [{from_sweep1}:{to_sweep1}), ratio_sweep1 = {ratio_sweep1}\nrange2 = [{from_sweep2}:{to_sweep2}), ratio_sweep2 = {ratio_sweep2}\nrange3 = [{from_sweep3}:{to_sweep3}), ratio_sweep3 = {ratio_sweep3}')
 
@@ -9383,11 +9397,16 @@ class Sweeper_write(threading.Thread):
             print('Inner step was made')
             
         def final_step(axis):
+            global stop_flag 
+            
             axis = str(axis)
             
             device_to_sweep = globals()[f'device_to_sweep{axis}']
             parameter_to_sweep = globals()[f'parameter_to_sweep{axis}']
             to_sweep = globals()[f'to_sweep{axis}']
+            from_sweep = globals()[f'from_sweep{axis}']
+            
+            ax = None
             
             if not getattr(self, f'sweepable{axis}') and manual_sweep_flags[int(axis) - 1] == 0:
             
@@ -9403,8 +9422,12 @@ class Sweeper_write(threading.Thread):
                         if not abs(float(current) - float(to_sweep)) < eps:
                             if axis == '1':
                                 inner_step(value1 = to_sweep)
+                                if len(manual_sweep_flags) == 3 or len(manual_sweep_flags) == 2:
+                                    ax = axis
                             elif axis == '2':
                                 inner_step(value2 = to_sweep)
+                                if len(manual_sweep_flags) == 3:
+                                    ax = axis
                             elif axis == '3':
                                 inner_step(value3 = to_sweep)
                     except TypeError as ty:
@@ -9413,12 +9436,24 @@ class Sweeper_write(threading.Thread):
                 else:
                     if axis == '1':
                         inner_step(value1 = to_sweep)
+                        if len(manual_sweep_flags) == 3 or len(manual_sweep_flags) == 2:
+                            ax = axis
                     elif axis == '2':
                         inner_step(value2 = to_sweep)
+                        if len(manual_sweep_flags) == 3:
+                            ax = axis
                     elif axis == '3':
                         inner_step(value3 = to_sweep)
                 
                 self.__dict__[f'value{axis}'] = to_sweep
+            
+            elif getattr(self, f'sweepable{axis}') and manual_sweep_flags[int(axis) - 1] == 0:
+                self.__dict__[f'value{axis}'] = from_sweep
+                
+            print('Final step was made')
+            
+            return ax
+
                 
         def inner_loop_single(direction = 1):
             '''commits a walk through mater (for 1d), slave (for 2d) or slave-slave (for 3d) axis'''
@@ -9692,7 +9727,6 @@ class Sweeper_write(threading.Thread):
                 
                     inner_loop_back_and_forth()
                     update_filename()
-                final_step(axis = len(manual_sweep_flags) - 1)
                     
             elif manual_sweep_flags[-2] == 1:
                 data_middle = pd.read_csv(manual_filenames[-2]).values.reshape(-1)
@@ -9815,7 +9849,6 @@ class Sweeper_write(threading.Thread):
                     globals()['dataframe_after'] = [*globals()['dataframe']]
                     external_loop_back_and_forth()
                     update_filename()
-                final_step(axis = 1)
             elif manual_sweep_flags[0] == 1:
                 data_external = pd.read_csv(manual_filenames[0]).values.reshape(-1)
                 for i, value in enumerate(data_external[::direction]):
