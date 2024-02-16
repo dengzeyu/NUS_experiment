@@ -89,7 +89,7 @@ matplotlib.use("Agg")
 plt.rcParams['animation.html'] = 'jshtml'
 LARGE_FONT = ('Verdana', 12)
 SUPER_LARGE = ('Verdana', 16)
-style.use('seaborn-v0_8-whitegrid')
+style.use('seaborn-whitegrid')
 
 # Check if everything connected properly
 rm = visa.ResourceManager()
@@ -816,7 +816,7 @@ class SetGet(tk.Frame):
                                  command=lambda: self.go_home(controller))
         button_home.pack()
         
-        button_set_all = tk.Button(self, text = 'Set all', command = self.set_all)
+        button_set_all = tk.Button(self, text = 'Set all', command = lambda: self.set_all())
         button_set_all.pack()
         
         for i in range (1, self.num_widgets + 1):
@@ -897,25 +897,13 @@ class SetGet(tk.Frame):
             self, text='📊', font = SUPER_LARGE, command = self.open_graph)
         button_open_graph.place(relx = 0.85, rely = 0.6)
         
-        self.button_get = tk.Button(self, text = 'Get!', command = self.check_get_mode)
-        self.button_get.bind('<Button-3>', self.change_button_get)
-        self.button_get.place(relx = 0.9, rely = 0.45)
-        CreateToolTip(self.button_get, 'Right click to switch modes')
-        
-        self.entry_filename = tk.Entry(self)
-        self.entry_filename.insert(0, filename_setget)
-        self.entry_filename.place(relx = 0.65, rely = 0.7, width = 600)
-        self.entry_filename.config(state=tk.DISABLED)
+        button_get = tk.Button(self, text = 'Get!', command = self.get_read_parameters)
+        button_get.place(relx = 0.9, rely = 0.45)
         
         idx = len(filename_setget) - filename_setget[::-1].index('-') - 1
         self.ind_setget = int(filename_setget[idx + 1:-4])
         
         self.thread_n = 0
-        
-    def pause(self):
-        global pause_flag
-        
-        pause_flag = not pause_flag
         
     def go_home(self, controller):
         global setget_flag
@@ -924,33 +912,6 @@ class SetGet(tk.Frame):
         
         controller.show_frame(StartPage)
             
-    def change_button_get(self, event):
-        global setget_flag
-        global pause_flag
-        global ind_setget
-        global filename_setget
-        
-        if self.button_get['text'] == 'Get!' and not setget_flag and not pause_flag:
-            answer = messagebox.askyesnocancel('Mode change', 'Are you sure you want to change the measurement mode to "Append"?\n This would change the current datafile.')
-            if answer:
-                self.button_get['text'] = 'Append line!'
-                self.entry_filename.config(state='normal')
-                self.ind_setget += 1
-                ind_setget.append(self.ind_setget)
-                filename_setget = os.path.join(cur_dir, 'data_files', f'setget_{YEAR}{MONTH}{DAY}-{self.ind_setget}.csv')
-                self.entry_filename.delete(0, tk.END)
-                self.entry_filename.insert(0, filename_setget)
-        elif self.button_get['text'] == 'Append line!':
-            answer = messagebox.askyesnocancel('Mode change', 'Are you sure you want to change the measurement mode to "Get"?\n This would change the current datafile.')
-            if answer:
-                self.button_get['text'] = 'Get!'
-                self.ind_setget += 1
-                ind_setget.append(self.ind_setget)
-                filename_setget = os.path.join(cur_dir, 'data_files', f'setget_{YEAR}{MONTH}{DAY}-{self.ind_setget}.csv')
-                self.entry_filename.delete(0, tk.END)
-                self.entry_filename.insert(0, filename_setget)
-                self.entry_filename.config(state=tk.DISABLED)
-        
     def update_sweep_parameters1(self, event, interval=100):
         global types_of_devices
         global list_of_devices
@@ -995,7 +956,7 @@ class SetGet(tk.Frame):
         device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
-        value = float(self.__dict__[f'entry_set{i}'].get())
+        value = self.__dict__[f'entry_set{i}'].get()
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -1050,7 +1011,7 @@ class SetGet(tk.Frame):
         device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
-        value = float(self.__dict__[f'entry_set{i}'].get())
+        value = self.__dict__[f'entry_set{i}'].get()
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -1105,7 +1066,7 @@ class SetGet(tk.Frame):
         device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
-        value = float(self.__dict__[f'entry_set{i}'].get())
+        value = self.__dict__[f'entry_set{i}'].get()
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -1160,7 +1121,7 @@ class SetGet(tk.Frame):
         device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
-        value = float(self.__dict__[f'entry_set{i}'].get())
+        value = self.__dict__[f'entry_set{i}'].get()
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -1215,7 +1176,7 @@ class SetGet(tk.Frame):
         device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
-        value = float(self.__dict__[f'entry_set{i}'].get())
+        value = self.__dict__[f'entry_set{i}'].get()
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -1270,7 +1231,7 @@ class SetGet(tk.Frame):
         device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
-        value = float(self.__dict__[f'entry_set{i}'].get())
+        value = self.__dict__[f'entry_set{i}'].get()
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -1378,8 +1339,6 @@ class SetGet(tk.Frame):
     def open_graph(self):
         
         global cur_animation_num
-        global x_current
-        global y_current
         
         def return_range(x, n):
             if x % n == 0:
@@ -1391,20 +1350,10 @@ class SetGet(tk.Frame):
         
         globals()[f'graph_object{globals()["cur_animation_num"]}'] = Graph(globals()['filename_setget'])
         for i in return_range(cur_animation_num, 3):
-            preset = pd.read_csv(globals()['graph_preset_path'], sep = ',')
-            preset = preset.fillna('')
-            x_current = int(preset[f'x{i + 1}_current'].values[0])
-            y_current = int(preset[f'y{i + 1}_current'].values[0])
             globals()[f'x{i + 1}'] = []
-            if x_current < len(columns):
-                globals()[f'x{i + 1}_status'] = x_current
-            else:
-                globals()[f'x{i + 1}_status'] = 0
+            globals()[f'x{i + 1}_status'] = 0
             globals()[f'y{i + 1}'] = []
-            if y_current < len(columns):
-                globals()[f'y{i + 1}_status'] = y_current
-            else:
-                globals()[f'y{i + 1}_status'] = 0
+            globals()[f'y{i + 1}_status'] = 0
             globals()[f'ani{i+1}'] = StartAnimation
             globals()[f'ani{i+1}'].start(globals()['filename_setget'])
 
@@ -1440,12 +1389,6 @@ class SetGet(tk.Frame):
         self.dict_num_heading[self.current_heading] = self.num_tw
         self.num_tw += 1
           
-    def check_get_mode(self):
-        if self.button_get['text'] == 'Get!':
-            self.get_read_parameters()
-        elif self.button_get['text'] == 'Append line!':
-            self.append_read_parameters()
-        
     def get_read_parameters(self):
         global setget_flag
         global filename_setget
@@ -1453,7 +1396,10 @@ class SetGet(tk.Frame):
         global columns
         global deli
         
-        filename_setget = self.entry_filename.get()
+        if self.ind_setget not in ind_setget:
+            ind_setget.append(self.ind_setget)
+            filename_setget = os.path.join(cur_dir, 'data_files', f'setget_{YEAR}{MONTH}{DAY}-{self.ind_setget}.csv')
+            self.ind_setget += 1
 
         def get_key(val, my_dict):
             for key, value in my_dict.items():
@@ -1535,134 +1481,11 @@ class SetGet(tk.Frame):
             self.scrollbar_table.config(command=self.table_dataframe.xview)
             self.table_dataframe.config(xscrollcommand=self.scrollbar_table.set)
             
-    def append_read_parameters(self):
-        
-        global setget_flag
-        global filename_setget
-        global ind_setget
-        global columns
-        global deli
-        
-        filename_setget = self.entry_filename.get()
-        
-        def get_key(val, my_dict):
-            for key, value in my_dict.items():
-                if val == value:
-                    return key
-        
-        self.list_to_read = []
-        # asking multichoise to get parameters to read
-        selection = self.lstbox_to_read.curselection()
-        for i in selection:
-            entrada = self.lstbox_to_read.get(i)
-            self.list_to_read.append(get_key(entrada, self.dict_lstbox))
-        globals()['parameters_to_read'] = self.list_to_read
-        
-        if not exists(filename_setget):
-            columns = ['Time']
-            for parameter in self.list_to_read:
-                columns.append(parameter)
-            setget_data = pd.DataFrame(columns=columns)
-            setget_data.to_csv(filename_setget, index=False, sep = deli)
-        else:
-            existing_columns = list(pd.read_csv(filename_setget).columns)
-            columns = ['Time']
-            for parameter in self.list_to_read:
-                columns.append(parameter)
-            if existing_columns != columns:
-                answer = messagebox.askyesnocancel('Coulmns matching conflict', f'The file you trying to append contains the following columns\n {list(existing_columns)}\n The current selection is\n {columns}\n Append to a separate file?')
-                if answer:
-                    self.ind_setget += 1
-                    ind_setget.append(self.ind_setget)
-                    self.ind_setget = np.max(ind_setget)
-                    filename_setget = os.path.join(cur_dir, 'data_files', f'setget_{YEAR}{MONTH}{DAY}-{self.ind_setget}.csv')
-                    self.entry_filename.delete(0, tk.END)
-                    self.entry_filename.insert(0, filename_setget)
-                    setget_data = pd.DataFrame(columns=columns)
-                    setget_data.to_csv(filename_setget, index=False, sep = deli)
-                    
-        dataframe = []
-        dataframe.append(round(time.perf_counter() - zero_time, 2))
-        
-        for parameter in globals()['parameters_to_read']:
-            index_dot = len(parameter) - parameter[::-1].find('.') - 1
-            adress = parameter[:index_dot]
-            option = parameter[index_dot + 1:]
-            try:
-                parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
-                                          option)()
-                dataframe.append(parameter_value)
-            except Exception as e:
-                print(f'Exception happened in setget_write: {e}')
-                dataframe.append(None)
-                return
-        time.sleep(0.2)
-            
-        with open(filename_setget, 'a', newline='') as f_object:
-            try:
-                writer_object = writer(f_object, delimiter = deli)
-                writer_object.writerow(dataframe)
-                f_object.close()
-            except KeyboardInterrupt:
-                f_object.close()
-            except Exception as e:
-                print(f'Exception happened in setget_write append: {e}')
-            finally:
-                f_object.close()
-        
-        if not hasattr(self, 'table_dataframe'):
-            self.table_dataframe = ttk.Treeview(self, columns = columns, show = 'headings', height = 1)
-            self.table_dataframe.place(relx = 0.28, rely = 0.76, relwidth = 0.65)
-            
-            self.initial_value = []
-            
-            for ind, heading in enumerate(columns):
-                self.table_dataframe.heading(ind, text = heading)
-                self.table_dataframe.column(ind, anchor=tk.CENTER, stretch=tk.YES, width=120)
-                self.initial_value.append(heading)
-                    
-            self.table_dataframe.insert('', tk.END, 'Current dataframe', text = 'Current dataframe', values = self.initial_value)
-            
-            self.update_item('Current dataframe')
-            
-            self.scrollbar_table = tk.Scrollbar(self, orient = 'horizontal')
-            self.scrollbar_table.place(relx = 0.28, rely = 0.82, relwidth = 0.65)
-            
-            self.scrollbar_table.config(command=self.table_dataframe.xview)
-            self.table_dataframe.config(xscrollcommand=self.scrollbar_table.set)
-            
-            self.num_tw = 1
-        
-        else:
-            self.table_dataframe.destroy()
-            self.scrollbar_table.destroy()
-            setget_flag = False
-            time.sleep(0.11)
-            setget_flag = True
-            self.table_dataframe = ttk.Treeview(self, columns = columns, show = 'headings', height = 1)
-            self.table_dataframe.place(relx = 0.28, rely = 0.76, relwidth = 0.65)
-            
-            self.initial_value = []
-            
-            for ind, heading in enumerate(columns):
-                self.table_dataframe.heading(ind, text = heading)
-                self.table_dataframe.column(ind,anchor=tk.CENTER, stretch=tk.YES, width=120)
-                self.initial_value.append(heading)
-                    
-            self.table_dataframe.insert('', tk.END, 'Current dataframe', text = 'Current dataframe', values = self.initial_value)
-            
-            self.update_item('Current dataframe')
-            
-            self.scrollbar_table = tk.Scrollbar(self, orient = 'horizontal')
-            self.scrollbar_table.place(relx = 0.28, rely = 0.82, relwidth = 0.65)
-            
-            self.scrollbar_table.config(command=self.table_dataframe.xview)
-            self.table_dataframe.config(xscrollcommand=self.scrollbar_table.set)
-        
+    
     def update_item(self, item):
         
         global filename_setget
-        global deli
+        global deli 
         
         try:
             dataframe = pd.read_csv(filename_setget, sep = deli, engine = 'python').tail(1).values.flatten()
@@ -1670,6 +1493,10 @@ class SetGet(tk.Frame):
             self.table_dataframe.after(250, self.update_item, item)
         except FileNotFoundError:
             self.table_dataframe.after(250, self.update_item, item)
+            
+    def pause(self):
+        global pause_flag
+        pause_flag = not(pause_flag)
             
 
 class Sweeper1d(tk.Frame):
@@ -5158,26 +4985,26 @@ class Sweeper2d(tk.Frame):
         self.start_sweep_flag = True
 
         if self.status_manual1.get() == 0:
-    
+
             try:
                 self.from_sweep1 = float(self.entry_from1.get())
                 from_sweep1 = self.from_sweep1
             except:
-                messagebox.showerror('Invalid value in "From 1" entrybox', f'Can not convert {self.entry_from1.get()} to float')
+                messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from1.get()} to float')
                 self.start_sweep_flag = False
                 
             try:
                 self.to_sweep1 = float(self.entry_to1.get())
                 to_sweep1 = self.to_sweep1
             except:
-                messagebox.showerror('Invalid value in "To 1" entrybox', f'Can not convert {self.entry_to1.get()} to float')
+                messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to1.get()} to float')
                 self.start_sweep_flag = False
         
         try:
             self.delay_factor1 = float(self.entry_delay_factor1.get())
             delay_factor1 = self.delay_factor1
         except:
-            messagebox.showerror('Invalid value in "Delay factor 1" entrybox', f'Can not convert {self.entry_delaty_factor1.get()} to float')
+            messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delay_factor1.get()} to float')
             self.start_sweep_flag = False
         
         if self.status_manual1.get() == 0:
@@ -5186,7 +5013,7 @@ class Sweeper2d(tk.Frame):
                 self.ratio_sweep1 = float(self.entry_ratio1.get())
                 
                 if self.back_ratio1_init == '':
-                    back_ratio_sweep1 = self.ratio_sweep1
+                    back_ratio_sweep1 = ratio_sweep1
                 else:
                     try:
                         back_ratio_sweep1 = float(self.back_ratio1_init)
@@ -5215,30 +5042,30 @@ class Sweeper2d(tk.Frame):
                     back_ratio_sweep1 = - back_ratio_sweep1
                 
             except:
-                messagebox.showerror('Invalid value in "ratio1" entrybox', f'Can not convert {self.entry_ratio1.get()} to float')
+                messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio1.get()} to float')
                 self.start_sweep_flag = False
             
         if self.status_manual2.get() == 0:
-    
+            
             try:
                 self.from_sweep2 = float(self.entry_from2.get())
                 from_sweep2 = self.from_sweep2
             except:
-                messagebox.showerror('Invalid value in "From 2" entrybox', f'Can not convert {self.entry_from2.get()} to float')
+                messagebox.showerror('Invalid value in "From" entrybox', f'Can not convert {self.entry_from2.get()} to float')
                 self.start_sweep_flag = False
                 
             try:
                 self.to_sweep2 = float(self.entry_to2.get())
                 to_sweep2 = self.to_sweep2
             except:
-                messagebox.showerror('Invalid value in "To 2" entrybox', f'Can not convert {self.entry_to2.get()} to float')
+                messagebox.showerror('Invalid value in "To" entrybox', f'Can not convert {self.entry_to2.get()} to float')
                 self.start_sweep_flag = False
         
         try:
             self.delay_factor2 = float(self.entry_delay_factor2.get())
             delay_factor2 = self.delay_factor2
         except:
-            messagebox.showerror('Invalid value in "Delay factor 2" entrybox', f'Can not convert {self.entry_delaty_factor2.get()} to float')
+            messagebox.showerror('Invalid value in "Delay factor" entrybox', f'Can not convert {self.entry_delay_factor2.get()} to float')
             self.start_sweep_flag = False
         
         if self.status_manual2.get() == 0:
@@ -5247,7 +5074,7 @@ class Sweeper2d(tk.Frame):
                 self.ratio_sweep2 = float(self.entry_ratio2.get())
                 
                 if self.back_ratio2_init == '':
-                    back_ratio_sweep2 = self.ratio_sweep2
+                    back_ratio_sweep2 = ratio_sweep2
                 else:
                     try:
                         back_ratio_sweep2 = float(self.back_ratio2_init)
@@ -5269,14 +5096,14 @@ class Sweeper2d(tk.Frame):
                     except:
                         messagebox.showerror('Invalid value in "back_delay_factor2" entrybox', f'Can not convert {self.back_delay_factor2_init} to float')
                         self.start_sweep_flag = False
-                
+                        
                 if self.count_option2 == 'step':
                     back_ratio_sweep2 = back_ratio_sweep2 / back_delay_factor2
                 if back_ratio_sweep2 * ratio_sweep2 > 0:
                     back_ratio_sweep2 = - back_ratio_sweep2
                 
             except:
-                messagebox.showerror('Invalid value in "ratio 2" entrybox', f'Can not convert {self.entry_ratio2.get()} to float')
+                messagebox.showerror('Invalid value in "Ratio" entrybox', f'Can not convert {self.entry_ratio2.get()} to float')
                 self.start_sweep_flag = False
 
         def get_key(val, my_dict):
@@ -8005,36 +7832,36 @@ class Sweeper3d(tk.Frame):
         
         self.start_sweep_flag = True
 
-        if self.status_manual1.get() == 0:
-    
+        if self.status_manual1.get() == 0:    
+
             try:
                 self.from_sweep1 = float(self.entry_from1.get())
                 from_sweep1 = self.from_sweep1
             except:
-                messagebox.showerror('Invalid value in "From 1" entrybox', f'Can not convert {self.entry_from1.get()} to float')
+                messagebox.showerror('Invalid value in "From1" entrybox', f'Can not convert {self.entry_from1.get()} to float')
                 self.start_sweep_flag = False
                 
             try:
                 self.to_sweep1 = float(self.entry_to1.get())
                 to_sweep1 = self.to_sweep1
             except:
-                messagebox.showerror('Invalid value in "To 1" entrybox', f'Can not convert {self.entry_to1.get()} to float')
+                messagebox.showerror('Invalid value in "To1" entrybox', f'Can not convert {self.entry_to1.get()} to float')
                 self.start_sweep_flag = False
         
         try:
             self.delay_factor1 = float(self.entry_delay_factor1.get())
             delay_factor1 = self.delay_factor1
         except:
-            messagebox.showerror('Invalid value in "Delay factor 1" entrybox', f'Can not convert {self.entry_delaty_factor1.get()} to float')
+            messagebox.showerror('Invalid value in "Delay factor1" entrybox', f'Can not convert {self.entry_delay_factor1.get()} to float')
             self.start_sweep_flag = False
         
-        if self.status_manual1.get() == 0:
+        if self.status_manual1.get() == 0:  
         
             try:
                 self.ratio_sweep1 = float(self.entry_ratio1.get())
                 
                 if self.back_ratio1_init == '':
-                    back_ratio_sweep1 = self.ratio_sweep1
+                    back_ratio_sweep1 = ratio_sweep1
                 else:
                     try:
                         back_ratio_sweep1 = float(self.back_ratio1_init)
@@ -8047,7 +7874,7 @@ class Sweeper3d(tk.Frame):
                 if self.from_sweep1 > self.to_sweep1 and self.ratio_sweep1 > 0:
                     self.ratio_sweep1 = - self.ratio_sweep1
                 ratio_sweep1 = self.ratio_sweep1
-                
+                        
                 if self.back_delay_factor1_init == '':
                     back_delay_factor1 = delay_factor1
                 else:
@@ -8063,39 +7890,39 @@ class Sweeper3d(tk.Frame):
                     back_ratio_sweep1 = - back_ratio_sweep1
                 
             except:
-                messagebox.showerror('Invalid value in "ratio1" entrybox', f'Can not convert {self.entry_ratio1.get()} to float')
+                messagebox.showerror('Invalid value in "Ratio1" entrybox', f'Can not convert {self.entry_ratio1.get()} to float')
                 self.start_sweep_flag = False
             
-        if self.status_manual2.get() == 0:
-    
+        if self.status_manual2.get() == 0:  
+            
             try:
                 self.from_sweep2 = float(self.entry_from2.get())
                 from_sweep2 = self.from_sweep2
             except:
-                messagebox.showerror('Invalid value in "From 2" entrybox', f'Can not convert {self.entry_from2.get()} to float')
+                messagebox.showerror('Invalid value in "From2" entrybox', f'Can not convert {self.entry_from2.get()} to float')
                 self.start_sweep_flag = False
                 
             try:
                 self.to_sweep2 = float(self.entry_to2.get())
                 to_sweep2 = self.to_sweep2
             except:
-                messagebox.showerror('Invalid value in "To 2" entrybox', f'Can not convert {self.entry_to2.get()} to float')
+                messagebox.showerror('Invalid value in "To2" entrybox', f'Can not convert {self.entry_to2.get()} to float')
                 self.start_sweep_flag = False
         
         try:
             self.delay_factor2 = float(self.entry_delay_factor2.get())
             delay_factor2 = self.delay_factor2
         except:
-            messagebox.showerror('Invalid value in "Delay factor 2" entrybox', f'Can not convert {self.entry_delaty_factor2.get()} to float')
+            messagebox.showerror('Invalid value in "Delay factor2" entrybox', f'Can not convert {self.entry_delay_factor2.get()} to float')
             self.start_sweep_flag = False
         
-        if self.status_manual2.get() == 0:
+        if self.status_manual2.get() == 0:  
         
             try:
                 self.ratio_sweep2 = float(self.entry_ratio2.get())
                 
                 if self.back_ratio2_init == '':
-                    back_ratio_sweep2 = self.ratio_sweep2
+                    back_ratio_sweep2 = ratio_sweep2
                 else:
                     try:
                         back_ratio_sweep2 = float(self.back_ratio2_init)
@@ -8124,7 +7951,7 @@ class Sweeper3d(tk.Frame):
                     back_ratio_sweep2 = - back_ratio_sweep2
                 
             except:
-                messagebox.showerror('Invalid value in "ratio 2" entrybox', f'Can not convert {self.entry_ratio2.get()} to float')
+                messagebox.showerror('Invalid value in "Ratio2" entrybox', f'Can not convert {self.entry_ratio2.get()} to float')
                 self.start_sweep_flag = False
                 
         if self.status_manual3.get() == 0:  
@@ -8501,13 +8328,6 @@ class Sweeper_write(threading.Thread):
             self.back_step1 = float(back_delay_factor1) * float(back_ratio_sweep1)
             self.back_step2 = float(back_delay_factor2) * float(back_ratio_sweep2)
             
-            print(f'Step1 = {self.step1}')
-            print(f'Back step1 = {self.back_step1}')
-            print(f'Step2 = {self.step2}')
-            print(f'Back step2 = {self.back_step2}')
-            print(f'Step3 = {self.step3}')
-            print(f'Back step3 = {self.back_step3}')
-            
             try:
                 self.nstep1 = (float(to_sweep1) - float(from_sweep1)) / self.ratio_sweep1 / self.delay_factor1
                 self.nstep1 = int(abs(self.nstep1))
@@ -8833,11 +8653,7 @@ class Sweeper_write(threading.Thread):
                         self.mapper3D.append_parameter(str(parameter), parameter_value)
                     dataframe.append(parameter_value)
                 except:
-                    if len(manual_sweep_flags) == 2 or (len(manual_sweep_flags) == 3 and self.condition_status != 'unknown'):
-                        self.mapper2D.append_parameter(str(parameter), np.nan)
-                    if len(manual_sweep_flags) == 3:
-                        self.mapper3D.append_parameter(str(parameter), np.nan)
-                    dataframe.append(np.nan)
+                    dataframe.append(None)
         
             data = dataframe.copy()
         
@@ -9538,7 +9354,6 @@ class Sweeper_write(threading.Thread):
                     if self.sweepable2 == True:
                         self.mapper2D.append_slave(value = self.current_value)
                     else:
-                        
                         self.mapper2D.append_slave(value = self.value2)
                     step(2, value2)
                     append_read_parameters()
