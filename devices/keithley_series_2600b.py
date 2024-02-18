@@ -1,6 +1,7 @@
 import pyvisa as visa
-from pymeasure.instruments.keithley.keithley2600 import Keithley2600
+from pymeasure.instruments.keithley.keithley2600 import Channel
 from pymeasure.instruments import Instrument
+from pymeasure.instruments.validators import truncated_range
 import numpy as np
 import time
 
@@ -11,10 +12,56 @@ def get(device, command):
     # return np.round(np.random.random(1), 1)
     return device.query(command)
 
+
+class My_Keithley_2600(Instrument):
+    def __init__(self, adapter, **kwargs):
+        super().__init__(
+            adapter,
+            "Keithley 2600 SourceMeter",
+            **kwargs
+        )
+        self.ChA = My_Channel(self, 'a')
+        self.ChB = My_Channel(self, 'b')
+
+class My_Channel(Channel):
+
+    """
+    Auxillary class made to deal with tolerance. Original class allow to source micro, this class allow nano.
+    """
+    source_current = Instrument.control(
+        'source.leveli', 'source.leveli=%.9f',
+        """ Property controlling the applied source current """,
+        validator=truncated_range,
+        values=[-1.5, 1.5]
+    )
+
+    compliance_current = Instrument.control(
+        'source.limiti', 'source.limiti=%.9f',
+        """ Property controlling the source compliance current """,
+        validator=truncated_range,
+        values=[-1.5, 1.5]
+    )
+
+    source_voltage = Instrument.control(
+        'source.levelv', 'source.levelv=%.9f',
+        """ Property controlling the applied source voltage """,
+        validator=truncated_range,
+        values=[-200, 200]
+    )
+
+    compliance_voltage = Instrument.control(
+        'source.limitv', 'source.limitv=%.9f',
+        """ Property controlling the source compliance voltage """,
+        validator=truncated_range,
+        values=[-200, 200]
+    )
+
+
+
 class keithley_series_2600b():
     
     def __init__(self, adress = 'GPIB0::04::INSTR'):
-        self.k26 = Keithley2600(adress)
+        self.k26 = My_Keithley_2600(adress)
         
         self.address = adress
         
@@ -139,7 +186,7 @@ class keithley_series_2600b():
         
 def main():
     device = keithley_series_2600b()
-    device.set_B_source_voltage(10, 1)
+    #device.set_A_source_current(-0.00001998)
     
 if __name__ == '__main__':
     main()
