@@ -2770,6 +2770,7 @@ class Sweeper1d(tk.Frame):
                         back_ratio_sweep1 = float(self.back_ratio1_init)
                     except:
                         messagebox.showerror('Invalid value in "back_ratio1" entrybox', f'Can not convert {self.back_ratio1_init} to float')
+                        back_ratio_sweep1 = self.ratio_sweep1
                         self.start_sweep_flag = False
                 
                 if self.count_option1 == 'step':
@@ -5013,7 +5014,7 @@ class Sweeper2d(tk.Frame):
                 self.ratio_sweep1 = float(self.entry_ratio1.get())
                 
                 if self.back_ratio1_init == '':
-                    back_ratio_sweep1 = ratio_sweep1
+                    back_ratio_sweep1 = self.ratio_sweep1
                 else:
                     try:
                         back_ratio_sweep1 = float(self.back_ratio1_init)
@@ -5074,7 +5075,7 @@ class Sweeper2d(tk.Frame):
                 self.ratio_sweep2 = float(self.entry_ratio2.get())
                 
                 if self.back_ratio2_init == '':
-                    back_ratio_sweep2 = ratio_sweep2
+                    back_ratio_sweep2 = self.ratio_sweep2
                 else:
                     try:
                         back_ratio_sweep2 = float(self.back_ratio2_init)
@@ -7861,7 +7862,7 @@ class Sweeper3d(tk.Frame):
                 self.ratio_sweep1 = float(self.entry_ratio1.get())
                 
                 if self.back_ratio1_init == '':
-                    back_ratio_sweep1 = ratio_sweep1
+                    back_ratio_sweep1 = self.ratio_sweep1
                 else:
                     try:
                         back_ratio_sweep1 = float(self.back_ratio1_init)
@@ -7922,7 +7923,7 @@ class Sweeper3d(tk.Frame):
                 self.ratio_sweep2 = float(self.entry_ratio2.get())
                 
                 if self.back_ratio2_init == '':
-                    back_ratio_sweep2 = ratio_sweep2
+                    back_ratio_sweep2 = self.ratio_sweep2
                 else:
                     try:
                         back_ratio_sweep2 = float(self.back_ratio2_init)
@@ -7983,7 +7984,7 @@ class Sweeper3d(tk.Frame):
                 self.ratio_sweep3 = float(self.entry_ratio3.get())
                 
                 if self.back_ratio3_init == '':
-                    back_ratio_sweep3 = ratio_sweep3
+                    back_ratio_sweep3 = self.ratio_sweep3
                 else:
                     try:
                         back_ratio_sweep3 = float(self.back_ratio3_init)
@@ -8166,6 +8167,9 @@ class Sweeper_write(threading.Thread):
         except ValueError:
             self.nstep1 = 1
             
+        print(f'back delay factor 1 = {back_delay_factor1}')
+        print(f'back step 1 = {self.back_step1}')
+            
         if self.sweepable1 == True and stepper_flag == False:
             self.nstep = 1
             
@@ -8239,6 +8243,9 @@ class Sweeper_write(threading.Thread):
                 
             globals()['from_sweep1'] -+ self.step1
             globals()['to_sweep1'] += self.step1
+        
+        print(f'back delay factor 2 = {back_delay_factor2}')
+        print(f'back step 2 = {self.back_step2}')
         
         if self.sweeper_flag3 == True:
             self.device_to_sweep2 = device_to_sweep2
