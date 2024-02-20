@@ -89,7 +89,7 @@ matplotlib.use("Agg")
 plt.rcParams['animation.html'] = 'jshtml'
 LARGE_FONT = ('Verdana', 12)
 SUPER_LARGE = ('Verdana', 16)
-style.use('seaborn-whitegrid')
+style.use('seaborn-v0_8-whitegrid')
 
 # Check if everything connected properly
 rm = visa.ResourceManager()
@@ -9452,7 +9452,11 @@ class Sweeper_write(threading.Thread):
                     elif axis == '3':
                         inner_step(value3 = to_sweep)
                 
-                self.__dict__[f'value{axis}'] = to_sweep
+                flags = {1: 'back_and_forth_master', 2: 'back_and_forth_slave', 3: 'back_and_forth_slave_slave'}
+                if globals()[flags[len(manual_sweep_flags)]] % 2 == 0:
+                    self.__dict__[f'value{axis}'] = to_sweep
+                else:
+                    self.__dict__[f'value{axis}'] = from_sweep
             
             elif getattr(self, f'sweepable{axis}') and manual_sweep_flags[int(axis) - 1] == 0:
                 self.__dict__[f'value{axis}'] = from_sweep
