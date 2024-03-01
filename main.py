@@ -169,7 +169,12 @@ path = fix_unicode(path)
 
 for file in os.listdir(path):
     if f'setget_{YEAR}{MONTH}{DAY}' in file: 
-        ind_setget.append(int(file[len(file) - file[::-1].find('-') : -4]))
+        try:
+            ind_setget.append(int(file[len(file) - file[::-1].find('-') : -4]))
+        except ValueError:
+            pass
+        finally:
+            pass
         
 filename_setget = os.path.join(cur_dir, 'data_files', f'setget_{YEAR}{MONTH}{DAY}-{np.max(ind_setget) + 1}.csv')
 filename_setget = fix_unicode(filename_setget)
@@ -816,7 +821,7 @@ class SetGet(tk.Frame):
                                  command=lambda: self.go_home(controller))
         button_home.pack()
         
-        button_set_all = tk.Button(self, text = 'Set all', command = lambda: self.set_all())
+        button_set_all = tk.Button(self, text = 'Set all', command = self.set_all)
         button_set_all.pack()
         
         for i in range (1, self.num_widgets + 1):
@@ -897,13 +902,25 @@ class SetGet(tk.Frame):
             self, text='📊', font = SUPER_LARGE, command = self.open_graph)
         button_open_graph.place(relx = 0.85, rely = 0.6)
         
-        button_get = tk.Button(self, text = 'Get!', command = self.get_read_parameters)
-        button_get.place(relx = 0.9, rely = 0.45)
+        self.button_get = tk.Button(self, text = 'Get!', command = self.check_get_mode)
+        self.button_get.bind('<Button-3>', self.change_button_get)
+        self.button_get.place(relx = 0.9, rely = 0.45)
+        CreateToolTip(self.button_get, 'Right click to switch modes')
+        
+        self.entry_filename = tk.Entry(self)
+        self.entry_filename.insert(0, filename_setget)
+        self.entry_filename.place(relx = 0.65, rely = 0.7, width = 600)
+        self.entry_filename.config(state=tk.DISABLED)
         
         idx = len(filename_setget) - filename_setget[::-1].index('-') - 1
         self.ind_setget = int(filename_setget[idx + 1:-4])
         
         self.thread_n = 0
+        
+    def pause(self):
+        global pause_flag
+        
+        pause_flag = not pause_flag
         
     def go_home(self, controller):
         global setget_flag
@@ -912,6 +929,33 @@ class SetGet(tk.Frame):
         
         controller.show_frame(StartPage)
             
+    def change_button_get(self, event):
+        global setget_flag
+        global pause_flag
+        global ind_setget
+        global filename_setget
+        
+        if self.button_get['text'] == 'Get!' and not setget_flag and not pause_flag:
+            answer = messagebox.askyesnocancel('Mode change', 'Are you sure you want to change the measurement mode to "Append"?\n This would change the current datafile.')
+            if answer:
+                self.button_get['text'] = 'Append line!'
+                self.entry_filename.config(state='normal')
+                self.ind_setget += 1
+                ind_setget.append(self.ind_setget)
+                filename_setget = os.path.join(cur_dir, 'data_files', f'setget_{YEAR}{MONTH}{DAY}-{self.ind_setget}.csv')
+                self.entry_filename.delete(0, tk.END)
+                self.entry_filename.insert(0, filename_setget)
+        elif self.button_get['text'] == 'Append line!':
+            answer = messagebox.askyesnocancel('Mode change', 'Are you sure you want to change the measurement mode to "Get"?\n This would change the current datafile.')
+            if answer:
+                self.button_get['text'] = 'Get!'
+                self.ind_setget += 1
+                ind_setget.append(self.ind_setget)
+                filename_setget = os.path.join(cur_dir, 'data_files', f'setget_{YEAR}{MONTH}{DAY}-{self.ind_setget}.csv')
+                self.entry_filename.delete(0, tk.END)
+                self.entry_filename.insert(0, filename_setget)
+                self.entry_filename.config(state=tk.DISABLED)
+        
     def update_sweep_parameters1(self, event, interval=100):
         global types_of_devices
         global list_of_devices
@@ -956,7 +1000,7 @@ class SetGet(tk.Frame):
         device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
-        value = self.__dict__[f'entry_set{i}'].get()
+        value = float(self.__dict__[f'entry_set{i}'].get())
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -1011,7 +1055,7 @@ class SetGet(tk.Frame):
         device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
-        value = self.__dict__[f'entry_set{i}'].get()
+        value = float(self.__dict__[f'entry_set{i}'].get())
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -1066,7 +1110,7 @@ class SetGet(tk.Frame):
         device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
-        value = self.__dict__[f'entry_set{i}'].get()
+        value = float(self.__dict__[f'entry_set{i}'].get())
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -1121,7 +1165,7 @@ class SetGet(tk.Frame):
         device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
-        value = self.__dict__[f'entry_set{i}'].get()
+        value = float(self.__dict__[f'entry_set{i}'].get())
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -1176,7 +1220,7 @@ class SetGet(tk.Frame):
         device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
-        value = self.__dict__[f'entry_set{i}'].get()
+        value = float(self.__dict__[f'entry_set{i}'].get())
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -1231,7 +1275,7 @@ class SetGet(tk.Frame):
         device_to_sweep = list_of_devices[ind]
         parameters = device_to_sweep.set_options
         parameter_to_sweep = parameters[self.__dict__[f'sweep_options{i}'].current()]
-        value = self.__dict__[f'entry_set{i}'].get()
+        value = float(self.__dict__[f'entry_set{i}'].get())
         
         self.preset.loc[0, f'set{i}'] = value
         self.preset.to_csv(globals()['setget_path'], index = False)
@@ -1339,6 +1383,8 @@ class SetGet(tk.Frame):
     def open_graph(self):
         
         global cur_animation_num
+        global x_current
+        global y_current
         
         def return_range(x, n):
             if x % n == 0:
@@ -1350,10 +1396,20 @@ class SetGet(tk.Frame):
         
         globals()[f'graph_object{globals()["cur_animation_num"]}'] = Graph(globals()['filename_setget'])
         for i in return_range(cur_animation_num, 3):
+            preset = pd.read_csv(globals()['graph_preset_path'], sep = ',')
+            preset = preset.fillna('')
+            x_current = int(preset[f'x{i + 1}_current'].values[0])
+            y_current = int(preset[f'y{i + 1}_current'].values[0])
             globals()[f'x{i + 1}'] = []
-            globals()[f'x{i + 1}_status'] = 0
+            if x_current < len(columns):
+                globals()[f'x{i + 1}_status'] = x_current
+            else:
+                globals()[f'x{i + 1}_status'] = 0
             globals()[f'y{i + 1}'] = []
-            globals()[f'y{i + 1}_status'] = 0
+            if y_current < len(columns):
+                globals()[f'y{i + 1}_status'] = y_current
+            else:
+                globals()[f'y{i + 1}_status'] = 0
             globals()[f'ani{i+1}'] = StartAnimation
             globals()[f'ani{i+1}'].start(globals()['filename_setget'])
 
@@ -1389,6 +1445,12 @@ class SetGet(tk.Frame):
         self.dict_num_heading[self.current_heading] = self.num_tw
         self.num_tw += 1
           
+    def check_get_mode(self):
+        if self.button_get['text'] == 'Get!':
+            self.get_read_parameters()
+        elif self.button_get['text'] == 'Append line!':
+            self.append_read_parameters()
+        
     def get_read_parameters(self):
         global setget_flag
         global filename_setget
@@ -1396,10 +1458,7 @@ class SetGet(tk.Frame):
         global columns
         global deli
         
-        if self.ind_setget not in ind_setget:
-            ind_setget.append(self.ind_setget)
-            filename_setget = os.path.join(cur_dir, 'data_files', f'setget_{YEAR}{MONTH}{DAY}-{self.ind_setget}.csv')
-            self.ind_setget += 1
+        filename_setget = self.entry_filename.get()
 
         def get_key(val, my_dict):
             for key, value in my_dict.items():
@@ -1481,11 +1540,134 @@ class SetGet(tk.Frame):
             self.scrollbar_table.config(command=self.table_dataframe.xview)
             self.table_dataframe.config(xscrollcommand=self.scrollbar_table.set)
             
-    
+    def append_read_parameters(self):
+        
+        global setget_flag
+        global filename_setget
+        global ind_setget
+        global columns
+        global deli
+        
+        filename_setget = self.entry_filename.get()
+        
+        def get_key(val, my_dict):
+            for key, value in my_dict.items():
+                if val == value:
+                    return key
+        
+        self.list_to_read = []
+        # asking multichoise to get parameters to read
+        selection = self.lstbox_to_read.curselection()
+        for i in selection:
+            entrada = self.lstbox_to_read.get(i)
+            self.list_to_read.append(get_key(entrada, self.dict_lstbox))
+        globals()['parameters_to_read'] = self.list_to_read
+        
+        if not exists(filename_setget):
+            columns = ['Time']
+            for parameter in self.list_to_read:
+                columns.append(parameter)
+            setget_data = pd.DataFrame(columns=columns)
+            setget_data.to_csv(filename_setget, index=False, sep = deli)
+        else:
+            existing_columns = list(pd.read_csv(filename_setget).columns)
+            columns = ['Time']
+            for parameter in self.list_to_read:
+                columns.append(parameter)
+            if existing_columns != columns:
+                answer = messagebox.askyesnocancel('Coulmns matching conflict', f'The file you trying to append contains the following columns\n {list(existing_columns)}\n The current selection is\n {columns}\n Append to a separate file?')
+                if answer:
+                    self.ind_setget += 1
+                    ind_setget.append(self.ind_setget)
+                    self.ind_setget = np.max(ind_setget)
+                    filename_setget = os.path.join(cur_dir, 'data_files', f'setget_{YEAR}{MONTH}{DAY}-{self.ind_setget}.csv')
+                    self.entry_filename.delete(0, tk.END)
+                    self.entry_filename.insert(0, filename_setget)
+                    setget_data = pd.DataFrame(columns=columns)
+                    setget_data.to_csv(filename_setget, index=False, sep = deli)
+                    
+        dataframe = []
+        dataframe.append(round(time.perf_counter() - zero_time, 2))
+        
+        for parameter in globals()['parameters_to_read']:
+            index_dot = len(parameter) - parameter[::-1].find('.') - 1
+            adress = parameter[:index_dot]
+            option = parameter[index_dot + 1:]
+            try:
+                parameter_value = getattr(list_of_devices[list_of_devices_addresses.index(adress)],
+                                          option)()
+                dataframe.append(parameter_value)
+            except Exception as e:
+                print(f'Exception happened in setget_write: {e}')
+                dataframe.append(None)
+                return
+        time.sleep(0.2)
+            
+        with open(filename_setget, 'a', newline='') as f_object:
+            try:
+                writer_object = writer(f_object, delimiter = deli)
+                writer_object.writerow(dataframe)
+                f_object.close()
+            except KeyboardInterrupt:
+                f_object.close()
+            except Exception as e:
+                print(f'Exception happened in setget_write append: {e}')
+            finally:
+                f_object.close()
+        
+        if not hasattr(self, 'table_dataframe'):
+            self.table_dataframe = ttk.Treeview(self, columns = columns, show = 'headings', height = 1)
+            self.table_dataframe.place(relx = 0.28, rely = 0.76, relwidth = 0.65)
+            
+            self.initial_value = []
+            
+            for ind, heading in enumerate(columns):
+                self.table_dataframe.heading(ind, text = heading)
+                self.table_dataframe.column(ind, anchor=tk.CENTER, stretch=tk.YES, width=120)
+                self.initial_value.append(heading)
+                    
+            self.table_dataframe.insert('', tk.END, 'Current dataframe', text = 'Current dataframe', values = self.initial_value)
+            
+            self.update_item('Current dataframe')
+            
+            self.scrollbar_table = tk.Scrollbar(self, orient = 'horizontal')
+            self.scrollbar_table.place(relx = 0.28, rely = 0.82, relwidth = 0.65)
+            
+            self.scrollbar_table.config(command=self.table_dataframe.xview)
+            self.table_dataframe.config(xscrollcommand=self.scrollbar_table.set)
+            
+            self.num_tw = 1
+        
+        else:
+            self.table_dataframe.destroy()
+            self.scrollbar_table.destroy()
+            setget_flag = False
+            time.sleep(0.11)
+            setget_flag = True
+            self.table_dataframe = ttk.Treeview(self, columns = columns, show = 'headings', height = 1)
+            self.table_dataframe.place(relx = 0.28, rely = 0.76, relwidth = 0.65)
+            
+            self.initial_value = []
+            
+            for ind, heading in enumerate(columns):
+                self.table_dataframe.heading(ind, text = heading)
+                self.table_dataframe.column(ind,anchor=tk.CENTER, stretch=tk.YES, width=120)
+                self.initial_value.append(heading)
+                    
+            self.table_dataframe.insert('', tk.END, 'Current dataframe', text = 'Current dataframe', values = self.initial_value)
+            
+            self.update_item('Current dataframe')
+            
+            self.scrollbar_table = tk.Scrollbar(self, orient = 'horizontal')
+            self.scrollbar_table.place(relx = 0.28, rely = 0.82, relwidth = 0.65)
+            
+            self.scrollbar_table.config(command=self.table_dataframe.xview)
+            self.table_dataframe.config(xscrollcommand=self.scrollbar_table.set)
+        
     def update_item(self, item):
         
         global filename_setget
-        global deli 
+        global deli
         
         try:
             dataframe = pd.read_csv(filename_setget, sep = deli, engine = 'python').tail(1).values.flatten()
@@ -1493,10 +1675,6 @@ class SetGet(tk.Frame):
             self.table_dataframe.after(250, self.update_item, item)
         except FileNotFoundError:
             self.table_dataframe.after(250, self.update_item, item)
-            
-    def pause(self):
-        global pause_flag
-        pause_flag = not(pause_flag)
             
 
 class Sweeper1d(tk.Frame):
@@ -1614,7 +1792,7 @@ class Sweeper1d(tk.Frame):
                     elif self.combo_back_and_forth_master.current() == -1:
                         self.parent.back_and_forth_master_count = int(self.combo_back_and_forth_master.get())
                     elif self.combo_back_and_forth_master.current() == 2:
-                        self.parent.back_and_forth_master_count = int(1e6)
+                        self.parent.back_and_forth_master_count = int(1e5)
                     else:
                         raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_master.get())}')
                     
@@ -3013,7 +3191,7 @@ class Sweeper2d(tk.Frame):
                     elif self.combo_back_and_forth_master.current() == -1:
                         self.parent.back_and_forth_master_count = int(self.combo_back_and_forth_slave.get())
                     elif self.combo_back_and_forth_master.current() == 2:
-                        self.parent.back_and_forth_master_count = int(1e6)
+                        self.parent.back_and_forth_master_count = int(1e5)
                     else:
                         raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_master.get())}')
                     
@@ -3109,7 +3287,7 @@ class Sweeper2d(tk.Frame):
                     elif self.combo_back_and_forth_slave.current() == -1:
                         self.parent.back_and_forth_slave_count = int(self.combo_back_and_forth_slave.get())
                     elif self.combo_back_and_forth_slave.current() == 2:
-                        self.parent.back_and_forth_slave_count = int(1e6)
+                        self.parent.back_and_forth_slave_count = int(1e5)
                     else:
                         raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_slave.get())}')
                 
@@ -5382,7 +5560,7 @@ class Sweeper3d(tk.Frame):
                     elif self.combo_back_and_forth_master.current() == -1:
                         self.parent.back_and_forth_master_count = int(self.combo_back_and_forth_slave.get())
                     elif self.combo_back_and_forth_master.current() == 2:
-                        self.parent.back_and_forth_master_count = int(1e6)
+                        self.parent.back_and_forth_master_count = int(1e5)
                     else:
                         raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_master.get())}')
                     
@@ -5504,7 +5682,7 @@ class Sweeper3d(tk.Frame):
                     elif self.combo_back_and_forth_slave.current() == -1:
                         self.parent.back_and_forth_slave_count = int(self.combo_back_and_forth_slave.get())
                     elif self.combo_back_and_forth_slave.current() == 2:
-                        self.parent.back_and_forth_slave_count = int(1e6)
+                        self.parent.back_and_forth_slave_count = int(1e5)
                     else:
                         raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_slave.get())}')
                 
@@ -5674,7 +5852,7 @@ class Sweeper3d(tk.Frame):
                     elif self.parent.combo_back_and_forth_slave_slave.current() == -1:
                         self.back_and_forth_slave_slave_count = int(self.combo_back_and_forth_slave.get())
                     elif self.parent.combo_back_and_forth_slave_slave.current() == 2:
-                        self.back_and_forth_slave_slave_count = int(1e6)
+                        self.back_and_forth_slave_slave_count = int(1e5)
                     else:
                         raise Exception(f'Insert proper back_and_forth_master. Should be int, but given {type(self.combo_back_and_forth_slave_slave.get())}')
                 
@@ -7573,15 +7751,15 @@ class Sweeper3d(tk.Frame):
                     
                     center(self.pop3)
                     
-                    self.label_approaching3 = tk.Label(self.pop2, text = 'Approaching start', font = LARGE_FONT)
+                    self.label_approaching3 = tk.Label(self.pop3, text = 'Approaching start', font = LARGE_FONT)
                     self.label_approaching3.grid(row = 0, column = 0)
                     
-                    self.label_position3 = tk.Label(self.pop2, text = '', font = LARGE_FONT)
+                    self.label_position3 = tk.Label(self.pop3, text = '', font = LARGE_FONT)
                     self.label_position3.grid(row = 1, column = 0)
                     
                 def update_position():
                     global sweeper_write
-                    if (abs(self.current_position2 - from_sweep)) > self.eps3:
+                    if (abs(self.current_position3 - from_sweep)) > self.eps3:
                         self.current_position3 = float(getattr(device, parameter)())
                         self.label_position3.config(text = f'{"{:.3e}".format(self.current_position3)} / {"{:.3e}".format(from_sweep)}')
                         self.label_position3.after(100, update_position)
@@ -8167,9 +8345,6 @@ class Sweeper_write(threading.Thread):
         except ValueError:
             self.nstep1 = 1
             
-        print(f'back delay factor 1 = {back_delay_factor1}')
-        print(f'back step 1 = {self.back_step1}')
-            
         if self.sweepable1 == True and stepper_flag == False:
             self.nstep = 1
             
@@ -8243,10 +8418,7 @@ class Sweeper_write(threading.Thread):
                 
             globals()['from_sweep1'] -+ self.step1
             globals()['to_sweep1'] += self.step1
-        
-        print(f'back delay factor 2 = {back_delay_factor2}')
-        print(f'back step 2 = {self.back_step2}')
-        
+            
         if self.sweeper_flag3 == True:
             self.device_to_sweep2 = device_to_sweep2
             self.device_to_sweep3 = device_to_sweep3
@@ -9405,6 +9577,9 @@ class Sweeper_write(threading.Thread):
             
         def final_step(axis):
             global stop_flag 
+            global back_and_forth_master
+            global back_and_forth_slave
+            global back_and_forth_slave_slave
             
             axis = str(axis)
             
@@ -9415,7 +9590,9 @@ class Sweeper_write(threading.Thread):
             
             ax = None
             
-            if not getattr(self, f'sweepable{axis}') and manual_sweep_flags[int(axis) - 1] == 0:
+            count = max(back_and_forth_master, back_and_forth_slave, back_and_forth_slave_slave)  
+            
+            if not getattr(self, f'sweepable{axis}') and manual_sweep_flags[int(axis) - 1] == 0 and count < 9e4:
             
                 if hasattr(device_to_sweep, parameter_to_sweep):
                     current = getattr(device_to_sweep, parameter_to_sweep)()
@@ -9711,6 +9888,45 @@ class Sweeper_write(threading.Thread):
                 inner_loop_back_and_forth()
                 update_filename()
             
+        def outer_step(value = None):
+            global manual_sweep_flags
+            '''Performs single step in a slave for 3D sweep'''
+            
+            step(2, value, back = True)
+            
+            print('Outer step was made')
+            
+        def external_walk_back(direction = -1):
+            '''commits a backwards walk through slave axis for 3D sweep'''
+            
+            if manual_sweep_flags[1] == 0:
+                while condition(2) and manual_sweep_flags[1] == 0:
+                    outer_step()
+            elif manual_sweep_flags[1] == 1:
+                data_outer = pd.read_csv(manual_filenames[1]).values.reshape(-1)
+                for i, value in enumerate(data_outer[::direction]):
+                    if manual_sweep_flags[1] == 1:
+                        if not self.cur_manual_index2 > i:
+                            determine_step(i, data_outer, len(manual_sweep_flags))
+                            self.cur_manual_index2 = i 
+                            outer_step(value)
+                    else:
+                        break
+                
+            else:
+                raise Exception('manual_sweep_flag is not correct, needs 0 or 1, but got ', manual_sweep_flags[len(manual_sweep_flags) - 1])
+            
+            final_step(axis = len(manual_sweep_flags))
+            
+            if len(manual_sweep_flags) == 2:
+                self.mapper2D.add_sub_slave()
+            elif len(manual_sweep_flags) == 3 and self.condition_status == 'yx':
+                self.mapper2D.add_sub_slave()
+            elif len(manual_sweep_flags) == 3 and self.condition_status != 'yx':
+                self.mapper3D.add_sub_slave_slave()
+            
+            print('Single inner loop was made')
+            
         def external_loop_single(direction = 1):
             '''perform sequence of steps through master (for 2-d) or slave (for 3-d) axis
             with inner_loop on each step'''
@@ -9805,7 +10021,8 @@ class Sweeper_write(threading.Thread):
                 self.__dict__[f'cur_manual_index{len(manual_sweep_flags) - 1}'] = 0
                 external_loop_single()
                 if len(manual_sweep_flags) == 3:
-                    back_and_forth_transposition(len(manual_sweep_flags) - 1, False)
+                    back_and_forth_transposition(2, False)
+                    #external_walk_back()
             
             elif walks > 1:
                 for i in range(1, walks + 1):
@@ -9835,11 +10052,14 @@ class Sweeper_write(threading.Thread):
                     
                 if walks % 2 == 1:
                     back_and_forth_transposition(len(manual_sweep_flags) - 1)
-                  
-                    
+                        
+            
             else:
                 raise Exception(f'{flags_dict[len(manual_sweep_flags)]} is not correct, needs > 1, but got ', walks)
     
+            #if walks % 2 == 1 and len(manual_sweep_flags) == 3:
+            #    external_walk_back()
+            
             if len(manual_sweep_flags) == 3:
                 self.mapper3D.clear_slave_slave()
                 self.mapper3D.clear_slave()
