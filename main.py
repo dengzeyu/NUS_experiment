@@ -9888,20 +9888,14 @@ class Sweeper_write(threading.Thread):
                 inner_loop_back_and_forth()
                 update_filename()
             
-        def outer_step(value = None):
-            global manual_sweep_flags
-            '''Performs single step in a slave for 3D sweep'''
-            
-            step(2, value, back = True)
-            
-            print('Outer step was made')
-            
         def external_walk_back(direction = -1):
             '''commits a backwards walk through slave axis for 3D sweep'''
             
+            
+            
             if manual_sweep_flags[1] == 0:
                 while condition(2) and manual_sweep_flags[1] == 0:
-                    outer_step()
+                    step(axis = 2)
             elif manual_sweep_flags[1] == 1:
                 data_outer = pd.read_csv(manual_filenames[1]).values.reshape(-1)
                 for i, value in enumerate(data_outer[::direction]):
@@ -9909,23 +9903,12 @@ class Sweeper_write(threading.Thread):
                         if not self.cur_manual_index2 > i:
                             determine_step(i, data_outer, len(manual_sweep_flags))
                             self.cur_manual_index2 = i 
-                            outer_step(value)
+                            step(axis = 2, value = value)
                     else:
                         break
                 
             else:
                 raise Exception('manual_sweep_flag is not correct, needs 0 or 1, but got ', manual_sweep_flags[len(manual_sweep_flags) - 1])
-            
-            final_step(axis = len(manual_sweep_flags))
-            
-            if len(manual_sweep_flags) == 2:
-                self.mapper2D.add_sub_slave()
-            elif len(manual_sweep_flags) == 3 and self.condition_status == 'yx':
-                self.mapper2D.add_sub_slave()
-            elif len(manual_sweep_flags) == 3 and self.condition_status != 'yx':
-                self.mapper3D.add_sub_slave_slave()
-            
-            print('Single inner loop was made')
             
         def external_loop_single(direction = 1):
             '''perform sequence of steps through master (for 2-d) or slave (for 3-d) axis
@@ -10021,8 +10004,9 @@ class Sweeper_write(threading.Thread):
                 self.__dict__[f'cur_manual_index{len(manual_sweep_flags) - 1}'] = 0
                 external_loop_single()
                 if len(manual_sweep_flags) == 3:
-                    back_and_forth_transposition(2, False)
-                    #external_walk_back()
+                    back_and_forth_transposition(2, True)
+                    external_walk_back()
+                    back_and_forth_transposition(2, True)
             
             elif walks > 1:
                 for i in range(1, walks + 1):
@@ -10057,8 +10041,9 @@ class Sweeper_write(threading.Thread):
             else:
                 raise Exception(f'{flags_dict[len(manual_sweep_flags)]} is not correct, needs > 1, but got ', walks)
     
-            #if walks % 2 == 1 and len(manual_sweep_flags) == 3:
-            #    external_walk_back()
+            if walks >= 3 and walks % 2 == 1 and len(manual_sweep_flags) == 3:
+                external_walk_back()
+                back_and_forth_transposition(2, True)
             
             if len(manual_sweep_flags) == 3:
                 self.mapper3D.clear_slave_slave()
