@@ -3,6 +3,8 @@ from os.path import exists
 core_dir = os.getcwd() 
 import sys
 import json
+import csv
+csv.field_size_limit(int(1e9))
 from csv import writer
 import threading
 from tkinter import ttk
@@ -1698,6 +1700,7 @@ class Sweeper1d(tk.Frame):
         self.status_manual = tk.IntVar(value = int(self.preset['status_manual1'].values[0]))
         self.manual_filenames = [self.preset['manual_filename1'].values[0]]
         self.filename_sweep = self.preset['filename_sweep'][0]
+        self.condition = str(self.preset['condition'].values[0])
 
         self.filename_index = get_filename_index(filename = self.filename_sweep, core_dir = core_dir, YMD = f'{YEAR}{MONTH}{DAY}')
 
@@ -2154,6 +2157,12 @@ class Sweeper1d(tk.Frame):
         button_explore_manual.place(relx=0.15, rely=0.56)
         CreateToolTip(button_explore_manual, 'Explore existing sweep instruction')
 
+        self.text_condition = tk.Text(self, width = 40, height = 7)
+        self.text_condition.delete('1.0', tk.END)
+        self.text_condition.insert(tk.END, self.condition)
+        self.text_condition.place(relx = 0.1, rely = 0.7)
+        CreateToolTip(self.text_condition, 'Master sweep: x\nSet condition for a sweep map \nRight click to configure script')
+
         self.filename_textvariable = tk.StringVar(self, value = self.filename_sweep)
         width = int(len(self.filename_textvariable.get()) * 0.95)
         self.entry_filename = tk.Entry(self, textvariable = self.filename_textvariable, font = LARGE_FONT, 
@@ -2161,6 +2170,127 @@ class Sweeper1d(tk.Frame):
         self.entry_filename.place(relx = 0.97 - width / 100, rely = 0.9)
 
         self.script = ''
+        
+        class Script(object):
+            
+            def __init__(self, widget, parent):
+                self.script_toplevel = None
+                self.script_widget = widget
+                self.parent = parent
+            
+            def show_toplevel(self):
+                x = y = 0
+                self.script_toplevel = tw = tk.Toplevel(self.script_widget)
+                tw.wm_geometry("+%d+%d" % (x, y))
+                
+                label_script = tk.Label(tw, text = 'Manual script', font = LARGE_FONT)
+                label_script.grid(row = 0, column = 0, pady = 2)
+                
+                def ctrlEvent(event):
+                    if event.state == 4 and event.keysym == 'c':
+                        content = self.text_script.selection_get()
+                        tw.clipboard_clear()
+                        tw.clipboard_append(content)
+                        return "break"
+                    elif event.state == 4 and event.keysym == 'v':
+                        self.text_script.insert('end', tw.selection_get(selection='CLIPBOARD'))
+                        return "break"
+                    elif event.state == 4 and event.keysym == 'a':
+                        self.text_script.tag_add("sel", "1.0","end")
+                        return "break"
+                    elif event.state == 4 and event.keysym == 'z':
+                        self.text_script.delete('sel.first','sel.last')
+                        return "break"
+                    
+                self.text_script = tk.Text(tw, width = 60, height = 10)
+                self.text_script.grid(row = 1, column = 0, pady = 2, rowspan = 3)
+                self.text_script.configure(font = LARGE_FONT)
+                self.text_script.bind("<Key>", ctrlEvent)
+                
+                def hide_toplevel():
+                    tw = self.script_toplevel
+                    self.script_toplevel = None
+        
+                    tw.destroy()
+                
+                def explore_script(interval = 1):
+                    
+                    if exists(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'scripts')):
+                        init = os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'scripts')
+                    else:
+                        init = os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}')
+                    
+                    script_filename = tk.filedialog.askopenfilename(initialdir=init,
+                                                                             title='Select a script')
+                    with open(script_filename, 'r') as file:
+                        try:
+                            script = file.read()
+                        except Exception as e:
+                            print(f'Exception happened while exploring existing script: {e}')
+                            file.close()
+                        finally:
+                            file.close()
+                            
+                    self.text_script.delete(1.0, tk.END)
+                    self.text_script.insert(tk.END, script)
+                    self.text_script.after(interval)
+                    self.script_toplevel.deiconify() #show toplevel again
+                    
+                def set_script():
+                    self.parent.script = self.text_script.get(1.0, tk.END)[:-1]
+                    hide_toplevel()
+                    
+                def save_script():
+                    
+                    if not exists(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'scripts')):
+                        os.mkdir(os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}', 'scripts'))
+                    
+                    self.script_filename = tk.filedialog.asksaveasfilename(title='Save the file',
+                                            initialfile=os.path.join(core_dir, f'{YEAR}{MONTH}{DAY}',
+                                            'scripts', f'script{datetime.today().strftime("%H_%M_%d_%m_%Y")}'),
+                                            defaultextension='.csv')
+                    
+                    self.parent.script = self.text_script.get(1.0, tk.END)[:-1]
+                    
+                    with open(self.script_filename, 'w') as file:
+                        try:
+                            file.write(self.parent.script)
+                        except Exception as e:
+                            print(f'Exception happened while saving the script: {e}')
+                            file.close()
+                        finally:
+                            file.close()
+                    
+                    self.script_toplevel.deiconify() #show toplevel again
+                
+                button_explore_script = tk.Button(
+                    tw, text='🔎', font = SUPER_LARGE, command = explore_script)
+                button_explore_script.grid(row = 1, column = 1, pady = 2)
+                CreateToolTip(button_explore_script, 'Explore existing script')
+                
+                button_save_script = tk.Button(
+                    tw, text='💾', font = SUPER_LARGE, command = save_script)
+                button_save_script.grid(row = 2, column = 1, pady = 2)
+                CreateToolTip(button_save_script, 'Save this script')
+                
+                self.script_filename = ''
+                
+                button_set_script = tk.Button(
+                    tw, text = 'Apply script', font = LARGE_FONT, command = set_script)
+                button_set_script.grid(row = 3, column = 1, pady = 2)
+                
+                tw.protocol("WM_DELETE_WINDOW", hide_toplevel)
+            
+        def CreateScriptToplevel(widget, parent):
+            
+            toplevel = Script(widget, parent)
+            
+            def show(event):
+                toplevel.show_toplevel()
+                
+            widget.bind('<Button-3>', show) 
+            
+        CreateScriptToplevel(self.text_condition, self)
 
         button_filename = tk.Button(
             self, text = 'Browse...', command=lambda: self.set_filename_sweep())
@@ -4844,6 +4974,7 @@ class Sweeper2d(tk.Frame):
             elif answer == False:
                 self.start_sweep_flag = True
             else:
+                self.start_sweep_flag = False
                 return
                 
     def pre_sweep2(self):
@@ -4971,6 +5102,7 @@ class Sweeper2d(tk.Frame):
             elif answer == False:
                 try_start()
             else:
+                self.start_sweep_flag = False
                 return
             
     def pre_double_sweep(self, i = 1, j=2):
@@ -7564,6 +7696,7 @@ class Sweeper3d(tk.Frame):
             elif answer == False:
                 self.start_sweep_flag = True
             else:
+                self.start_sweep_flag = False
                 return
                     
     def pre_sweep2(self):
@@ -7681,6 +7814,7 @@ class Sweeper3d(tk.Frame):
             elif answer == False:
                 self.start_sweep_flag = True
             else:
+                self.start_sweep_flag = False
                 return
                 
     def pre_sweep3(self):
@@ -7808,6 +7942,7 @@ class Sweeper3d(tk.Frame):
             elif answer == False:
                 try_start()
             else:
+                self.start_sweep_flag = False
                 return
             
     def pre_double_sweep(self, i, j):
@@ -9676,7 +9811,8 @@ class Sweeper_write(threading.Thread):
             else:
                 raise Exception('manual_sweep_flag is not correct, needs 0 or 1, but got ', manual_sweep_flags[len(manual_sweep_flags) - 1])
             
-            final_step(axis = len(manual_sweep_flags))
+            if not stop_flag:
+                final_step(axis = len(manual_sweep_flags))
             
             if len(manual_sweep_flags) == 2:
                 self.mapper2D.add_sub_slave()
