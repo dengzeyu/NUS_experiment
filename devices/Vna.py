@@ -11,6 +11,7 @@ from rohdeschwarz.instruments.vna.properties    import Properties
 from rohdeschwarz.instruments.vna.settings      import Settings
 from rohdeschwarz.instruments.vna.filesystem    import FileSystem, Directory
 import numpy as np
+np.set_printoptions(threshold=1e9)
 
 class ImageFormat(Enum):
     bmp = 'BMP'
@@ -27,12 +28,15 @@ class Vna(GenericInstrument):
         self.properties = Properties(self)
         self.settings = Settings(self)
         self.file = FileSystem(self)
-        ip_address, socket = adress.split(':')
-        socket = int(socket)
-        self._open(ip_address, socket)
+        if ':' in adress and '::' not in adress:
+            ip_address, socket = adress.split(':')
+            socket = int(socket)
+            self._open(ip_address, socket)
+        else:
+            self._open(adress)
         #self.display_screen()
         
-        self.get_options = ['start_freq', 'stop_freq', 'cent_freq', 'span_freq', 'num_points', 'bandwidth', 'power', 'freqs', 'trace_real', 'trace_im', 'real_peak_freq', 'real_dip_freq', 'im_peak_freq', 'im_dip_freq']
+        self.get_options = ['start_freq', 'stop_freq', 'cent_freq', 'span_freq', 'num_points', 'bandwidth', 'power', 'freqs', 'trace_real', 'trace_im', 'trace_linmag', 'trace_logmag', 'trace_phase', 'real_peak_freq', 'real_dip_freq', 'im_peak_freq', 'im_dip_freq']
         self.set_options = ['start_freq', 'stop_freq', 'cent_freq', 'span_freq', 'num_points', 'bandwidth', 'power']
 
     def _open(self, ip_address: str, socket:int):
@@ -609,7 +613,6 @@ class Vna(GenericInstrument):
     def start_sweep(self):
         scpi = 'INIT1:IMM'
         self.write(scpi)
-        self.write('*WAI')
         
     def trace_data(self):
         scpi = 'CALC1:DATA? FDAT'
@@ -617,6 +620,8 @@ class Vna(GenericInstrument):
         
     def trace_real(self):
         self.autoscale()
+        scpi = '*WAI'
+        self.write(scpi)
         scpi = 'CALC1:FORM REAL'
         self.write(scpi)
         scpi = 'CALC1:DATA? FDAT'
@@ -629,6 +634,39 @@ class Vna(GenericInstrument):
     def trace_im(self):
         self.autoscale()
         scpi = 'CALC1:FORM IMAG'
+        self.write(scpi)
+        scpi = 'CALC1:DATA? FDAT'
+        answer = self.query(scpi)
+        answer = answer.replace('\r', '')
+        answer = answer.replace('\n', '')
+        answer = answer.replace(' ', '')
+        return answer
+    
+    def trace_linmag(self):
+        self.autoscale()
+        scpi = 'CALC1:FORM MLIN'
+        self.write(scpi)
+        scpi = 'CALC1:DATA? FDAT'
+        answer = self.query(scpi)
+        answer = answer.replace('\r', '')
+        answer = answer.replace('\n', '')
+        answer = answer.replace(' ', '')
+        return answer
+    
+    def trace_logmag(self):
+        self.autoscale()
+        scpi = 'CALC1:FORM MLOG'
+        self.write(scpi)
+        scpi = 'CALC1:DATA? FDAT'
+        answer = self.query(scpi)
+        answer = answer.replace('\r', '')
+        answer = answer.replace('\n', '')
+        answer = answer.replace(' ', '')
+        return answer
+    
+    def trace_phase(self):
+        self.autoscale()
+        scpi = 'CALC1:FORM PHAS'
         self.write(scpi)
         scpi = 'CALC1:DATA? FDAT'
         answer = self.query(scpi)
@@ -732,7 +770,7 @@ class Vna(GenericInstrument):
      
 def main():
     device = Vna('169.254.82.39:5025')
-    print(device.real_dip_freq())
+    print(device.trace_real())
 
 if __name__ == '__main__':       
     main()
