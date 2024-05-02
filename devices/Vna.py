@@ -10,8 +10,10 @@ from rohdeschwarz.instruments.vna.trace         import Trace
 from rohdeschwarz.instruments.vna.properties    import Properties
 from rohdeschwarz.instruments.vna.settings      import Settings
 from rohdeschwarz.instruments.vna.filesystem    import FileSystem, Directory
+
 import numpy as np
 np.set_printoptions(threshold=1e9)
+import time
 
 class ImageFormat(Enum):
     bmp = 'BMP'
@@ -36,7 +38,9 @@ class Vna(GenericInstrument):
             self._open(adress)
         #self.display_screen()
         
-        self.get_options = ['start_freq', 'stop_freq', 'cent_freq', 'span_freq', 'num_points', 'bandwidth', 'power', 'freqs', 'trace_real', 'trace_im', 'trace_linmag', 'trace_logmag', 'trace_phase', 'real_peak_freq', 'real_dip_freq', 'im_peak_freq', 'im_dip_freq']
+        self.get_options = ['start_freq', 'stop_freq', 'cent_freq', 'span_freq', 'sweep_time', 'num_points', 'bandwidth', 'power', 
+                            'freqs', 'trace_real', 'trace_im', 'trace_linmag', 'trace_logmag', 'trace_phase', 
+                            'real_peak_freq', 'real_dip_freq', 'im_peak_freq', 'im_dip_freq', 'linmag_peak_freq', 'max_linmag_freq']
         self.set_options = ['start_freq', 'stop_freq', 'cent_freq', 'span_freq', 'num_points', 'bandwidth', 'power']
 
     def _open(self, ip_address: str, socket:int):
@@ -617,11 +621,17 @@ class Vna(GenericInstrument):
     def trace_data(self):
         scpi = 'CALC1:DATA? FDAT'
         return self.query(scpi)
+    
+    def sweep_time(self):
+        scpi = 'SENSE1:SWEEP:TIME?'
+        return float(self.query(scpi))
         
     def trace_real(self):
         self.autoscale()
-        scpi = '*WAI'
+        scpi = 'INIT1:IMM:ALL'
         self.write(scpi)
+        t = self.sweep_time()
+        time.sleep(t)
         scpi = 'CALC1:FORM REAL'
         self.write(scpi)
         scpi = 'CALC1:DATA? FDAT'
@@ -633,6 +643,10 @@ class Vna(GenericInstrument):
     
     def trace_im(self):
         self.autoscale()
+        scpi = 'INIT1:IMM:ALL'
+        self.write(scpi)
+        t = self.sweep_time()
+        time.sleep(t)
         scpi = 'CALC1:FORM IMAG'
         self.write(scpi)
         scpi = 'CALC1:DATA? FDAT'
@@ -644,6 +658,10 @@ class Vna(GenericInstrument):
     
     def trace_linmag(self):
         self.autoscale()
+        scpi = 'INIT1:IMM:ALL'
+        self.write(scpi)
+        t = self.sweep_time()
+        time.sleep(t)
         scpi = 'CALC1:FORM MLIN'
         self.write(scpi)
         scpi = 'CALC1:DATA? FDAT'
@@ -655,6 +673,10 @@ class Vna(GenericInstrument):
     
     def trace_logmag(self):
         self.autoscale()
+        scpi = 'INIT1:IMM:ALL'
+        self.write(scpi)
+        t = self.sweep_time()
+        time.sleep(t)
         scpi = 'CALC1:FORM MLOG'
         self.write(scpi)
         scpi = 'CALC1:DATA? FDAT'
@@ -666,6 +688,10 @@ class Vna(GenericInstrument):
     
     def trace_phase(self):
         self.autoscale()
+        scpi = 'INIT1:IMM:ALL'
+        self.write(scpi)
+        t = self.sweep_time()
+        time.sleep(t)
         scpi = 'CALC1:FORM PHAS'
         self.write(scpi)
         scpi = 'CALC1:DATA? FDAT'
@@ -728,11 +754,15 @@ class Vna(GenericInstrument):
         
         from scipy.signal import find_peaks
         
-        y = [float(i) for i in y.split(',')]
+        y = [float(i) for i in y]
         
         peaks_pos = find_peaks(y)[0]
         
-        max_peak_pos = peaks_pos[0]
+        try:
+            max_peak_pos = peaks_pos[0]
+        except IndexError:
+            return x[x.shape[0] // 2], x[x.shape[0] // 2], np.max(y), np.max(y)
+        
 
         for pos in peaks_pos:
             if y[pos] > y[max_peak_pos]:
@@ -740,13 +770,23 @@ class Vna(GenericInstrument):
             
         dips_pos = find_peaks([-i for i in y])[0]
         
-        min_dip_pos = dips_pos[0]
+        try:
+            min_dip_pos = dips_pos[0]
+        except IndexError:
+            return x[x.shape[0] // 2], x[x.shape[0] // 2], np.max(y), np.max(y)
+            
         
         for pos in dips_pos:
             if y[pos] < y[min_dip_pos]:
                 min_dip_pos = pos
         
-        return x[max_peak_pos], x[min_dip_pos]
+        return x[max_peak_pos], x[min_dip_pos], y[max_peak_pos], y[min_dip_pos]
+    
+    def max_linmag_freq(self):
+        x = self.freqs().split(',')
+        y = self.trace_linmag().split(',')
+        idx = np.argmax(y)
+        return x[idx]
     
     def real_peak_freq(self):
         f = self.freqs().split(',')
@@ -767,10 +807,40 @@ class Vna(GenericInstrument):
         f = self.freqs().split(',')
         f = np.array([float(i) for i in f])
         return self.fit(f, self.trace_im())[1]
+    
+    def linmag_peak(self):
+        f = self.freqs().split(',')
+        f = np.array([float(i) for i in f])
+        ans = self.fit(f, self.trace_linmag().split(','))
+        return (ans[0], ans[2])
+    
+    
+    def linmag_dip(self):
+        f = self.freqs().split(',')
+        f = np.array([float(i) for i in f])
+        ans = self.fit(f, self.trace_linmag().split(','))
+        return (ans[1], ans[3])
+    
+    def linmag_peak_freq(self):
+        f = self.freqs().split(',')
+        f = np.array([float(i) for i in f])
+        return self.fit(f, self.trace_linmag().split(','))[0]
+    
+    def linmag_dip_freq(self):
+        f = self.freqs().split(',')
+        f = np.array([float(i) for i in f])
+        return self.fit(f, self.trace_linmag().split(','))[0]
      
 def main():
-    device = Vna('169.254.82.39:5025')
-    print(device.trace_real())
-
+    vna = Vna('169.254.82.39:5025')
+    
+    try:
+        trace = vna.trace_linmag()
+        print(trace)
+    except Exception as ex:
+        print(ex)
+    finally:
+        vna.close()
+    
 if __name__ == '__main__':       
     main()

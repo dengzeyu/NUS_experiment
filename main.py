@@ -924,6 +924,11 @@ class SetGet(tk.Frame):
         
         pause_flag = not pause_flag
         
+    def stop(self):
+        global stop_flag
+        
+        stop_flag = True
+        
     def go_home(self, controller):
         global setget_flag
         
@@ -9172,6 +9177,7 @@ class Sweeper_write(threading.Thread):
                         ###################
                         globals()['self'] = self
                         exec(script, globals())
+
                         return 
                     elif getattr(self, f'sweepable{str(axis)}') == True:
                         if manual_sweep_flags[axis - 1] == 0:
