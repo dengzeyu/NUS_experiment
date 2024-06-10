@@ -5,9 +5,9 @@ import platform
 import time
 
 if __name__ == '__main__':
-    from ANC350_Python_Control.ANC350.PylibANC350 import Positioner_ANC350
+    from ANC350_drivers.ANC350.PylibANC350 import Positioner_ANC350
 else:
-    from devices.ANC350_Python_Control.ANC350.PylibANC350 import Positioner_ANC350
+    from devices.ANC350_drivers.ANC350.PylibANC350 import Positioner_ANC350
 
 def ANC_errcheck(ret_code, func, args):
     '''
@@ -64,9 +64,9 @@ def load_ANC350dll():
     cur_dir = os.getcwd()
 
     if __name__ == '__main__':
-        filename = os.path.join(cur_dir, 'ANC350_Python_Control', 'ANC350', 'win64', 'anc350v4.dll')
+        filename = os.path.join(cur_dir, 'ANC350_drivers', 'ANC350', 'win64', 'anc350v4.dll')
     else:
-        filename = os.path.join(cur_dir, 'devices', 'ANC350_Python_Control', 'ANC350', 'win64', 'anc350v4.dll')
+        filename = os.path.join(cur_dir, 'devices', 'ANC350_drivers', 'ANC350', 'win64', 'anc350v4.dll')
 
     anc = ctypes.cdll.LoadLibrary(filename)
 
