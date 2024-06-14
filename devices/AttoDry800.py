@@ -18,7 +18,10 @@ import ctypes as ct
 import time
 import os
 
-path_to_dll = r".devices\attoDRY800_example\01 DLLs for different Cryostat Versions\standard\64 bit\AttoDryInterfaceLib64bit.dll"
+if not __name__ == '__main__':
+    path_to_dll = r"devices\attoDRY800_example\01 DLLs for different Cryostat Versions\standard\64 bit\AttoDryInterfaceLib64bit.dll"
+else:
+    path_to_dll = r"attoDRY800_example\01 DLLs for different Cryostat Versions\standard\64 bit\AttoDryInterfaceLib64bit.dll"
 
 lib = ct.CDLL(path_to_dll)
 
@@ -42,7 +45,7 @@ class AttoDry800():
         #define AttoDRY_Interface_Device_attoDRY800 2
         self.cryo.AttoDRY_Interface_begin(ct.c_ushort(2))
         self.cryo.AttoDRY_Interface_Connect.argtypes = (ct.c_char_p, )
-        bytes_adress = bytes(adress)
+        bytes_adress = bytes(adress, encoding = 'utf-8')
         self.cryo.AttoDRY_Interface_Connect(ct.c_char_p(bytes_adress))
         self.cryo.AttoDRY_Interface_isDeviceInitialised.argtypes = (ct.POINTER(ct.c_int), )
         self.cryo.AttoDRY_Interface_isDeviceInitialised(ct.byref(self.running))
@@ -52,74 +55,74 @@ class AttoDry800():
         
         self.eps = [0.25, None, None, None]
         
-        def Temp(self):
-            #get sample temperature
-            self.cryo.AttoDRY_Interface_getSampleTemperature(ct.byref(self.sampleTemp))
-            T = self.sampleTemp.value
-            T = float(T)
-            return T
+    def Temp(self):
+        #get sample temperature
+        self.cryo.AttoDRY_Interface_getSampleTemperature(ct.byref(self.sampleTemp))
+        T = self.sampleTemp.value
+        T = float(T)
+        return T
+    
+    def VTI_Temp(self):
+        #get sample temperature
+        self.cryo.AttoDRY_Interface_getVTITemperature(ct.byref(self.VTITemp))
+        T = self.VTITemp.value
+        T = float(T)
+        return T
+    
+    def P(self):
+        #get proportional gain
+        self.cryo.AttoDRY_Interface_getProportionalGain(ct.byref(self.P))
+        P = self.P.value
+        P = float(P)
+        return P
+    
+    def I(self):
+        #get integral gain
+        self.cryo.AttoDRY_Interface_getIntegralGain(ct.byref(self.I))
+        I = self.I.value
+        I = float(I)
+        return I
+    
+    def D(self):
+        #get derivative gain
+        self.cryo.AttoDRY_Interface_getDerivativeGain(ct.byref(self.D))
+        D = self.D.value
+        D = float(D)
+        return D
+    
+    def Sam_Heater(self):
+        #get sample heater power
+        self.cryo.AttoDRY_Interface_getSampleHeaterPower(ct.byref(self.samHeater))
+        SH = self.samHeater.value
+        SH = float(SH)
+        return SH
+    
+    def VTI_Heater(self):
+        #get sample heater power
+        self.cryo.AttoDRY_Interface_getVTIHeaterPower(ct.byref(self.VTIHeater))
+        VH = self.VTIHeater.value
+        VH = float(VH)
+        return VH
+    
+    def set_Temp(self, value: float, speed: float = None):
+        #set user temperature
+        self.userTemp = ct.c_float(value)
+        self.cryo.AttoDRY_Interface_setUserTemperature(self.userTemp)
         
-        def VTI_Temp(self):
-            #get sample temperature
-            self.cryo.AttoDRY_Interface_getVTITemperature(ct.byref(self.VTITemp))
-            T = self.VTITemp.value
-            T = float(T)
-            return T
+    def set_P(self, value: float, speed: float = None):
+        #set proportional gain
+        self.P = ct.c_float(value)
+        self.cryo.AttoDRY_Interface_setProportionalGain(self.P)
         
-        def P(self):
-            #get proportional gain
-            self.cryo.AttoDRY_Interface_getProportionalGain(ct.byref(self.P))
-            P = self.P.value
-            P = float(P)
-            return P
+    def set_I(self, value: float, speed: float = None):
+        #set integral gain
+        self.I = ct.c_float(value)
+        self.cryo.AttoDRY_Interface_setIntegralGain(self.I)
         
-        def I(self):
-            #get integral gain
-            self.cryo.AttoDRY_Interface_getIntegralGain(ct.byref(self.I))
-            I = self.I.value
-            I = float(I)
-            return I
-        
-        def D(self):
-            #get derivative gain
-            self.cryo.AttoDRY_Interface_getDerivativeGain(ct.byref(self.D))
-            D = self.D.value
-            D = float(D)
-            return D
-        
-        def Sam_Heater(self):
-            #get sample heater power
-            self.cryo.AttoDRY_Interface_getSampleHeaterPower(ct.byref(self.samHeater))
-            SH = self.samHeater.value
-            SH = float(SH)
-            return SH
-        
-        def VTI_Heater(self):
-            #get sample heater power
-            self.cryo.AttoDRY_Interface_getVTIHeaterPower(ct.byref(self.VTIHeater))
-            VH = self.VTIHeater.value
-            VH = float(VH)
-            return VH
-        
-        def set_Temp(self, value: float, speed: float = None):
-            #set user temperature
-            self.userTemp = ct.c_float(value)
-            self.cryo.AttoDRY_Interface_setUserTemperature(self.userTemp)
-            
-        def set_P(self, value: float, speed: float = None):
-            #set proportional gain
-            self.P = ct.c_float(value)
-            self.cryo.AttoDRY_Interface_setProportionalGain(self.P)
-            
-        def set_I(self, value: float, speed: float = None):
-            #set integral gain
-            self.I = ct.c_float(value)
-            self.cryo.AttoDRY_Interface_setIntegralGain(self.I)
-            
-        def set_D(self, value: float, speed: float = None):
-            #set derivative gain
-            self.D = ct.c_float(value)
-            self.cryo.AttoDRY_Interface_setDerivativeGain(self.D)
+    def set_D(self, value: float, speed: float = None):
+        #set derivative gain
+        self.D = ct.c_float(value)
+        self.cryo.AttoDRY_Interface_setDerivativeGain(self.D)
         
         
         
