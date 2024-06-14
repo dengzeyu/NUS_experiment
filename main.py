@@ -1685,7 +1685,7 @@ class Sweeper1d(tk.Frame):
 
         tk.Frame.__init__(self, parent)
         
-        self.preset = pd.read_csv(globals()['sweeper1d_path'], sep = ',')
+        self.preset = pd.read_csv(globals()['sweeper1d_path'], sep = ',', dtype = str)
         self.preset = self.preset.fillna('')
         self.combo_to_sweep1_current = int(self.preset['combo_to_sweep1'].values[0])
         self.sweep_options1_current = int(self.preset['sweep_options1'].values[0])
@@ -2118,6 +2118,8 @@ class Sweeper1d(tk.Frame):
         self.entry_from = tk.Entry(self)
         self.entry_from.insert(0, self.from1_init)
         self.entry_from.place(relx=0.17, rely=0.24)
+        self.entry_from.after(1000, self.rewrite_preset)
+
 
         self.entry_to = tk.Entry(self)
         self.entry_to.insert(0, self.to1_init)
@@ -2147,6 +2149,15 @@ class Sweeper1d(tk.Frame):
                                           variable=self.status_manual, onvalue=1,
                                           offvalue=0, command=lambda: self.save_manual_status())
         self.checkbox_manual1.place(relx=0.12, rely=0.52)
+
+        if self.status_back_and_forth_master.get() == 0:
+                self.entry_from.config(state= "normal")
+                self.entry_to.config(state= "normal")
+                self.entry_ratio.config(state= "normal")
+        else:
+                self.entry_from.config(state= "disabled")
+                self.entry_to.config(state= "disabled")
+                self.entry_ratio.config(state= "disabled")
 
         button_new_manual = tk.Button(self, text = '🖊', font = LARGE_FONT, command=lambda: self.open_blank())
         button_new_manual.place(relx=0.12, rely=0.56)
@@ -2435,6 +2446,9 @@ class Sweeper1d(tk.Frame):
             self.preset.loc[0, 'combo_to_sweep1'] = self.combo_to_sweep1.current()
             self.preset.to_csv(globals()['sweeper1d_path'], index = False)
             
+        self.back_ratio1_init = ''
+        self.back_delay_factor1_init = ''
+            
     def swap_ratio_step1(self):
         if self.count_option1 == 'step':
             self.count_option1 = 'ratio'
@@ -2495,6 +2509,8 @@ class Sweeper1d(tk.Frame):
         if current_filename != basename(self.filename_sweep):
             self.preset.loc[0, 'filename_sweep'] = current_filename
             self.preset.to_csv(globals()['sweeper1d_path'], index = False)
+        
+        self.entry_from.after(1000, self.rewrite_preset)
 
     def update_sweep_configuration(self):
         global from_sweep1
@@ -2602,8 +2618,16 @@ class Sweeper1d(tk.Frame):
         
         if self.status_back_and_forth_master.get() == 0:
             back_and_forth_master = 1
+            if hasattr(self, 'entry_from'):
+                self.entry_from.config(state= "normal")
+                self.entry_to.config(state= "normal")
+                self.entry_ratio.config(state= "normal")
         else:
             back_and_forth_master = self.back_and_forth_master_count
+            if hasattr(self, 'entry_from'):
+                self.entry_from.config(state= "disabled")
+                self.entry_to.config(state= "disabled")
+                self.entry_ratio.config(state= "disabled")
             
         self.preset.loc[0, 'status_back_and_forth1'] = self.status_back_and_forth_master.get()
         self.preset.to_csv(globals()['sweeper1d_path'], index = False)
@@ -3158,7 +3182,7 @@ class Sweeper2d(tk.Frame):
 
         tk.Frame.__init__(self, parent)
         
-        self.preset = pd.read_csv(globals()['sweeper2d_path'], sep = ',')
+        self.preset = pd.read_csv(globals()['sweeper2d_path'], sep = ',', dtype = str)
         self.preset = self.preset.fillna('')
         self.combo_to_sweep1_current = int(self.preset['combo_to_sweep1'].values[0])
         self.sweep_options1_current = int(self.preset['sweep_options1'].values[0])
@@ -3797,6 +3821,7 @@ class Sweeper2d(tk.Frame):
         self.entry_from1 = tk.Entry(self)
         self.entry_from1.insert(0, self.from1_init)
         self.entry_from1.place(relx=0.17, rely=0.29)
+        self.entry_from1.after(1000, self.rewrite_preset)
 
         self.entry_to1 = tk.Entry(self)
         self.entry_to1.insert(0, self.to1_init)
@@ -3869,6 +3894,15 @@ class Sweeper2d(tk.Frame):
                                            variable=self.status_manual1, onvalue=1,
                                            offvalue=0, command=lambda: self.save_manual_status(i=1))
         self.checkbox_manual1.place(relx=0.12, rely=0.57)
+        
+        if self.status_back_and_forth_master.get() == 0:
+            self.entry_from1.config(state= "normal")
+            self.entry_to1.config(state= "normal")
+            self.entry_ratio1.config(state= "normal")
+        else:
+            self.entry_from1.config(state= "disabled")
+            self.entry_to1.config(state= "disabled")
+            self.entry_ratio1.config(state= "disabled")
 
         button_new_manual1 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(i=0))
         button_new_manual1.place(relx=0.12, rely=0.6)
@@ -3883,6 +3917,15 @@ class Sweeper2d(tk.Frame):
                                            variable=self.status_manual2, onvalue=1,
                                            offvalue=0, command=lambda: self.save_manual_status(i=2))
         self.checkbox_manual2.place(relx=0.27, rely=0.57)
+
+        if self.status_back_and_forth_slave.get() == 0:
+            self.entry_from2.config(state= "normal")
+            self.entry_to2.config(state= "normal")
+            self.entry_ratio2.config(state= "normal")
+        else:
+            self.entry_from2.config(state= "disabled")
+            self.entry_to2.config(state= "disabled")
+            self.entry_ratio2.config(state= "disabled")
 
         button_new_manual2 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(i=1))
         button_new_manual2.place(relx=0.27, rely=0.6)
@@ -4270,6 +4313,9 @@ class Sweeper2d(tk.Frame):
         if self.combo_to_sweep1.current() != self.combo_to_sweep1_current:
             self.preset.loc[0, 'combo_to_sweep1'] = self.combo_to_sweep1.current()
             self.preset.to_csv(globals()['sweeper2d_path'], index = False)
+        
+        self.back_ratio1_init = ''
+        self.back_delay_factor1_init = ''
             
     def update_sweep_options1(self, event):
         if self.sweep_options1.current() != self.sweep_options1_current:
@@ -4298,6 +4344,9 @@ class Sweeper2d(tk.Frame):
         if self.combo_to_sweep2.current() != self.combo_to_sweep2_current:
             self.preset.loc[0, 'combo_to_sweep2'] = self.combo_to_sweep2.current()
             self.preset.to_csv(globals()['sweeper2d_path'], index = False)
+            
+        self.back_ratio2_init = ''
+        self.back_delay_factor2_init = ''
             
     def update_sweep_options2(self, event):
         if self.sweep_options2.current() != self.sweep_options2_current:
@@ -4397,6 +4446,8 @@ class Sweeper2d(tk.Frame):
         self.preset.loc[0, 'interpolated'] = self.interpolated
         self.preset.loc[0, 'uniform'] = self.uniform
         self.preset.to_csv(globals()['sweeper2d_path'], index = False)
+        
+        self.entry_from1.after(1000, self.rewrite_preset)
 
     def update_sweep_configuration(self):
         global from_sweep1
@@ -4562,8 +4613,16 @@ class Sweeper2d(tk.Frame):
         
         if self.status_back_and_forth_master.get() == 0:
             back_and_forth_master = 1
+            if hasattr(self, 'entry_from1'):
+                self.entry_from1.config(state= "normal")
+                self.entry_to1.config(state= "normal")
+                self.entry_ratio1.config(state= "normal")
         else:
             back_and_forth_master = self.back_and_forth_master_count
+            if hasattr(self, 'entry_from1'):
+                self.entry_from1.config(state= "disabled")
+                self.entry_to1.config(state= "disabled")
+                self.entry_ratio1.config(state= "disabled")
             
         self.preset.loc[0, 'status_back_and_forth1'] = self.status_back_and_forth_master.get()
         self.preset.to_csv(globals()['sweeper2d_path'], index = False)
@@ -4573,8 +4632,16 @@ class Sweeper2d(tk.Frame):
         
         if self.status_back_and_forth_slave.get() == 0:
             back_and_forth_slave = 1
+            if hasattr(self, 'entry_from2'):
+                self.entry_from2.config(state= "normal")
+                self.entry_to2.config(state= "normal")
+                self.entry_ratio2.config(state= "normal")
         else:
             back_and_forth_slave = self.back_and_forth_slave_count
+            if hasattr(self, 'entry_from2'):
+                self.entry_from2.config(state= "disabled")
+                self.entry_to2.config(state= "disabled")
+                self.entry_ratio2.config(state= "disabled")
             
         self.preset.loc[0, 'status_back_and_forth2'] = self.status_back_and_forth_slave.get()
         self.preset.to_csv(globals()['sweeper2d_path'], index = False)
@@ -5495,7 +5562,7 @@ class Sweeper3d(tk.Frame):
 
         tk.Frame.__init__(self, parent)
         
-        self.preset = pd.read_csv(globals()['sweeper3d_path'], sep = ',')
+        self.preset = pd.read_csv(globals()['sweeper3d_path'], sep = ',', dtype = str)
         self.preset = self.preset.fillna('')
         self.combo_to_sweep1_current = int(self.preset['combo_to_sweep1'].values[0])
         self.sweep_options1_current = int(self.preset['sweep_options1'].values[0])
@@ -6343,6 +6410,7 @@ class Sweeper3d(tk.Frame):
         self.entry_from1 = tk.Entry(self)
         self.entry_from1.insert(0, self.from1_init)
         self.entry_from1.place(relx=0.17, rely=0.29)
+        self.entry_from1.after(1000, self.rewrite_preset)
 
         self.entry_to1 = tk.Entry(self)
         self.entry_to1.insert(0, self.to1_init)
@@ -6451,6 +6519,15 @@ class Sweeper3d(tk.Frame):
                                            offvalue=0, command=lambda: self.save_manual_status(i=1))
         self.checkbox_manual1.place(relx=0.12, rely=0.57)
         
+        if self.status_back_and_forth_master.get() == 0:
+            self.entry_from1.config(state= "normal")
+            self.entry_to1.config(state= "normal")
+            self.entry_ratio1.config(state= "normal")
+        else:
+            self.entry_from1.config(state= "disabled")
+            self.entry_to1.config(state= "disabled")
+            self.entry_ratio1.config(state= "disabled")
+        
         button_new_manual1 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(i=0))
         button_new_manual1.place(relx=0.12, rely=0.61)
         CreateToolTip(button_new_manual1, 'Create new sweep instruction')
@@ -6465,6 +6542,15 @@ class Sweeper3d(tk.Frame):
                                            offvalue=0, command=lambda: self.save_manual_status(i=2))
         self.checkbox_manual2.place(relx=0.27, rely=0.57)
 
+        if self.status_back_and_forth_slave.get() == 0:
+            self.entry_from2.config(state= "normal")
+            self.entry_to2.config(state= "normal")
+            self.entry_ratio2.config(state= "normal")
+        else:
+            self.entry_from2.config(state= "disabled")
+            self.entry_to2.config(state= "disabled")
+            self.entry_ratio2.config(state= "disabled")
+
         button_new_manual2 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(i=1))
         button_new_manual2.place(relx=0.27, rely=0.61)
         CreateToolTip(button_new_manual2, 'Create new sweep instruction')
@@ -6478,6 +6564,15 @@ class Sweeper3d(tk.Frame):
                                            variable=self.status_manual3, onvalue=1,
                                            offvalue=0, command=lambda: self.save_manual_status(i=3))
         self.checkbox_manual3.place(relx=0.42, rely=0.57)
+
+        if self.status_back_and_forth_slave_slave.get() == 0:
+            self.entry_from3.config(state= "normal")
+            self.entry_to3.config(state= "normal")
+            self.entry_ratio3.config(state= "normal")
+        else:
+            self.entry_from3.config(state= "disabled")
+            self.entry_to3.config(state= "disabled")
+            self.entry_ratio3.config(state= "disabled")
 
         button_new_manual3 = tk.Button(self, text='🖊', font = LARGE_FONT, command=lambda: self.open_blank(i=2))
         button_new_manual3.place(relx=0.42, rely=0.61)
@@ -6875,6 +6970,9 @@ class Sweeper3d(tk.Frame):
         if self.combo_to_sweep1.current() != self.combo_to_sweep1_current:
             self.preset.loc[0, 'combo_to_sweep1'] = self.combo_to_sweep1.current()
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
+            
+        self.back_ratio1_init = ''
+        self.back_delay_factor1_init = ''
 
     def update_sweep_parameters2(self, event, interval=100):
         global types_of_devices
@@ -6899,6 +6997,9 @@ class Sweeper3d(tk.Frame):
         if self.combo_to_sweep2.current() != self.combo_to_sweep2_current:
             self.preset.loc[0, 'combo_to_sweep2'] = self.combo_to_sweep2.current()
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
+            
+        self.back_ratio2_init = ''
+        self.back_delay_factor2_init = ''
 
     def update_sweep_parameters3(self, event, interval=100):
         global types_of_devices
@@ -6922,6 +7023,9 @@ class Sweeper3d(tk.Frame):
         if self.combo_to_sweep3.current() != self.combo_to_sweep3_current:
             self.preset.loc[0, 'combo_to_sweep3'] = self.combo_to_sweep3.current()
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
+            
+        self.back_ratio3_init = ''
+        self.back_delay_factor3_init = ''
             
     def update_sweep_options1(self, event):
         if self.sweep_options1.current() != self.sweep_options1_current:
@@ -7062,6 +7166,8 @@ class Sweeper3d(tk.Frame):
         self.preset.loc[0, 'interpolated'] = self.interpolated
         self.preset.loc[0, 'uniform'] = self.uniform
         self.preset.to_csv(globals()['sweeper3d_path'], index = False)
+        
+        self.entry_from1.after(1000, self.rewrite_preset)
             
     def update_sweep_configuration(self):
         global from_sweep1
@@ -7271,8 +7377,16 @@ class Sweeper3d(tk.Frame):
         
         if self.status_back_and_forth_master.get() == 0:
             back_and_forth_master = 1
+            if hasattr(self, 'entry_from1'):
+                self.entry_from1.config(state= "normal")
+                self.entry_to1.config(state= "normal")
+                self.entry_ratio1.config(state= "normal")
         else:
             back_and_forth_master = self.back_and_forth_master_count
+            if hasattr(self, 'entry_from1'):
+                self.entry_from1.config(state= "disabled")
+                self.entry_to1.config(state= "disabled")
+                self.entry_ratio1.config(state= "disabled")
             
         self.preset.loc[0, 'status_back_and_forth1'] = self.status_back_and_forth_master.get()
         self.preset.to_csv(globals()['sweeper3d_path'], index = False)
@@ -7282,8 +7396,16 @@ class Sweeper3d(tk.Frame):
         
         if self.status_back_and_forth_slave.get() == 0:
             back_and_forth_slave = 1
+            if hasattr(self, 'entry_from2'):
+                self.entry_from2.config(state= "normal")
+                self.entry_to2.config(state= "normal")
+                self.entry_ratio2.config(state= "normal")
         else:
             back_and_forth_slave = self.back_and_forth_slave_count
+            if hasattr(self, 'entry_from2'):
+                self.entry_from2.config(state= "disabled")
+                self.entry_to2.config(state= "disabled")
+                self.entry_ratio2.config(state= "disabled")
             
         self.preset.loc[0, 'status_back_and_forth2'] = self.status_back_and_forth_slave.get()
         self.preset.to_csv(globals()['sweeper3d_path'], index = False)
@@ -7293,8 +7415,16 @@ class Sweeper3d(tk.Frame):
         
         if self.status_back_and_forth_slave_slave.get() == 0:
             back_and_forth_slave_slave = 1
+            if hasattr(self, 'entry_from3'):
+                self.entry_from3.config(state= "normal")
+                self.entry_to3.config(state= "normal")
+                self.entry_ratio3.config(state= "normal")
         else:
             back_and_forth_slave_slave = self.back_and_forth_slave_slave_count
+            if hasattr(self, 'entry_from3'):
+                self.entry_from3.config(state= "disabled")
+                self.entry_to3.config(state= "disabled")
+                self.entry_ratio3.config(state= "disabled")
             
         self.preset.loc[0, 'status_back_and_forth3'] = self.status_back_and_forth_slave_slave.get()
         self.preset.to_csv(globals()['sweeper3d_path'], index = False)
@@ -9738,7 +9868,8 @@ class Sweeper_write(threading.Thread):
                         eps = abs(float(getattr(self, f'step{axis}')) * 0.1)
                     
                     try:
-                        if not abs(float(current) - float(to_sweep)) < eps:
+                        delta = abs(float(current) - float(to_sweep))
+                        if (delta > eps) and (delta < getattr(self, f'step{axis}') * 2.1):
                             if axis == '1':
                                 inner_step(value1 = to_sweep)
                                 if len(manual_sweep_flags) == 3 or len(manual_sweep_flags) == 2:
