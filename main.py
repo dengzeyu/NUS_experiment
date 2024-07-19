@@ -2150,7 +2150,7 @@ class Sweeper1d(tk.Frame):
                                           offvalue=0, command=lambda: self.save_manual_status())
         self.checkbox_manual1.place(relx=0.12, rely=0.52)
 
-        if self.status_back_and_forth_master.get() == 0:
+        if self.status_manual.get() == 0:
                 self.entry_from.config(state= "normal")
                 self.entry_to.config(state= "normal")
                 self.entry_ratio.config(state= "normal")
@@ -2473,6 +2473,9 @@ class Sweeper1d(tk.Frame):
             self.preset.to_csv(globals()['sweeper1d_path'], index = False)
             
     def rewrite_preset(self):
+        
+        time.sleep(0.05)
+        
         if self.entry_from.get() != self.from1_init:
             self.preset.loc[0, 'from1'] = self.entry_from.get()
             self.preset.to_csv(globals()['sweeper1d_path'], index = False)
@@ -2605,6 +2608,15 @@ class Sweeper1d(tk.Frame):
 
         if self.status_manual.get() == 0:
             self.manual_filenames = ['']
+            if hasattr(self, 'entry_from'):
+                self.entry_from.config(state= "normal")
+                self.entry_to.config(state= "normal")
+                self.entry_ratio.config(state= "normal")
+        else:
+            if hasattr(self, 'entry_from'):
+                self.entry_from.config(state= "disabled")
+                self.entry_to.config(state= "disabled")
+                self.entry_ratio.config(state= "disabled")
             
         #update preset
         self.preset.loc[0, 'manual_filename1'] = str(self.manual_filenames[0])
@@ -2618,16 +2630,8 @@ class Sweeper1d(tk.Frame):
         
         if self.status_back_and_forth_master.get() == 0:
             back_and_forth_master = 1
-            if hasattr(self, 'entry_from'):
-                self.entry_from.config(state= "normal")
-                self.entry_to.config(state= "normal")
-                self.entry_ratio.config(state= "normal")
         else:
-            back_and_forth_master = self.back_and_forth_master_count
-            if hasattr(self, 'entry_from'):
-                self.entry_from.config(state= "disabled")
-                self.entry_to.config(state= "disabled")
-                self.entry_ratio.config(state= "disabled")
+            back_and_forth_master = self.back_and_forth_master_coun
             
         self.preset.loc[0, 'status_back_and_forth1'] = self.status_back_and_forth_master.get()
         self.preset.to_csv(globals()['sweeper1d_path'], index = False)
@@ -3895,7 +3899,7 @@ class Sweeper2d(tk.Frame):
                                            offvalue=0, command=lambda: self.save_manual_status(i=1))
         self.checkbox_manual1.place(relx=0.12, rely=0.57)
         
-        if self.status_back_and_forth_master.get() == 0:
+        if self.status_manual1.get() == 0:
             self.entry_from1.config(state= "normal")
             self.entry_to1.config(state= "normal")
             self.entry_ratio1.config(state= "normal")
@@ -3918,7 +3922,7 @@ class Sweeper2d(tk.Frame):
                                            offvalue=0, command=lambda: self.save_manual_status(i=2))
         self.checkbox_manual2.place(relx=0.27, rely=0.57)
 
-        if self.status_back_and_forth_slave.get() == 0:
+        if self.status_manual2.get() == 0:
             self.entry_from2.config(state= "normal")
             self.entry_to2.config(state= "normal")
             self.entry_ratio2.config(state= "normal")
@@ -4388,6 +4392,7 @@ class Sweeper2d(tk.Frame):
         self.preset.to_csv(globals()['sweeper2d_path'], index = False)
             
     def rewrite_preset(self):
+        time.sleep(0.05)
         if self.entry_from1.get() != self.from1_init:
             self.preset.loc[0, 'from1'] = self.entry_from1.get()
             self.preset.to_csv(globals()['sweeper2d_path'], index = False)
@@ -4600,6 +4605,15 @@ class Sweeper2d(tk.Frame):
 
         if getattr(self, f'status_manual{i}').get() == 0:
             self.manual_filenames[i - 1] = ''
+            if hasattr(self, f'entry_from{i}'):
+                getattr(self, f'entry_from{i}').config(state= "normal")
+                getattr(self, f'entry_to{i}').config(state= "normal")
+                getattr(self, f'entry_ratio{i}').config(state= "normal")
+        else:
+            if hasattr(self, f'entry_from{i}'):
+                getattr(self, f'entry_from{i}').config(state= "disabled")
+                getattr(self, f'entry_to{i}').config(state= "disabled")
+                getattr(self, f'entry_ratio{i}').config(state= "disabled")
             
         #update preset
         self.preset.loc[0, f'manual_filename{i}'] = str(self.manual_filenames[i - 1])
@@ -4613,16 +4627,8 @@ class Sweeper2d(tk.Frame):
         
         if self.status_back_and_forth_master.get() == 0:
             back_and_forth_master = 1
-            if hasattr(self, 'entry_from1'):
-                self.entry_from1.config(state= "normal")
-                self.entry_to1.config(state= "normal")
-                self.entry_ratio1.config(state= "normal")
         else:
             back_and_forth_master = self.back_and_forth_master_count
-            if hasattr(self, 'entry_from1'):
-                self.entry_from1.config(state= "disabled")
-                self.entry_to1.config(state= "disabled")
-                self.entry_ratio1.config(state= "disabled")
             
         self.preset.loc[0, 'status_back_and_forth1'] = self.status_back_and_forth_master.get()
         self.preset.to_csv(globals()['sweeper2d_path'], index = False)
@@ -4632,16 +4638,8 @@ class Sweeper2d(tk.Frame):
         
         if self.status_back_and_forth_slave.get() == 0:
             back_and_forth_slave = 1
-            if hasattr(self, 'entry_from2'):
-                self.entry_from2.config(state= "normal")
-                self.entry_to2.config(state= "normal")
-                self.entry_ratio2.config(state= "normal")
         else:
             back_and_forth_slave = self.back_and_forth_slave_count
-            if hasattr(self, 'entry_from2'):
-                self.entry_from2.config(state= "disabled")
-                self.entry_to2.config(state= "disabled")
-                self.entry_ratio2.config(state= "disabled")
             
         self.preset.loc[0, 'status_back_and_forth2'] = self.status_back_and_forth_slave.get()
         self.preset.to_csv(globals()['sweeper2d_path'], index = False)
@@ -6519,7 +6517,7 @@ class Sweeper3d(tk.Frame):
                                            offvalue=0, command=lambda: self.save_manual_status(i=1))
         self.checkbox_manual1.place(relx=0.12, rely=0.57)
         
-        if self.status_back_and_forth_master.get() == 0:
+        if self.status_manual1.get() == 0:
             self.entry_from1.config(state= "normal")
             self.entry_to1.config(state= "normal")
             self.entry_ratio1.config(state= "normal")
@@ -6542,7 +6540,7 @@ class Sweeper3d(tk.Frame):
                                            offvalue=0, command=lambda: self.save_manual_status(i=2))
         self.checkbox_manual2.place(relx=0.27, rely=0.57)
 
-        if self.status_back_and_forth_slave.get() == 0:
+        if self.status_manual3.get() == 0:
             self.entry_from2.config(state= "normal")
             self.entry_to2.config(state= "normal")
             self.entry_ratio2.config(state= "normal")
@@ -6565,7 +6563,7 @@ class Sweeper3d(tk.Frame):
                                            offvalue=0, command=lambda: self.save_manual_status(i=3))
         self.checkbox_manual3.place(relx=0.42, rely=0.57)
 
-        if self.status_back_and_forth_slave_slave.get() == 0:
+        if self.status_manual3.get() == 0:
             self.entry_from3.config(state= "normal")
             self.entry_to3.config(state= "normal")
             self.entry_ratio3.config(state= "normal")
@@ -7094,6 +7092,9 @@ class Sweeper3d(tk.Frame):
         self.preset.to_csv(globals()['sweeper3d_path'], index = False)
             
     def rewrite_preset(self):
+        
+        time.sleep(0.05)
+        
         if self.entry_from1.get() != self.from1_init:
             self.preset.loc[0, 'from1'] = self.entry_from1.get()
             self.preset.to_csv(globals()['sweeper3d_path'], index = False)
@@ -7359,11 +7360,19 @@ class Sweeper3d(tk.Frame):
 
     def save_manual_status(self, i):
         if self.manual_sweep_flags[i - 1] != getattr(self, 'status_manual' + str(i)).get():
-            self.manual_sweep_flags[i -
-                                    1] = getattr(self, 'status_manual' + str(i)).get()
+            self.manual_sweep_flags[i - 1] = getattr(self, 'status_manual' + str(i)).get()
 
         if getattr(self, f'status_manual{i}').get() == 0:
             self.manual_filenames[i - 1] = ''
+            if hasattr(self, f'entry_from{i}'):
+                getattr(self, f'entry_from{i}').config(state= "normal")
+                getattr(self, f'entry_to{i}').config(state= "normal")
+                getattr(self, f'entry_ratio{i}').config(state= "normal")
+        else:
+            if hasattr(self, f'entry_from{i}'):
+                getattr(self, f'entry_from{i}').config(state= "disabled")
+                getattr(self, f'entry_to{i}').config(state= "disabled")
+                getattr(self, f'entry_ratio{i}').config(state= "disabled")
             
         #update preset
         self.preset.loc[0, f'manual_filename{i}'] = str(self.manual_filenames[i - 1])
@@ -7377,16 +7386,8 @@ class Sweeper3d(tk.Frame):
         
         if self.status_back_and_forth_master.get() == 0:
             back_and_forth_master = 1
-            if hasattr(self, 'entry_from1'):
-                self.entry_from1.config(state= "normal")
-                self.entry_to1.config(state= "normal")
-                self.entry_ratio1.config(state= "normal")
         else:
             back_and_forth_master = self.back_and_forth_master_count
-            if hasattr(self, 'entry_from1'):
-                self.entry_from1.config(state= "disabled")
-                self.entry_to1.config(state= "disabled")
-                self.entry_ratio1.config(state= "disabled")
             
         self.preset.loc[0, 'status_back_and_forth1'] = self.status_back_and_forth_master.get()
         self.preset.to_csv(globals()['sweeper3d_path'], index = False)
@@ -7396,16 +7397,8 @@ class Sweeper3d(tk.Frame):
         
         if self.status_back_and_forth_slave.get() == 0:
             back_and_forth_slave = 1
-            if hasattr(self, 'entry_from2'):
-                self.entry_from2.config(state= "normal")
-                self.entry_to2.config(state= "normal")
-                self.entry_ratio2.config(state= "normal")
         else:
             back_and_forth_slave = self.back_and_forth_slave_count
-            if hasattr(self, 'entry_from2'):
-                self.entry_from2.config(state= "disabled")
-                self.entry_to2.config(state= "disabled")
-                self.entry_ratio2.config(state= "disabled")
             
         self.preset.loc[0, 'status_back_and_forth2'] = self.status_back_and_forth_slave.get()
         self.preset.to_csv(globals()['sweeper3d_path'], index = False)
@@ -7415,16 +7408,8 @@ class Sweeper3d(tk.Frame):
         
         if self.status_back_and_forth_slave_slave.get() == 0:
             back_and_forth_slave_slave = 1
-            if hasattr(self, 'entry_from3'):
-                self.entry_from3.config(state= "normal")
-                self.entry_to3.config(state= "normal")
-                self.entry_ratio3.config(state= "normal")
         else:
             back_and_forth_slave_slave = self.back_and_forth_slave_slave_count
-            if hasattr(self, 'entry_from3'):
-                self.entry_from3.config(state= "disabled")
-                self.entry_to3.config(state= "disabled")
-                self.entry_ratio3.config(state= "disabled")
             
         self.preset.loc[0, 'status_back_and_forth3'] = self.status_back_and_forth_slave_slave.get()
         self.preset.to_csv(globals()['sweeper3d_path'], index = False)
