@@ -170,7 +170,7 @@ class opticool():
         self.set_options = ['T_sample', 'T_finger', 'Field', 'T_rate', 'Field_rate', 'T_approach', 'Field_approach', 'Field_driven']
         self.get_options = ['T_sample', 'T_finger', 'Field', 'T_rate', 'Field_rate', 'T_approach', 'Field_approach', 'Field_driven']
         self.sweepable = [True, True, True, False, False, False, False, False]
-        self.maxspeed = [10, 10, self.max_Field_speed(), None, None, None, None, None, None]
+        self.maxspeed = [5, 5, self.max_Field_speed(), None, None, None, None, None, None]
         self.eps = [0.05, 0.05, 50, None, None, None, None, None, None]
     
     
