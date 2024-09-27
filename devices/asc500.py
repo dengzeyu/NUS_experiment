@@ -6,15 +6,15 @@
 
 import numpy as np
 from matplotlib import pyplot as plt
-from ASC500.lib import ASC500
+from ASC500_Python_Control.lib import ASC500
 import time
 
 if __name__ == '__main__':
-    binPath = "ASC500\\Installer\\ASC500CL-V2.7.13\\"
-    dllPath = "ASC500\\64bit_lib\\ASC500CL-LIB-WIN64-V2.7.13\\daisybase\\lib\\"
+    binPath = "ASC500_Python_Control\\Installer\\ASC500CL-V2.7.13\\"
+    dllPath = "ASC500_Python_Control\\64bit_lib\\ASC500CL-LIB-WIN64-V2.7.13\\daisybase\\lib\\"
 else:
-    binPath = "devices\\ASC500\\Installer\\ASC500CL-V2.7.13\\"
-    dllPath = "devices\\ASC500\\64bit_lib\\ASC500CL-LIB-WIN64-V2.7.13\\daisybase\\lib\\"
+    binPath = "devices\\ASC500_Python_Control\\Installer\\ASC500CL-V2.7.13\\"
+    dllPath = "devices\\ASC500_Python_Control\\64bit_lib\\ASC500CL-LIB-WIN64-V2.7.13\\daisybase\\lib\\"
     
 class asc500():
     def __init__(self, adress = 'COM3'):
@@ -22,17 +22,17 @@ class asc500():
         self.device = ASC500(binPath, dllPath)
         self.device.base.startServer()
         
-        self.get_options = ['gnd_x', 'gnd_y', 'gnd_z', 'volt_x', 'volt_y', 'volt_z', 'freq_x', 'freq_y', 'freq_z']
-        self.set_options = ['gnd_x', 'gnd_y', 'gnd_z', 'step_up_x', 'step_up_y', 'step_up_z', 'step_down_x', 
+        self.get_options = ['scanner_z', 'outp_active', 'gnd_x', 'gnd_y', 'gnd_z', 'volt_x', 'volt_y', 'volt_z', 'freq_x', 'freq_y', 'freq_z']
+        self.set_options = ['scanner_z', 'outp_active', 'gnd_x', 'gnd_y', 'gnd_z', 'step_up_x', 'step_up_y', 'step_up_z', 'step_down_x', 
                             'step_down_y', 'step_down_z', 'volt_x', 'volt_y', 'volt_z', 'freq_x', 'freq_y', 'freq_z']
         
-        self.set_freq_x(400)
-        self.set_freq_y(400)
-        self.set_freq_z(40)
+        self.set_freq_x(100)
+        self.set_freq_y(100)
+        self.set_freq_z(100)
         
         self.set_volt_x(35)
         self.set_volt_y(35)
-        self.set_volt_z(35)
+        self.set_volt_z(40)
         
         self.sweepable = [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False]
         
@@ -134,8 +134,44 @@ class asc500():
         else:
             set_mode = 2
         self.device.coarse.setCoarseAxisMode(axis, set_mode)
+        
+    def outp_active(self):
+        """
+        Activates the output of the scanner.
+
+        Parameters
+        ----------
+        None.
+
+        Returns
+        -------
+        None.
+
+        """
+        # check if scanner output is already active?
+        outActive = self.device.base.getParameter(self.device.base.getConst('ID_OUTPUT_STATUS'), 0 )
+        time.sleep(0.1)
+        return outActive
     
-    def set_steps_up_x(self, value: int = 1):
+    def set_outp_active(self, value: int):
+        """
+        If value == 0 or False: set output active off
+        If value == 1 or True: set set output active on
+        
+        """
+        
+        outActive = self.outp_active()
+        
+        if outActive == 0: #if disabled
+            if value == 1 or value == True:
+                self.device.base.setParameter(self.device.base.getConst('ID_OUTPUT_ACTIVATE'), 1)
+                time.sleep(0.1)
+        else: #if enabled
+            if value == 0 or value == False:
+                self.device.base.setParameter(self.device.base.getConst('ID_OUTPUT_ACTIVATE'), 0)
+                time.sleep(0.1)
+    
+    def set_step_up_x(self, value: int = 1):
         """
         Makes 'value' number of steps up along x-axis
         
@@ -152,7 +188,7 @@ class asc500():
         axis = 4
         self.device.coarse.stepCoarseUp(axis, value)
         
-    def set_steps_down_x(self, value: int = 1):
+    def set_step_down_x(self, value: int = 1):
         """
         Makes 'value' number of steps down along x-axis 
         
@@ -169,7 +205,7 @@ class asc500():
         axis = 4
         self.device.coarse.stepCoarseDown(axis, value)
         
-    def set_steps_up_y(self, value: int = 1):
+    def set_step_up_y(self, value: int = 1):
         """
         Makes 'value' number of steps up along y-axis
         
@@ -186,7 +222,7 @@ class asc500():
         axis = 5
         self.device.coarse.stepCoarseUp(axis, value)
         
-    def set_steps_down_y(self, value: int = 1):
+    def set_step_down_y(self, value: int = 1):
         """
         Makes 'value' number of steps down along y-axis 
         
@@ -203,7 +239,7 @@ class asc500():
         axis = 5
         self.device.coarse.stepCoarseDown(axis, value)
         
-    def set_steps_up_z(self, value: int = 1):
+    def set_step_up_z(self, value: int = 1):
         """
         Makes 'value' number of steps up along z-axis
         
@@ -220,7 +256,87 @@ class asc500():
         axis = 6
         self.device.coarse.stepCoarseUp(axis, value)
         
-    def set_steps_down_z(self, value: int = 1):
+    def scanner_z(self):
+        """
+        Returns the position of the zcontrol
+        """
+        
+        return self.device.zcontrol.getPositionZ()
+    
+    def set_scanner_z(self, value):
+        """
+        Set the position of the zcontrol
+        """
+        
+        try:
+            value = float(value)
+        except ValueError:
+            print(f'Invalid step type: expected int or float, got {type(value)}')
+            value = self.scanner_z()
+        
+        self.device.zcontrol.setPositionZ(value)
+        
+    def scanner_x(self):
+        """
+        Returns the position of the x-scanner
+        """
+        
+        return self.device.scanner.getPositionsXYZRel()[0]
+    
+    def scanner_y(self):
+        """
+        Returns the position of the y-scanner
+        """
+        
+        return self.device.scanner.getPositionsXYZRel()[1]
+        
+    def set_scanner_up_z(self, value: float):
+        """
+        
+
+        Parameters
+        ----------
+        value : int or float; step up
+
+        Reads the position of zcontrol and sets a position + step
+
+        """
+        
+        z = self.scanner_z()
+        
+        try:
+            value = float(value)
+            new_z = z + value
+        except ValueError:
+            print(f'Invalid step type: expected int or float, got {type(value)}')
+            new_z = z
+        
+        self.device.zcontrol.setPositionZ(new_z)
+        
+    def set_scanner_down_z(self, value: float):
+        """
+        
+
+        Parameters
+        ----------
+        value : int or float; step down
+
+        Reads the position of zcontrol and sets a position - step
+
+        """
+        
+        z = self.scanner_z()
+        
+        try:
+            value = float(value)
+            new_z = z - value
+        except ValueError:
+            print(f'Invalid step type: expected int or float, got {type(value)}')
+            new_z = z
+        
+        self.device.zcontrol.setPositionZ(new_z)
+        
+    def set_step_down_z(self, value: int = 1):
         """
         Makes 'value' number of steps down along z-axis 
         
@@ -368,17 +484,43 @@ class asc500():
         """
         axis = 6
         self.device.coarse.setCoarseFrequency(axis, value)
+        
+    def Temp(self):
+        """
+        Return the environment temperature from Daisy
+        """
+        
+        T = self.device.limits.getTemperature()
+        return T
+    
+    def set_Temp(self, value: float):
+        """
+
+        Parameters
+        ----------
+        value : Environment temperature
+
+        Sets the environment temperature in Daisy
+
+        """
+        
+        try:
+            value = float(value)
+        except ValueError:
+            print(f'Unexpected type of environment temperature, expected int or flot, got {type(value)}')
+            value = self.T
+        
+        self.device.limits.setTemperature(value)
     
     def close(self):
-        #self.device.base.stopServer()
-        pass
+        self.device.base.stopServer()
 
 def main():
-    device = ASC500(binPath, dllPath)
-    device.base.startServer()
-    axis = 6
-    device.coarse.setCoarseAxisMode(axis, 1)
-    print(device.coarse.getCoarseAxisMode(axis))
+    #set_gnd_z(true)
+    device = asc500()
+    device.set_gnd_x(2)
+    device.close()
+    #device.set_gnd_z(1)
     #device.base.stopServer()
     #device.base.startServer()
     #device.base.stopServer()

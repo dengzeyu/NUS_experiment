@@ -56,9 +56,11 @@ class AttoDry2100():
         
         self.set_options = ['Temp', 'Field', 'ToggleTemp', 'ToggleField', 'P', 'I', 'D']
         self.get_options = ['Temp', 'Field', 'UserTemperaure', 'UserField', 'ToggleTemp', 'ToggleField', 'VTI_Temp', 'P', 'I', 'D', 'Sam_Heater', 'VTI_Heater']
+        self.sweepable = [True, True, False, False, False, False, True, False, False, False, False, False]
         
-        self.eps = [0.25, None, None, None]
-        
+        self.eps = [0.03, 0.001, 0.1, 0.001, None, None, 0.1, None, None, None, None, None]
+        self.maxspeed = [None, None, None, None, None, None, None, None, None, None, None, None]
+               
     def Temp(self):
         #get sample temperature
         self.cryo.AttoDRY_Interface_getSampleTemperature(ct.byref(self.sampleTemp))
@@ -81,7 +83,7 @@ class AttoDry2100():
         return ans
     
     def ToggleField(self):
-        #get value if cryostat is controlling sample temperature
+        #get value if cryostat is controlling Field
         self.cryo.AttoDRY_Interface_isControllingField(ct.byref(self.isControllingField))
         ans = self.isControllingField.value
         ans = bool(ans)
@@ -104,13 +106,15 @@ class AttoDry2100():
             self.cryo.AttoDRY_Interface_toggleFullTemperatureControl.argtypes = (ct.c_ushort, )
             self.cryo.AttoDRY_Interface_toggleFullTemperatureControl(ct.c_ushort(value))
         
-        if value and self.ToggleTemp():
+        t = self.ToggleTemp()
+        
+        if value and t:
             pass
-        elif value and not self.ToggleTemp():
+        elif value and not t:
             toggle(1)
-        elif not value and not self.ToggleTemp():
+        elif not value and not t:
             pass
-        elif not value and self.ToggleTemp():
+        elif not value and t:
             toggle(0)
     
     def set_ToggleField(self, value):
@@ -123,6 +127,7 @@ class AttoDry2100():
             self.cryo.AttoDRY_Interface_toggleMagneticFieldControl.argtypes = (ct.c_ushort, )
             self.cryo.AttoDRY_Interface_toggleMagneticFieldControl(ct.c_ushort(value))
         
+
         if value and self.ToggleField():
             pass
         elif value and not self.ToggleField():
@@ -141,7 +146,7 @@ class AttoDry2100():
     
     def VTI_Temp(self):
         #get sample temperature
-        self.cryo.AttoDRY_Interface_getVTITemperature(ct.byref(self.VTITemp))
+        self.cryo.AttoDRY_Interface_getVtiTemperature(ct.byref(self.VTITemp))
         T = self.VTITemp.value
         T = float(T)
         return T
@@ -176,7 +181,7 @@ class AttoDry2100():
     
     def VTI_Heater(self):
         #get sample heater power
-        self.cryo.AttoDRY_Interface_getVTIHeaterPower(ct.byref(self.VTIHeater))
+        self.cryo.AttoDRY_Interface_getVtiHeaterPower(ct.byref(self.VTIHeater))
         VH = self.VTIHeater.value
         VH = float(VH)
         return VH
@@ -191,28 +196,39 @@ class AttoDry2100():
         
     def set_Field(self, value: float, speed: float = None):
         #set user temperature
-        self.userField = ct.c_float(value)
+        self._userField = ct.c_float(value)
         self.cryo.AttoDRY_Interface_setUserMagneticField(self._userField)
         if not self.ToggleField():
             print('Field was not toggled, now controlling')
             self.set_ToggleField(True)
         
         
-    def set_P(self, value: float, speed: float = None):
+    def set_P(self, value: float):
         #set proportional gain
         self.P = ct.c_float(value)
         self.cryo.AttoDRY_Interface_setProportionalGain(self.P)
         
-    def set_I(self, value: float, speed: float = None):
+    def set_I(self, value: float):
         #set integral gain
         self.I = ct.c_float(value)
         self.cryo.AttoDRY_Interface_setIntegralGain(self.I)
         
-    def set_D(self, value: float, speed: float = None):
+    def set_D(self, value: float):
         #set derivative gain
         self.D = ct.c_float(value)
         self.cryo.AttoDRY_Interface_setDerivativeGain(self.D)
         
+    def error_status(self):
+        length = 500
+        ErrorStatus = ct.create_string_buffer(length)
+        l = ct.c_int(length)
+        self.cryo.AttoDRY_Interface_getAttodryErrorStatus(ct.byref(ErrorStatus), l)
+        return ErrorStatus.value.decode('utf-8')
+        
+    def downloadSampleTemperatureSensorCalibrationCurve(self, savepath):
+        Savepath = savepath.encode('utf-8')
+        self.cryo.AttoDRY_Interface_downloadSampleTemperatureSensorCalibrationCurve(ct.c_char_p(Savepath).value)
+
     def close(self):
         self.cryo.AttoDRY_Interface_Disconnect()
 
@@ -220,8 +236,12 @@ class AttoDry2100():
         
         
 def main():
+    device = AttoDry2100(adress='COM4')
     try:
-        device = AttoDry2100(adress='COM4')
+        print(device.error_status())
+        #device.set_Temp(4)
+        #device.set_ToggleField(1)
+        #device.set_Field(0.01)
     except Exception as ex:
         print(f'Exception happened initializing AttoDry2100: {ex}')
     finally:

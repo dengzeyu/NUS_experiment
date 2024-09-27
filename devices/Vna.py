@@ -782,6 +782,34 @@ class Vna(GenericInstrument):
         
         return x[max_peak_pos], x[min_dip_pos], y[max_peak_pos], y[min_dip_pos]
     
+    def calculate_span_peak(self, x, y):
+        from scipy.signal import find_peaks, peak_widths
+        
+        y = [float(i) for i in y]
+        
+        peaks_pos = find_peaks(y)[0]
+        
+        try:
+            max_peak_pos = peaks_pos[0]
+        except IndexError:
+            return self.span_freq() // 10
+        
+        for pos in peaks_pos:
+            if y[pos] > y[max_peak_pos]:
+                max_peak_pos = pos
+        
+        n = peak_widths(y, [max_peak_pos])[0][0]
+        
+        span = float(self.span_freq())
+        
+        npoints = float(self.num_points())
+        
+        n = float(n)
+        
+        n = span * n / npoints
+        
+        return n
+    
     def max_linmag_freq(self):
         x = self.freqs().split(',')
         y = self.trace_linmag().split(',')
@@ -814,6 +842,11 @@ class Vna(GenericInstrument):
         ans = self.fit(f, self.trace_linmag().split(','))
         return (ans[0], ans[2])
     
+    def linmag_span(self):
+        f = self.freqs().split(',')
+        f = np.array([float(i) for i in f])
+        ans = self.calculate_span_peak(f, self.trace_linmag().split(','))
+        return ans
     
     def linmag_dip(self):
         f = self.freqs().split(',')
@@ -833,10 +866,9 @@ class Vna(GenericInstrument):
      
 def main():
     vna = Vna('169.254.82.39:5025')
-    
     try:
-        trace = vna.trace_linmag()
-        print(trace)
+        span = vna.linmag_span()
+        print(span)
     except Exception as ex:
         print(ex)
     finally:
