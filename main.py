@@ -134,6 +134,7 @@ ratio_sweep3 = 1
 back_ratio_sweep3 = 1
 delay_factor3 = 1
 back_delay_factor3 = 1
+setget_time_delay = 10
 stepper_flag = False
 #fastmode_slave_flag = False
 #fastmode_master_flag = False
@@ -2513,7 +2514,7 @@ class Sweeper1d(tk.Frame):
             self.preset.loc[0, 'filename_sweep'] = current_filename
             self.preset.to_csv(globals()['sweeper1d_path'], index = False)
         
-        self.entry_from.after(1000, self.rewrite_preset)
+        #self.entry_from.after(1000, self.rewrite_preset)
 
     def update_sweep_configuration(self):
         global from_sweep1
@@ -2631,7 +2632,7 @@ class Sweeper1d(tk.Frame):
         if self.status_back_and_forth_master.get() == 0:
             back_and_forth_master = 1
         else:
-            back_and_forth_master = self.back_and_forth_master_coun
+            back_and_forth_master = self.back_and_forth_master_count
             
         self.preset.loc[0, 'status_back_and_forth1'] = self.status_back_and_forth_master.get()
         self.preset.to_csv(globals()['sweeper1d_path'], index = False)
@@ -3825,7 +3826,7 @@ class Sweeper2d(tk.Frame):
         self.entry_from1 = tk.Entry(self)
         self.entry_from1.insert(0, self.from1_init)
         self.entry_from1.place(relx=0.17, rely=0.29)
-        self.entry_from1.after(1000, self.rewrite_preset)
+        #self.entry_from1.after(1000, self.rewrite_preset)
 
         self.entry_to1 = tk.Entry(self)
         self.entry_to1.insert(0, self.to1_init)
@@ -4452,7 +4453,7 @@ class Sweeper2d(tk.Frame):
         self.preset.loc[0, 'uniform'] = self.uniform
         self.preset.to_csv(globals()['sweeper2d_path'], index = False)
         
-        self.entry_from1.after(1000, self.rewrite_preset)
+        #self.entry_from1.after(1000, self.rewrite_preset)
 
     def update_sweep_configuration(self):
         global from_sweep1
@@ -6408,7 +6409,7 @@ class Sweeper3d(tk.Frame):
         self.entry_from1 = tk.Entry(self)
         self.entry_from1.insert(0, self.from1_init)
         self.entry_from1.place(relx=0.17, rely=0.29)
-        self.entry_from1.after(1000, self.rewrite_preset)
+        #self.entry_from1.after(1000, self.rewrite_preset)
 
         self.entry_to1 = tk.Entry(self)
         self.entry_to1.insert(0, self.to1_init)
@@ -7168,7 +7169,7 @@ class Sweeper3d(tk.Frame):
         self.preset.loc[0, 'uniform'] = self.uniform
         self.preset.to_csv(globals()['sweeper3d_path'], index = False)
         
-        self.entry_from1.after(1000, self.rewrite_preset)
+        #self.entry_from1.after(1000, self.rewrite_preset)
             
     def update_sweep_configuration(self):
         global from_sweep1
@@ -9018,6 +9019,7 @@ class Sweeper_write(threading.Thread):
         
         def setget_write():
             global setget_flag
+            global setget_time_delay
             global filename_setget
             global pause_flag
             global deli
@@ -9040,7 +9042,7 @@ class Sweeper_write(threading.Thread):
                             dataframe.append(None)
                             return
                             
-                    time.sleep(0.2)
+                    time.sleep(setget_time_delay)
                         
                     with open(filename_setget, 'a', newline = '') as f_object:
                         try:
@@ -9054,7 +9056,7 @@ class Sweeper_write(threading.Thread):
                         finally:
                             f_object.close()
                 else:
-                    time.sleep(0.2)
+                    time.sleep(setget_time_delay)
         
         def append_read_parameters():
             '''appends dataframe with parameters to read'''
