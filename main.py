@@ -2632,7 +2632,7 @@ class Sweeper1d(tk.Frame):
         if self.status_back_and_forth_master.get() == 0:
             back_and_forth_master = 1
         else:
-            back_and_forth_master = self.back_and_forth_master_coun
+            back_and_forth_master = self.back_and_forth_master_count
             
         self.preset.loc[0, 'status_back_and_forth1'] = self.status_back_and_forth_master.get()
         self.preset.to_csv(globals()['sweeper1d_path'], index = False)
