@@ -138,7 +138,7 @@ class mapper2D():
                         diff = self.__dict__[f'map_{parameter}'].shape[1] - self.__dict__[parameter].shape[0]
                         if diff < 0:
                             for i in range(abs(diff)):
-                                self.__dict__[parameter] =  np.concatenate(self.__dict__[parameter], [np.nan])
+                                self.__dict__[parameter] =  np.concatenate((self.__dict__[parameter], [np.nan]))
                         elif diff > 0:
                             def stack(parameter):
                                 self.__dict__[f'map_{parameter}'] = np.hstack([self.__dict__[f'map_{parameter}'], np.array([np.nan * np.ones(self.__dict__[f'map_{parameter}'].shape[0])]).T])
