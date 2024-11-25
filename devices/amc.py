@@ -12,6 +12,7 @@ class amc():
     def __init__(self, adress: str = "192.168.1.4"):
         self.device = AMC(adress)
         self.device.connect()
+        self.fraction = 1000
         
         self.set_options = ['gnd_1', 'gnd_2', 'gnd_3', 'step_up_1', 'step_down_1', 'step_up_2', 'step_down_2',
                             'step_up_3', 'step_down_3', 'volt_1', 'volt_2', 'volt_3', 'freq_1', 'freeq_2',
@@ -27,20 +28,20 @@ class amc():
             self.sweepable.append(None)
         
         for i in range(3):
-            self.__dict__[f'position_{i+1}'] = lambda: self.position(i+1)
-            self.__dict__[f'gnd_{i+1}'] = lambda: self.gnd(i+1)
-            self.__dict__[f'volt_{i+1}'] = lambda: self.volt(i+1)
-            self.__dict__[f'freq_{i+1}'] = lambda: self.freq(i+1)
-            self.__dict__[f'ampl_{i+1}'] = lambda: self.ampl(i+1)
-            self.__dict__[f'outp_active_{i+1}'] = lambda: self.outp_active(i+1)
-            self.__dict__[f'set_gnd_{i+1}'] = lambda value: self.set_gnd(i+1, value)
-            self.__dict__[f'set_step_up_{i+1}'] = lambda value: self.set_step_up(i+1, value)
-            self.__dict__[f'set_step_down_{i+1}'] = lambda value: self.set_step_down(i+1, value)
-            self.__dict__[f'set_volt_{i+1}'] = lambda value: self.set_volt(i+1, value)
-            self.__dict__[f'set_freq_{i+1}'] = lambda value: self.set_freq(i+1, value)
-            self.__dict__[f'set_ampl_{i+1}'] = lambda value: self.set_ampl(i+1, value)
-            self.__dict__[f'set_outp_active_{i+1}'] = lambda value: self.outp_active(i+1, value)
-            
+            self.__dict__[f'position_{i+1}'] = lambda i = i: self.position(i)
+            self.__dict__[f'gnd_{i+1}'] = lambda i = i: self.gnd(i)
+            self.__dict__[f'volt_{i+1}'] = lambda i = i: self.volt(i)
+            self.__dict__[f'freq_{i+1}'] = lambda i = i: self.freq(i)
+            self.__dict__[f'ampl_{i+1}'] = lambda i = i: self.ampl(i)
+            self.__dict__[f'outp_active_{i+1}'] = lambda i = i: self.outp_active(i)
+            self.__dict__[f'set_position_{i+1}'] = lambda value, i = i: self.set_position(i, value * self.fraction)
+            self.__dict__[f'set_gnd_{i+1}'] = lambda value, i = i: self.set_gnd(i, value)
+            self.__dict__[f'set_step_up_{i+1}'] = lambda value, i = i: self.set_step_up(i, value)
+            self.__dict__[f'set_step_down_{i+1}'] = lambda value, i = i: self.set_step_down(i, value)
+            self.__dict__[f'set_volt_{i+1}'] = lambda value, i = i: self.set_volt(i, value * self.fraction)
+            self.__dict__[f'set_freq_{i+1}'] = lambda value, i = i: self.set_freq(i, value * self.fraction)
+            self.__dict__[f'set_ampl_{i+1}'] = lambda value, i = i: self.set_ampl(i, value * self.fraction)
+            self.__dict__[f'set_outp_active_{i+1}'] = lambda value, i = i: self.outp_active(i, value)
         
     def get_nan_answer(self, func):
         try:
@@ -50,32 +51,57 @@ class amc():
         return answer
         
     def description(self):
-        answer = self.get_nan_answer(self.device.description.getDeviceType)
+        answer = self.device.description.getDeviceType()
         return answer
     
     def position(self, axis: int):
-        answer = self.get_nan_answer(lambda: self.device.control.getPosition(axis))
-        return answer
+        answer = self.device.move.getPosition(axis)
+        return answer // self.fraction
     
     def gnd(self, axis: int):
-        answer = self.get_nan_answer(lambda: self.device.move.getGroundAxis(axis))
+        answer = self.device.move.getGroundAxis(axis)
         return answer
     
     def volt(self, axis: int):
-        answer = self.get_nan_answer(lambda: self.device.control.getCurrentOutputVoltage(axis))
-        return answer
+        answer = self.device.control.getCurrentOutputVoltage(axis)
+        return answer // self.fraction
     
     def freq(self, axis: int):
-        answer = self.get_nan_answer(lambda: self.device.control.getControlFrequency(axis))
-        return answer
+        answer = self.device.control.getControlFrequency(axis)
+        return answer // self.fraction
     
     def ampl(self, axis: int):
-        answer = self.get_nan_answer(lambda: self.device.control.getControlAmplitude(axis))
-        return answer
+        answer = self.device.control.getControlAmplitude(axis)
+        return answer // self.fraction
     
     def outp_active(self, axis: int):
-        answer = self.get_nan_answer(lambda: self.device.control.getControlOutput(axis))
+        answer = self.device.control.getControlOutput(axis)
         return answer
+    
+    def capacity(self, axis: int):
+        name = "Capacity Test"
+        parameters = "{'capacity': 'Capacity (nF)'}, 'version': 1.0.0'}"
+        answer = self.device.test.execute(name, parameters)
+        return answer
+    
+    def set_position(self, axis: int, value: int):
+        '''
+
+        Parameters
+        ----------
+        axis : int
+            Axis count number (int).
+        value : int
+            Set absolute position.
+
+        Returns
+        -------
+        None.
+
+        '''
+        
+        self.device.move.setControlTargetPosition(axis, value)
+        self.device.move.moveReference(axis)
     
     def set_gnd(self, axis: int, value: bool):
         '''
@@ -114,14 +140,23 @@ class amc():
         self.device.control.getControlOutput(axis, value)
     
     def close(self):
-        self.device.disconnect()
+        self.device.close()
     
 def main():
-    try:
-        device = amc('192.168.1.3')
-        print(device.Volt1())
-    except Exception as ex:
-        print(ex)
+    device = amc('192.168.1.4')
+    freq_1 = device.freq_1()
+    print(f'Freq1 = {freq_1}')
+    pos_1 = device.position_1()
+    print(f'Pos1 = {pos_1}')
+    volt_1 = device.volt_1()
+    print(f'Volt1 = {volt_1}')
+    ampl_1 = device.ampl_1()
+    print(f'Ampl1 = {ampl_1}')
+    outp_active_1 = device.outp_active_1()
+    print(f'Outp_active1 = {outp_active_1}')
+    gnd_1 = device.gnd_1()
+    print(f'gnd1 = {gnd_1}')
+    device.close()
         
 if __name__ == '__main__':
     main()
