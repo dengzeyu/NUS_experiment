@@ -2514,7 +2514,7 @@ class Sweeper1d(tk.Frame):
             self.preset.loc[0, 'filename_sweep'] = current_filename
             self.preset.to_csv(globals()['sweeper1d_path'], index = False)
         
-        self.entry_from.after(1000, self.rewrite_preset)
+        #self.entry_from.after(1000, self.rewrite_preset)
 
     def update_sweep_configuration(self):
         global from_sweep1
@@ -4453,7 +4453,7 @@ class Sweeper2d(tk.Frame):
         self.preset.loc[0, 'uniform'] = self.uniform
         self.preset.to_csv(globals()['sweeper2d_path'], index = False)
         
-        self.entry_from1.after(1000, self.rewrite_preset)
+        #self.entry_from1.after(1000, self.rewrite_preset)
 
     def update_sweep_configuration(self):
         global from_sweep1
@@ -7169,7 +7169,7 @@ class Sweeper3d(tk.Frame):
         self.preset.loc[0, 'uniform'] = self.uniform
         self.preset.to_csv(globals()['sweeper3d_path'], index = False)
         
-        self.entry_from1.after(1000, self.rewrite_preset)
+        #self.entry_from1.after(1000, self.rewrite_preset)
             
     def update_sweep_configuration(self):
         global from_sweep1
