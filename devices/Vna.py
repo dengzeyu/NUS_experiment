@@ -15,6 +15,17 @@ import numpy as np
 np.set_printoptions(threshold=1e9)
 import time
 
+class myTrace(Trace):
+    
+    def measure_complex_data(self):
+        channel = self._vna.channel(self.channel)
+        is_manual = channel.manual_sweep
+        channel.manual_sweep = True
+        channel.start_sweep()
+        y = self.y_complex
+        channel.manual_sweep = is_manual
+        return y
+
 class ImageFormat(Enum):
     bmp = 'BMP'
     png = 'PNG'
@@ -37,6 +48,8 @@ class Vna(GenericInstrument):
         else:
             self._open(adress)
         #self.display_screen()
+        
+        self.complex_number = [None, None]
         
         self.get_options = ['start_freq', 'stop_freq', 'cent_freq', 'span_freq', 'sweep_time', 'num_points', 'bandwidth', 'power', 
                             'freqs', 'trace_real', 'trace_im', 'trace_linmag', 'trace_logmag', 'trace_phase', 
@@ -598,6 +611,14 @@ class Vna(GenericInstrument):
         scpi = 'SOUR:POW?'
         return self.query(scpi)
     
+    def average(self):
+        scpi = 'SENS:AVER?'
+        return self.query(scpi)
+    
+    def set_average(self, value):
+        scpi = f'AVER {value}'
+        self.write(scpi)
+    
     def set_power(self, value):
         scpi = f'SOUR:POW {value}'
         self.write(scpi)
@@ -625,7 +646,12 @@ class Vna(GenericInstrument):
     def sweep_time(self):
         scpi = 'SENSE1:SWEEP:TIME?'
         return float(self.query(scpi))
-        
+    
+    def trac(self):
+        data = myTrace(self, 'Trc1')
+        complex_trace = data.measure_complex_data()
+        self.complex_number = (complex_trace.real, complex_trace.imag)
+    
     def trace_real(self):
         self.autoscale()
         scpi = 'INIT1:IMM:ALL'
@@ -662,14 +688,15 @@ class Vna(GenericInstrument):
         self.write(scpi)
         t = self.sweep_time()
         time.sleep(t)
-        scpi = 'CALC1:FORM MLIN'
-        self.write(scpi)
-        scpi = 'CALC1:DATA? FDAT'
-        answer = self.query(scpi)
-        answer = answer.replace('\r', '')
-        answer = answer.replace('\n', '')
-        answer = answer.replace(' ', '')
-        return answer
+        scpi1 = 'CALC1:FORM MLIN'
+        self.write(scpi1)
+        scpi1 = 'CALC1:DATA? FDAT'
+        answer1 = self.query(scpi1)
+        answer1 = answer1.replace('\r', '')
+        answer1 = answer1.replace('\n', '')
+        answer1 = answer1.replace(' ', '')
+        
+        return answer1
     
     def trace_logmag(self):
         self.autoscale()
@@ -867,8 +894,8 @@ class Vna(GenericInstrument):
 def main():
     vna = Vna('169.254.82.39:5025')
     try:
-        span = vna.linmag_span()
-        print(span)
+        answer = vna.trac()
+        print(answer)
     except Exception as ex:
         print(ex)
     finally:
