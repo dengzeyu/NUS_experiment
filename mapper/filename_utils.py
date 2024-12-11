@@ -75,14 +75,20 @@ def unify_filename(filename: str, possibilities = possibilities):
     '''
     if any((match1 := num) in filename for num in possibilities):
         filename = (filename[:filename.index(match1)], filename[filename.index(match1) + 3:])
-        idx_ = len(filename[0]) - filename[0][::-1].index('_') - 1
-        name = filename[0][:idx_] + filename[1]
+        if '_' in filename[0]:
+            idx_ = len(filename[0]) - filename[0][::-1].index('_') - 1
+            name = filename[0][:idx_] + filename[1]
+        else:
+            name = filename[0] + filename[1]
     else:
         name = filename
     if any((match2 := num) in name for num in possibilities):
         name = (name[:name.index(match2)], name[name.index(match2) + 3:])
-        idx_ = len(name[0]) - name[0][::-1].index('_') - 1
-        name = name[0][:idx_] + name[1]
+        if '_' in name[0]:
+            idx_ = len(name[0]) - name[0][::-1].index('_') - 1
+            name = name[0][:idx_] + name[1]
+        else:
+            name = name[0] + name[1]
     return name
 
 def fix_unicode(filename: str):
