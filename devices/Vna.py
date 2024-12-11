@@ -893,8 +893,10 @@ class Vna(GenericInstrument):
      
 def main():
     vna = Vna('169.254.82.39:5025')
+    answer = vna.trace_linmag()
+    print(answer)
     try:
-        answer = vna.trac()
+        answer = vna.trace_real()
         print(answer)
     except Exception as ex:
         print(ex)
