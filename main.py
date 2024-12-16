@@ -63,15 +63,15 @@ def serial_ports():
             pass
     return result
 
-if not exists(os.path.join(core_dir, 'devices')):
-    os.mkdir(os.path.join(core_dir, 'devices'))
+if not exists(os.path.join(core_dir, 'resources')):
+    os.mkdir(os.path.join(core_dir, 'resources'))
       
-sys.path.insert(0, os.path.join(core_dir, 'devices'))
+sys.path.insert(0, os.path.join(core_dir, 'resources'))
 
 def str_to_class(classname):
     return getattr(sys.modules[__name__], classname)
 
-device_classes = os.listdir(os.path.join(core_dir, 'devices'))
+device_classes = os.listdir(os.path.join(core_dir, 'resources'))
 _device_classes = []
 for i in device_classes:
     if i[-3:] == '.py':
