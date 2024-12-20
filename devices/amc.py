@@ -15,26 +15,19 @@ class amc():
         self.fraction = 1000
         
         self.set_options = ['gnd_1', 'gnd_2', 'gnd_3', 'step_up_1', 'step_down_1', 'step_up_2', 'step_down_2',
-                            'step_up_3', 'step_down_3', 'jog_1', 'jog_2', 'jog_3', 'volt_1', 'volt_2', 'volt_3', 'freq_1', 'freeq_2',
+                            'step_up_3', 'step_down_3', 'volt_1', 'volt_2', 'volt_3', 'freq_1', 'freeq_2',
                             'freq_3', 'ampl_1', 'amplt_2', 'ampl_3', 'outp_active1', 'outp_active_2', 
                             'outp_active_3']
         self.get_options = ['position_1', 'position_2', 'position_3','gnd_1', 'gnd_2', 'gnd_3',
                             'volt_1', 'volt_2', 'volt_3', 'freq_1', 'freq_2', 'freq_3', 
                             'outp_active_1', 'outp_active_2', 'outp_active_3']
         
-        self.sweepable = [False, False, False, False, False, False, False, False, False, True, True, True,
-                          False, False, False, False, False, False, False, False, False, False, False, False]
-        
-        self.jog_steps = 1
-        self.jog_position = 0
-        
         for i in self.set_options:
-            self.sweepable.append(None)
+            self.sweepable.append(False)
         
         for i in range(3):
             self.__dict__[f'position_{i+1}'] = lambda i = i: self.position(i)
             self.__dict__[f'gnd_{i+1}'] = lambda i = i: self.gnd(i)
-            self.__dict__[f'jog_{i+1}'] = lambda i = i: self.jog(i)
             self.__dict__[f'volt_{i+1}'] = lambda i = i: self.volt(i)
             self.__dict__[f'freq_{i+1}'] = lambda i = i: self.freq(i)
             self.__dict__[f'ampl_{i+1}'] = lambda i = i: self.ampl(i)
@@ -43,11 +36,11 @@ class amc():
             self.__dict__[f'set_gnd_{i+1}'] = lambda value, i = i: self.set_gnd(i, value)
             self.__dict__[f'set_step_up_{i+1}'] = lambda value, i = i: self.set_step_up(i, value)
             self.__dict__[f'set_step_down_{i+1}'] = lambda value, i = i: self.set_step_down(i, value)
-            self.__dict__[f'set_jog_{i+1}'] = lambda value, speed, i = i: self.set_jog(i, value, speed)
             self.__dict__[f'set_volt_{i+1}'] = lambda value, i = i: self.set_volt(i, value * self.fraction)
             self.__dict__[f'set_freq_{i+1}'] = lambda value, i = i: self.set_freq(i, value * self.fraction)
             self.__dict__[f'set_ampl_{i+1}'] = lambda value, i = i: self.set_ampl(i, value * self.fraction)
             self.__dict__[f'set_outp_active_{i+1}'] = lambda value, i = i: self.outp_active(i, value)
+            self.__dict__[f'step_{i+1}_position'] = 0
         
     def get_nan_answer(self, func):
         try:
@@ -67,9 +60,6 @@ class amc():
     def gnd(self, axis: int):
         answer = self.device.move.getGroundAxis(axis)
         return answer
-    
-    def jog(self, axis: int):
-        return self.jog_position
     
     def volt(self, axis: int):
         answer = self.device.control.getCurrentOutputVoltage(axis)
@@ -131,47 +121,31 @@ class amc():
         self.device.move.setGroundAxis(axis, value)
     
     def set_step_up(self, axis: int, value: int):
-        self.device.move.setNSteps(axis, False, value)
+        step = value - self.__dict__[f'step_{axis+1}_position']
+        try:
+            step = int(step)
+        except ValueError:
+            step = 1
+        if step >= 0:
+            self.device.move.setNSteps(axis, False, step)
+        else:
+            self.device.move.setNSteps(axis, True, step)
+        
+        
+        self.__dict__[f'step_{axis+1}_position'] = value
         
     def set_step_down(self, axis: int, value: int):
-        self.device.move.setNSteps(axis, True, value)
-        
-    def set_jog(self, axis: int, value: int = 1, speed: float = None):
-        """
-
-        Parameters
-        ----------
-        axis : int
-            Axis count number
-        value : int, optional
-            Number of steps to take. Defined by self.jog_steps, except when called from SetGet menu. Default is 1.
-        speed : TYPE, optional
-            Positive speed executes step_up, negative speed executes step_down.
-
-        Returns
-        -------
-        None.
-
-        """
-        
-        self.jog_position = value
-        
-        if speed is None:
-            direction = 'up'
-            value = self.jog_steps
-        elif speed == 'SetGet':
-            if value > 0:    
-                direction = 'up'
-            else:
-                direction = 'down'
-        elif speed > 0:
-            value = self.jog_steps
-            direction = 'up'
+        step = - value + self.__dict__[f'step_{axis+1}_position']
+        try:
+            step = int(step)
+        except ValueError:
+            step = 1
+        if step >= 0:
+            self.device.move.setNSteps(axis, True, step)
         else:
-            value = self.jog_steps
-            direction = 'down'
+            self.device.move.setNSteps(axis, False, step)
         
-        self.__dict__[f'set_step_{direction}_{axis}'](value = value)
+        self.__dict__[f'step_{axis+1}_position'] = value
         
     def set_volt(self, axis: int, value: int):
         self.device.control.setCurrentOutputVoltage(axis, value)
