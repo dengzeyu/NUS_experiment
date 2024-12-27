@@ -2,28 +2,7 @@ import MultiPyVu as mpv
 #from MultiPyVu import MultiVuClient as mvc
 from enum import IntEnum
 
-import sys
-import os
-import socket
-import traceback
 import time
-from typing import Dict, Union
-
-
-from MultiPyVu.SocketMessageClient import ClientMessage
-from MultiPyVu.create_logger import log
-from MultiPyVu.project_vars import (CLIENT_NAME,
-                           HOST,
-                           PORT,
-                           )
-from MultiPyVu.exceptions import (MultiPyVuError,
-                         ClientCloseError,
-                         ServerCloseError,
-                         SocketError
-                         )
-
-if sys.platform == 'win32':
-    import msvcrt    # Used to help detect the esc-key
 
 MAX_TRIES = 3
 #import socket
@@ -154,7 +133,6 @@ class opticool():
         self._sock = None
         self._request = {}
         self._response = {}
-        self.log_event = log(CLIENT_NAME)
         self._instr = None
         self.instrument_name = ''
         
@@ -375,7 +353,7 @@ class opticool():
         self.device.close_client()
     
 def main():
-    device = opticool()
+    device = opticool('192.168.0.100:5000')
     print(f'Field = {device.Field()} Oe')
     print(f'Cold finger temp = {device.T_finger()} K')
     #print(f'Aux temp = {device.T_sample()} K')
