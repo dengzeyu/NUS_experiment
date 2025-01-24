@@ -18,7 +18,7 @@ from msl.equipment import (
 class Avaspec():
     def __init__(self, adress):
         
-        serial = '1801230U1'
+        serial = '2009277U1'
         
         record = EquipmentRecord(
             manufacturer='Avantes',
@@ -31,7 +31,7 @@ class Avaspec():
         )
         
         self.device = record.connect()
-        self.use_high_res_adc(False)
+        #self.use_high_res_adc(False)
         
         self._dark_data = None
         
@@ -64,19 +64,37 @@ class Avaspec():
     
     def wavelength(self):
         ans = self.device.get_lambda()
-        return ans
+        #convert to string
+        answer = ''
+        for i in ans:
+            answer += str(i)
+            answer += ','
+        answer = answer[:-1]
+        return answer
     
     def data(self):
         # start 1 measurement, wait until the measurement is finished, then get the data
         self.device.measure(1)
         while not self.device.poll_scan():
             time.sleep(0.01)
-        _, data = self.device.get_data()
+        _, dat = self.device.get_data()
         
         self._dark_data = self.device.get_dark_pixel_data()
+        #convert to string
+        answer = ''
+        for i in dat:
+            answer += str(i)
+            answer += ','
+        answer = answer[:-1]
+        return answer
         
     def dark_data(self):
-        return self._dark_data
+        answer = ''
+        for i in self._dark_data:
+            answer += str(i)
+            answer += ','
+        answer = answer[:-1]
+        return answer
     
     def set_integration_time(self, value: float, speed: float = None):
         cfg = self.device.MeasConfigType()
@@ -87,4 +105,18 @@ class Avaspec():
         cfg = self.device.MeasConfigType()
         cfg.m_NrAverages = value
         self.device.prepare_measure(cfg)
+        
+def main():
+    try:
+        device = Avaspec('COM1')
+        data = device.data()
+        
+        print(data)
+    except Exception as ex:
+        print(f'Exception happened while initializing Avaspec: {ex}')
+    finally:
+        pass
+    
+if __name__ == '__main__':
+    main()
         
