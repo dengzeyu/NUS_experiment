@@ -9,7 +9,7 @@ from scipy.stats import binned_statistic
 #Inspired by https://github.com/SengerM/TeledyneLeCroyPy
 
 class Waverunner9000():
-    def __init__(self, adress = '192.168.0.196'):
+    def __init__(self, adress = '169.254.28.243'):
         if adress.startswith('TCPIP0'):
             self.adress = adress
         else:
@@ -59,8 +59,8 @@ class Waverunner9000():
                             '200MS': 200e-3,'500MS': 500e-3,'1S': 1,'2S': 2,'5S': 5,'10S': 10,'20S': 20,
                             '50S': 50,'100S': 100}
         
-        self.sparcing = 200
-        self._npoints = 500
+        self.sparcing = 1
+        self._npoints = 5000000
         self.first_point = 0
         self.segment_number = 0
         self.set_config()
@@ -135,7 +135,7 @@ class Waverunner9000():
         self.measured_Amplitude[n-1] = aux
         '''
         data = self.device.get_waveform(n_channel=n)
-        ans = data['waveforms'][0]['Time (s)'][:self._npoints]
+        ans = data['waveforms'][0]['Time (s)']#[:self._npoints]
         #aux = data['waveforms'][0]['Amplitude (V)']
         answer = ''
         for i in ans:
@@ -165,7 +165,7 @@ class Waverunner9000():
         '''
         data = self.device.get_waveform(n_channel=n)
         #aux = data['waveforms'][0]['Time (s)']
-        ans = data['waveforms'][0]['Amplitude (V)'][:self._npoints]
+        ans = data['waveforms'][0]['Amplitude (V)']#[:self._npoints]
         answer = ''
         for i in ans:
             answer += str(i)
@@ -360,34 +360,29 @@ class Waverunner9000():
 def main():
     device = Waverunner9000()
     
-    stat = device.read_window()
-    iterat = 1
-    sh = 100
-    n = np.arange(0, sh+1, 1)
-    correlation = np.zeros_like(n, dtype = float)
-    cor_n = device.correlation_n()
-    print(cor_n)
-    for i in range(iterat):
-        cor = []
-        stat = device.read_window()
-        print(stat[:50])
-        for i in n:
-            cor.append(device.correlation(stat, i))
-        cor = np.array(cor, dtype = float)
-        correlation += cor
+    import pandas as pd
+    import os
     
-    correlation /= iterat
+    folder = r'C:\Users\graphene\Desktop\Dima\Lab\Unisweep\Data\250123\data_files'
+    filename = 'data7'
     
-    m = correlation[0]
-    print(f'Mean is {m}')
-    m = np.ones_like(n) * m
-    plt.plot(n, correlation, 'o-', label = 'Data', color = 'darkblue')
-    plt.plot(n, m**2, '--', color = 'crimson', label = 'Uncorrelated', alpha = 0.5)
-    plt.legend()
-    plt.xlabel('n-th neighbor')
-    plt.ylabel('Correlation')
+    filename = os.path.join(folder, f'{filename}.csv')
+    
+    t = device.Time1()
+    a = device.Amplitude1()
+    
+    t = t.split(',')
+    t = [float(i) for i in t]
+    
+    a = a.split(',')
+    a = [float(i) for i in a]
+    
+    plt.plot(t, a)
     plt.show()
     
+    d = {'Time': t, 'Ampl': a}
+    df = pd.DataFrame(d)
+    df.to_csv(filename, index = False)
     device.close()
 
 if __name__ == '__main__':
