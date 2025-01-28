@@ -1448,13 +1448,23 @@ class AFG1000():
             self.set_outp2('OFF')
         self.device.ch2.set_amplitude(value)
         
+    def set_phas1(self, value):
+        self.device.set_frequency_lock("ON", use_channel=1)
+        self.device.write(f'SOUR1:PHAS {value}DEG')
+        
+    def set_phas2(self, value):
+        self.device.set_frequency_lock("ON", use_channel=2)
+        self.device.write(f'SOUR2:PHAS {value}DEG')
+        
     def set_freq1(self, value):
         
         self.device.ch1.set_frequency(value)
+        self.device.set_frequency_lock("ON", use_channel=1)
     
     def set_freq2(self, value):
         
         self.device.ch2.set_frequency(value)
+        self.device.set_frequency_lock("ON", use_channel=2)
         
     def set_offset1(self, value):
         
@@ -1504,6 +1514,16 @@ class AFG1000():
         
         settings = self.device.ch2.get_settings()
         ans = settings['frequency'][0]
+        return ans
+    
+    def phas1(self):
+        
+        ans = self.device.query(f'SOUR1:PHAS?')
+        return ans
+    
+    def phas2(self):
+        
+        ans = self.device.query(f'SOUR2:PHAS?')
         return ans
     
     def offset1(self):
