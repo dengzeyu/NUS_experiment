@@ -1,0 +1,12 @@
+matplotlib
+pyvisa-py
+pandas
+numpy
+scipy
+serial
+IPy
+imageio
+pymeasure
+git+https://github.com/MSLNZ/msl-equipment.git
+psutil
+zeroconf
