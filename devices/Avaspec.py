@@ -16,10 +16,9 @@ from msl.equipment import (
 )
 
 class Avaspec():
-    def __init__(self, avaspecx64_dll_path='C:/AvaSpecX64-DLL_9.4/examples/Vcpp2008/x64/Release/avaspecx64.dll'):
-        
-        serial = '1801230U1'
-        
+    def __init__(self, serial ='1801230U1',
+                 avaspecx64_dll_path='C:/AvaSpecX64-DLL_9.4/examples/Vcpp2008/x64/Release/avaspecx64.dll'):
+                
         # if adress == 'COM1':
         #     serial = '46387463732'
         # elif adress == 'COM2':
