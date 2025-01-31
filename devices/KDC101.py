@@ -14,10 +14,10 @@ from msl.equipment.resources.thorlabs import MotionControl
 
 
 class KDC101():
-    def __init__(self, ser = '27004046'):
+    def __init__(self, ser = '27004046', kinesis_path = 'C:/Program Files/Thorlabs/Kinesis'):
         
         # ensure that the Kinesis folder is available on PATH
-        os.environ['PATH'] += os.pathsep + 'C:/Program Files/Thorlabs/Kinesis'
+        os.environ['PATH'] += os.pathsep + kinesis_path
 
         # if adress == 'COM5':
         #     ser = '27004046'
@@ -88,15 +88,15 @@ class KDC101():
         
         
 
-def main():
-    try:
-        device = KDC101('COM10')
-        device.set_position(57)
-        print(device.position())
-    except Exception as ex:
-        print(f'Exception hapened in executing KCube: {ex}')
-    finally:
-        device.close()
+# def main():
+#     try:
+#         device = KDC101('COM10')
+#         device.set_position(57)
+#         print(device.position())
+#     except Exception as ex:
+#         print(f'Exception hapened in executing KCube: {ex}')
+#     finally:
+#         device.close()
         
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
