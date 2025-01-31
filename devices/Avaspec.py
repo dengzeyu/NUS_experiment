@@ -32,7 +32,7 @@ class Avaspec():
             model='AvaSpec-2048L',  # update for your device
             serial=serial,
             connection=ConnectionRecord(
-                address='SDK::C:/AvaSpecX64-DLL_9.14.0.0/avaspecx64.dll',  # update the path to the DLL file
+                address='SDK::C:/AvaSpecX64-DLL_9.4/avaspecx64.dll',  # update the path to the DLL file
                 backend=Backend.MSL,
             )
         )
