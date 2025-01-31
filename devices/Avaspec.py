@@ -16,7 +16,7 @@ from msl.equipment import (
 )
 
 class Avaspec():
-    def __init__(self, avaspecx64_dll_path='C:/AvaSpecX64-DLL_9.4/avaspecx64.dll'):
+    def __init__(self, avaspecx64_dll_path='C:/AvaSpecX64-DLL_9.4/examples/Vcpp2008/x64/avaspecx64.dll'):
         
         serial = '1801230U1'
         
