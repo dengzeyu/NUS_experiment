@@ -16,16 +16,16 @@ from msl.equipment import (
 )
 
 class Avaspec():
-    def __init__(self, adress):
+    def __init__(self):
         
-        serial = '2009277U1'
+        serial = '1801230U1'
         
-        if adress == 'COM1':
-            serial = '46387463732'
-        elif adress == 'COM2':
-            serial = '455272056'
-        elif adress == '192.168.0.1':
-            serial = '4527u1'
+        # if adress == 'COM1':
+        #     serial = '46387463732'
+        # elif adress == 'COM2':
+        #     serial = '455272056'
+        # elif adress == '192.168.0.1':
+        #     serial = '4527u1'
         
         record = EquipmentRecord(
             manufacturer='Avantes',
