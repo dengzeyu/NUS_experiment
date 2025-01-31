@@ -14,11 +14,17 @@ from msl.equipment.resources.thorlabs import MotionControl
 
 
 class KDC101():
-    def __init__(self, ser='270004046'):
+    def __init__(self, adress = ''):
         
         # ensure that the Kinesis folder is available on PATH
         os.environ['PATH'] += os.pathsep + 'C:/Program Files/Thorlabs/Kinesis'
 
+        if adress == 'COM5':
+            ser = '27004046'
+        elif adress == 'COM11':
+            ser = '27004883'
+        elif adress == 'COM3':
+            ser = '27004770'
             
         record = EquipmentRecord(
             manufacturer='Thorlabs',
