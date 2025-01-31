@@ -16,7 +16,7 @@ from msl.equipment import (
 )
 
 class Avaspec():
-    def __init__(self):
+    def __init__(self, avaspecx64_dll_path='C:/AvaSpecX64-DLL_9.4/avaspecx64.dll'):
         
         serial = '1801230U1'
         
@@ -32,7 +32,7 @@ class Avaspec():
             model='AvaSpec-2048L',  # update for your device
             serial=serial,
             connection=ConnectionRecord(
-                address='SDK::C:/AvaSpecX64-DLL_9.4/avaspecx64.dll',  # update the path to the DLL file
+                address=f'SDK::{avaspecx64_dll_path}',  # update the path to the DLL file
                 backend=Backend.MSL,
             )
         )
