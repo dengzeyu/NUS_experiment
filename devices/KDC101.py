@@ -17,7 +17,8 @@ class KDC101():
     def __init__(self, ser = '27004046', kinesis_path = 'C:/Program Files/Thorlabs/Kinesis'):
         
         # ensure that the Kinesis folder is available on PATH
-        os.environ['PATH'] += os.pathsep + kinesis_path
+        if kinesis_path not in os.environ['PATH']:
+            os.environ['PATH'] += os.pathsep + kinesis_path
 
         # if adress == 'COM5':
         #     ser = '27004046'
