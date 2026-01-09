@@ -7,6 +7,6 @@ serial
 IPy
 imageio
 pymeasure
-git+https://github.com/MSLNZ/msl-equipment.git
+git+https://github.com/MSLNZ/msl-equipment.git@70455f0
 psutil
 zeroconf
